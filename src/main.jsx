@@ -405,3 +405,18 @@ createRoot(document.getElementById("root")).render(
     <App />
   </I18nProvider>
 );
+
+// The opening screen in index.html: faded out once the app has painted,
+// and never in under 700 ms, so a fast load does not flash the logo for a
+// blink -- that reads as a glitch, not a brand.
+(function hideSplash() {
+  const el = document.getElementById("splash");
+  if (!el) return;
+  const shown = performance.now();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    setTimeout(() => {
+      el.classList.add("gone");
+      setTimeout(() => el.remove(), 400);
+    }, Math.max(0, 700 - shown));
+  }));
+})();
