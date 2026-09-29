@@ -51,6 +51,7 @@ import csv
 import io
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -122,6 +123,24 @@ STATE_ALIASES = {
 
 POSTAL_ZIP = "https://download.geonames.org/export/zip/IN.zip"
 BATCH = 500
+
+
+def supabase_url():
+    """SUPABASE_URL from the environment, else the one the app itself uses
+    (src/config.js), so only the service key has to be typed."""
+    url = (os.environ.get("SUPABASE_URL") or "").strip()
+    if url and "YOUR" not in url.upper():
+        return url.rstrip("/")
+    cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", "config.js")
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            m = re.search(r'SUPABASE_URL\s*=\s*["\']([^"\']+)', f.read())
+        if m:
+            print(f"  Using SUPABASE_URL from src/config.js: {m.group(1)}")
+            return m.group(1).rstrip("/")
+    except OSError:
+        pass
+    return url.rstrip("/") or None
 
 
 def fetch(url):
@@ -417,7 +436,7 @@ def load_post_offices(rows, dry_run):
         print("  --dry-run: nothing uploaded.")
         return 0
 
-    url = os.environ.get("SUPABASE_URL")
+    url = supabase_url()
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
         print("\n  Set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
@@ -487,7 +506,7 @@ def main():
         if args.dry_run:
             print("  --dry-run: nothing uploaded.")
             return 0
-        url = os.environ.get("SUPABASE_URL")
+        url = supabase_url()
         key = os.environ.get("SUPABASE_SERVICE_KEY")
         if not url or not key:
             print("\n  Set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
@@ -517,7 +536,7 @@ def main():
     # The service_role key, not the anon key: services_load_pincodes is
     # granted to nobody else, on purpose. Read from the environment so it
     # never lands in shell history or in this file.
-    url = os.environ.get("SUPABASE_URL")
+    url = supabase_url()
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
         print("\n  Set these first, then run again:\n"
