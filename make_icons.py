@@ -35,8 +35,13 @@ WHITE = (255, 255, 255, 255)
 jobs = [
     # The mark is blue on transparency, so the tile is WHITE, not blue --
     # blue-on-blue would erase it.
-    ("public/icon-192.png",          192, 0.82, 0.22, WHITE),
-    ("public/icon-512.png",          512, 0.82, 0.22, WHITE),
+    # Full-bleed white, no rounded corners. Rounded corners were drawn on
+    # transparency and then saved as RGB, which turned the corners BLACK --
+    # and Android shows this icon on the launch screen, so the app opened on
+    # a white tile with black edges. The launcher rounds or crops the icon
+    # itself; the square simply disappears into the white launch screen.
+    ("public/icon-192.png",          192, 0.78, 0.0,  WHITE),
+    ("public/icon-512.png",          512, 0.78, 0.0,  WHITE),
     ("public/apple-touch-icon.png",  180, 0.80, 0.0,  WHITE),   # iOS masks it itself
     ("public/icon-maskable-512.png", 512, 0.60, 0.0,  WHITE),
 ]
