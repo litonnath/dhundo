@@ -442,9 +442,12 @@ def load_post_offices(rows, dry_run):
                 if e.code < 500 or attempt == 3:
                     print(f"\n  batch {i // BATCH + 1} refused: {e.code} {e.read()[:300]!r}")
                     return 1
-            except urllib.error.URLError:
+            except urllib.error.URLError as e:
                 if attempt == 3:
-                    raise
+                    print(f"\n  Could not reach {url}  ({e.reason})")
+                    print("  Check SUPABASE_URL: Supabase > Project Settings > API > Project URL,")
+                    print("  like https://abcdefghijklmnop.supabase.co")
+                    return 1
             time.sleep(2 ** attempt)
         print(f"  {min(i + BATCH, len(offices)):,} / {len(offices):,}", end="\r", flush=True)
     print(f"\n  Done. {loaded:,} post offices loaded.")
