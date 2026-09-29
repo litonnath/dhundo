@@ -11,16 +11,14 @@
 # Order matters:
 #   1. import_regions.py    GeoNames: every populated place, with towns
 #                           marked so the town picker has something in it
-#   2. import_osm_places.py OpenStreetMap: the villages and paras GeoNames
-#                           lacks, plus coordinates for everything
+#   2. import_osm_file.py   OpenStreetMap (one downloaded file): the villages
+#                           and paras GeoNames lacks, plus coordinates
 #   3. import_pincodes.py   India Post PIN codes via GeoNames
 #
 # Every step skips rows already loaded, so running this again is safe --
 # and is the thing to do if it stops partway.
 #
-# Time: step 2 is the long one, one Overpass query per state. Expect an hour
-# or more for all of India. It is donated infrastructure; run this once, not
-# on a schedule.
+# Time: step 2 downloads ~1.5 GB once, then 10-30 minutes.
 # ===========================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -48,9 +46,10 @@ echo; echo "=== 1/3  Places from GeoNames ==="
 python3 import_regions.py
 
 echo; echo "=== 2/3  Villages and localities from OpenStreetMap ==="
-# Not fatal: a state Overpass times out on is listed at the end with the
-# command to retry it, and the PIN codes are still worth loading.
-python3 import_osm_places.py "$@" || echo "(some states did not load -- see above)"
+# From one downloaded India file (import_osm_file.py) rather than the public
+# Overpass servers, which time out and rate-limit. Needs, once:
+#   apt-get install -y osmium-tool python3-pyosmium python3-shapely
+python3 import_osm_file.py "$@"
 
 echo; echo "=== 3/3  PIN codes ==="
 python3 import_pincodes.py
