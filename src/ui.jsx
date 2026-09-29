@@ -1634,7 +1634,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
-    tab === "account" ? "account"
+    tab === "account" || tab === "profile" ? "account"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
     : "find";
   const item = (key, icon, label, go, dot) => {
@@ -2303,7 +2303,7 @@ export function waLink(phone) {
 // be spread over two header rows.
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
-  hasListing = false, onOpenListing, onList, showCredits = false,
+  hasListing = false, onOpenListing, onList, onOpenProfile, showCredits = false,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra, sub) => (
@@ -2368,6 +2368,11 @@ export function AccountPage({
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Two different things, kept apart on purpose. The PROFILE is
+            about the person and only they see it. The LISTING is the work
+            they do, with the name, address and phone customers use. */}
+        {account && row("user", account.full_name ? t("prof_edit") : t("prof_create"),
+          onOpenProfile, null, t("prof_sub"))}
         {account && (hasListing
           ? row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))
           : row("construction", t("nav_list"), onList, null, t("acc_list_sub")))}
@@ -2389,6 +2394,136 @@ export function AccountPage({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------- profile
+// The person, not their work. Name, email, address -- for the account.
+// Customers never see it; what they see is the listing. The phone is the
+// sign-in number, shown but not editable here.
+export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved }) {
+  const { t } = useI18n();
+  const [f, setF] = useState({
+    full_name: (account && account.full_name) || "", email: "", address: "",
+    city: "", state: "", pincode: "",
+  });
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const set = (k, v) => { setMsg(null); setF((p) => ({ ...p, [k]: v })); };
+
+  React.useEffect(() => {
+    let live = true;
+    api.myProfile().then((p) => {
+      if (!live || !p) return;
+      setF({
+        full_name: p.full_name || (account && account.full_name) || "",
+        email: p.email || "", address: p.address || "", city: p.city || "",
+        state: p.state || "", pincode: p.pincode || "",
+      });
+    }).catch(() => {}).finally(() => live && setLoaded(true));
+    return () => { live = false; };
+    // Once, on opening. Saving the name renews the session and with it
+    // `api`; reloading then would put back what the server had a moment ago.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async () => {
+    if (!f.full_name.trim()) return setMsg({ tone: "bad", text: t("ae_name") });
+    setBusy(true); setMsg(null);
+    try {
+      const r = await api.updateMyProfile(f);
+      if (r && r.ok) {
+        setMsg({ tone: "good", text: t("p_saved") });
+        onSaved && onSaved(r.profile);
+      } else {
+        const why = r && r.reason;
+        setMsg({ tone: "bad", text: t(
+          why === "bad_name" ? "ae_name" : why === "bad_email" ? "prof_e_email"
+          : why === "bad_pincode" ? "e_badpin" : why === "bad_state" ? "e_badstate" : "e_save") });
+      }
+    } catch (_) {
+      setMsg({ tone: "bad", text: t("e_save") });
+    } finally { setBusy(false); }
+  };
+
+  const field = { ...input, minHeight: 52, fontSize: 16, padding: "13px 14px", borderRadius: 11 };
+  const label = (text, children) => (
+    <label style={{ display: "block", marginBottom: 14 }}>
+      <span style={{ display: "block", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{text}</span>
+      {children}
+    </label>
+  );
+
+  return (
+    <div style={{ maxWidth: 560, margin: "0 auto", padding: "18px 16px 30px" }}>
+      <button onClick={onBack} style={{
+        display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none",
+        color: T.brandDark, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "6px 0",
+        marginBottom: 6, fontFamily: "inherit",
+      }}><Icon name="back" size={18} /> {t("w_back")}</button>
+      <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 4px" }}>{t("prof_title")}</h1>
+      <p style={{ fontSize: 14.5, color: T.inkSoft, margin: "0 0 18px", lineHeight: 1.6 }}>
+        {t("prof_intro")}
+      </p>
+
+      <div style={{
+        background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18,
+        opacity: loaded ? 1 : 0.6,
+      }}>
+        {label(t("au_name"),
+          <input style={field} value={f.full_name} autoComplete="name" maxLength={80}
+                 onChange={(e) => set("full_name", e.target.value)} />)}
+        {label(t("au_phone"),
+          <>
+            <input style={{ ...field, background: T.paper, color: T.inkSoft }} readOnly
+                   value={prettyPhone(account && account.phone)} />
+            <span style={{ display: "block", fontSize: 12.5, color: T.inkFaint, marginTop: 5 }}>
+              {t("prof_phone_note")}
+            </span>
+          </>)}
+        {label(t("prof_email"),
+          <input style={field} type="email" inputMode="email" autoComplete="email" value={f.email}
+                 onChange={(e) => set("email", e.target.value)} />)}
+        {label(t("prof_address"),
+          <textarea style={{ ...field, minHeight: 76, resize: "vertical" }} value={f.address}
+                    autoComplete="street-address" maxLength={300}
+                    onChange={(e) => set("address", e.target.value)} />)}
+        {label(t("prof_city"),
+          <input style={field} value={f.city} autoComplete="address-level2" maxLength={80}
+                 onChange={(e) => set("city", e.target.value)} />)}
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 180px" }}>
+            {label(t("state_label"),
+              <StateSelect big value={f.state} onChange={(v) => set("state", v)}
+                           style={{ display: "block", width: "100%" }} />)}
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            {label(t("p_pincode"),
+              <input style={field} inputMode="numeric" maxLength={6} value={f.pincode}
+                     autoComplete="postal-code"
+                     onChange={(e) => set("pincode", e.target.value.replace(/\D/g, ""))} />)}
+          </div>
+        </div>
+        {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+        <Btn full onClick={save} disabled={busy || !loaded} style={{ fontSize: 17, minHeight: 54 }}>
+          {busy ? "…" : t("p_save")}
+        </Btn>
+      </div>
+
+      {/* The listing is a separate thing -- say so where people look. */}
+      <div style={{
+        marginTop: 16, background: T.brandSoft, borderRadius: 16, padding: 18,
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{t("prof_list_q")}</div>
+        <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 12px", lineHeight: 1.55 }}>
+          {t("prof_list_body")}
+        </p>
+        <Btn kind="ghost" onClick={onList}>
+          <Icon name={hasListing ? "edit" : "construction"} size={18} />{" "}
+          {hasListing ? t("nav_mine") : t("nav_list")}
+        </Btn>
+      </div>
     </div>
   );
 }

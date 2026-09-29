@@ -379,6 +379,11 @@ function App() {
         isAdmin={!!(session && session.user.is_admin)}
         onSignIn={() => setShowAuth(true)}
         onSignOut={signOut}
+        onProfileSaved={(p) => {
+          if (!session || !p) return;
+          const next = { ...session, user: { ...session.user, full_name: p.full_name || null } };
+          writeSession(next); setSession(next);
+        }}
       />
 
       {showAuth && (

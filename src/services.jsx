@@ -26,7 +26,7 @@ import {
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
-  BottomNav, AccountPage, LanguageGate, PopularTrades, matchTrade,
+  BottomNav, AccountPage, ProfilePage, LanguageGate, PopularTrades, matchTrade,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
@@ -105,6 +105,15 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_hours: hours || null,
       }, true),
     myAvailability: () => rpc("services_my_availability", {}, true),
+    // ------------------------------------------------- account profile (83)
+    // About the person, not their work: that is the listing.
+    myProfile: () => rpc("services_my_profile", {}, true),
+    updateMyProfile: (p) =>
+      rpc("services_update_my_profile", {
+        p_full_name: p.full_name || "", p_email: p.email || null,
+        p_address: p.address || null, p_city: p.city || null,
+        p_state: p.state || null, p_pincode: p.pincode || null,
+      }, true),
     // Anyone can ask: the answer is cards and distances, never positions.
     availableWorkers: (o = {}) =>
       rpc("services_available_workers", {
@@ -753,7 +762,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   // the main trade; the rest become other_trades.
   const [picked, setPicked] = useState([]);
   const [f, setF] = useState(() => ({
-    full_name: "",
+    // From the account profile, when there is one. Editable: a shop may be
+    // listed under somebody else's name.
+    full_name: (user && user.full_name) || "",
     business_name: "",
     // They signed up with their phone number, so asking again is asking a
     // question we already know the answer to. Editable, because somebody may
@@ -1805,7 +1816,7 @@ function AdminList({ api, trades, reloadKey }) {
 // ---------------------------------------------------------------------- page
 export default function ServicesPage({
   supabaseUrl, anonKey, user = null, getAccessToken = null,
-  isAdmin = false, onSignIn, onSignOut,
+  isAdmin = false, onSignIn, onSignOut, onProfileSaved,
 }) {
   const base = useMemo(
     () => makeApi({ supabaseUrl, anonKey, getAccessToken }),
@@ -2071,7 +2082,7 @@ export default function ServicesPage({
         </div>
       )}
 
-      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && (
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "26px 16px 60px" }}>
           {tab === "add" && (
             <>
@@ -2123,8 +2134,16 @@ export default function ServicesPage({
           hasListing={hasListing}
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
+          onOpenProfile={() => setTab("profile")}
           showCredits={inApp}
         />
+      )}
+
+      {tab === "profile" && signedIn && (
+        <ProfilePage api={api} account={user} hasListing={hasListing}
+                     onBack={() => setTab("account")}
+                     onList={() => setTab(hasListing ? "mine" : "add")}
+                     onSaved={(p) => onProfileSaved && onProfileSaved(p)} />
       )}
 
       {/* The footer is for the website. In the app the bottom bar does its
