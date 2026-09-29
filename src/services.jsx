@@ -28,7 +28,7 @@ import {
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinNear } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -260,6 +260,13 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     cities: (state, q) =>
       rpc("services_cities", { p_state: state, p_q: q || null, p_limit: 200 }),
     pincodeLookup: (pin) => rpc("services_pincode_lookup", { p_pin: pin }),
+    // Everybody in one PIN code, as the same cards the search returns (89).
+    pinWorkers: (o = {}) =>
+      rpc("services_pin_workers", {
+        p_pin: o.pin, p_trade: o.trade || null, p_group: o.group || null,
+        p_lat: typeof o.lat === "number" ? o.lat : null,
+        p_lng: typeof o.lng === "number" ? o.lng : null, p_limit: 50,
+      }),
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
@@ -362,6 +369,14 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const hasPos = typeof (place && place.lat) === "number";
   const byDistance = (a, b) =>
     (a.distance_km == null ? 1e9 : Number(a.distance_km)) - (b.distance_km == null ? 1e9 : Number(b.distance_km));
+  // 0 means any distance (up to FAR_KM).
+  const [radius, setRadiusState] = useState(() => {
+    try { return Number(window.localStorage.getItem("dhundo_radius")) || 0; } catch (_) { return 0; }
+  });
+  const setRadius = (km) => {
+    setRadiusState(km);
+    try { window.localStorage.setItem("dhundo_radius", String(km)); } catch (_) {}
+  };
 
   const load = useCallback(() => {
     if (showGrid) { setList([]); setTotal(0); return; }
@@ -386,7 +401,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                    lat: withPos ? place.lat : null, lng: withPos ? place.lng : null,
                    // Said outright rather than left to the database default:
                    // everyone within 100 km, nearest first.
-                   radiusKm: withPos ? FAR_KM : null })
+                   radiusKm: withPos ? (radius || FAR_KM) : null })
         .then(many).catch(() => []);
     Promise.all(asks.map((a) => ask(a, hasPos)))
       // Nothing within reach of the position -- a place picked with a rough
@@ -408,7 +423,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
       })
       .catch((e) => setError(e.message || t("e_load")))
       .finally(() => setLoading(false));
-  }, [api, trade, group, search, slugKey, typed, locality, state, showGrid, hasPos,
+  }, [api, trade, group, search, slugKey, typed, locality, state, showGrid, hasPos, radius,
       place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------------------------------- available now (80)
@@ -467,7 +482,44 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // Available first, then everybody else once; the live copy of a card wins
   // because its distance is from where the worker is now.
   const liveIds = useMemo(() => new Set(live.map((r) => r.id)), [live]);
-  const shown = onlyLive ? live : [...live, ...list.filter((r) => !liveIds.has(r.id))];
+
+  // SAME PIN CODE FIRST. Everybody whose listing is in the customer's PIN
+  // code, shown above everyone else whatever the distance says: a PIN is
+  // something both sides know, where a village position can be rough.
+  const pin = place && place.pin;
+  const [pinRows, setPinRows] = useState([]);
+  useEffect(() => {
+    if (!pin || showGrid) { setPinRows([]); return; }
+    let alive = true;
+    Promise.all(tradeSlugs.map((slug) => api.pinWorkers({
+      pin, trade: slug, group: typed ? null : group,
+      lat: place && place.lat, lng: place && place.lng,
+    }).then(many).catch(() => [])))
+      .then((sets) => {
+        if (!alive) return;
+        const seen = new Set();
+        let rows = [];
+        sets.forEach((set) => set.forEach((x) => { if (!seen.has(x.id)) { seen.add(x.id); rows.push(x); } }));
+        const q = typed ? "" : search.trim();
+        if (q) {
+          const qs = variants(q, 8).map((v) => v.toLowerCase());
+          rows = rows.filter((x) => [x.display_name, x.trade_name, x.locality, x.city]
+            .some((v) => qs.some((w) => String(v || "").toLowerCase().includes(w))));
+        }
+        setPinRows(rows.sort(byDistance));
+      });
+    return () => { alive = false; };
+  }, [api, pin, showGrid, slugKey, typed, group, search, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // HOW FAR TO LOOK, chosen by the person and remembered. Only means
+  // anything once the app knows where they are.
+  const inRadius = (r) => !radius || !hasPos || r.distance_km == null || Number(r.distance_km) <= radius;
+  const pinIds = new Set(pinRows.map((r) => r.id));
+  const pinShown = onlyLive
+    ? live.filter((r) => pinIds.has(r.id))
+    : pinRows.map((r) => live.find((l) => l.id === r.id) || r);
+  const shown = (onlyLive ? live : [...live, ...list.filter((r) => !liveIds.has(r.id))])
+    .filter((r) => !pinIds.has(r.id) && inRadius(r));
 
   // Debounced: one request per pause, not one per keystroke. On the
   // connections this audience has, that is the difference between usable and
@@ -684,7 +736,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       ...p,
                       area: got.area || p.area,
                       state: got.state && STATES.includes(got.state) ? got.state : p.state,
-                      lat: got.lat, lng: got.lng,
+                      // A new position may be in another PIN; worked out again.
+                      lat: got.lat, lng: got.lng, pin: undefined,
                     }));
                   }}
                   disabled={geo.state === "locating"}
@@ -701,13 +754,36 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               ) : null}
             </div>
 
+            {/* How far to look: the person decides, and it is remembered. */}
+            {hasPos && (
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14,
+                            overflowX: "auto", scrollbarWidth: "none", paddingBottom: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, flexShrink: 0 }}>
+                  {t("radius_label")}
+                </span>
+                {[5, 10, 30, 50, 0].map((km) => {
+                  const on = radius === km;
+                  return (
+                    <button key={km} onClick={() => setRadius(km)} aria-pressed={on} style={{
+                      flex: "0 0 auto", padding: "7px 12px", borderRadius: 18, minHeight: 36,
+                      cursor: "pointer", fontFamily: "inherit", fontSize: 13,
+                      fontWeight: on ? 800 : 600, whiteSpace: "nowrap",
+                      border: `1.5px solid ${on ? T.brandDark : T.line}`,
+                      background: on ? T.brandSoft : T.white, color: on ? T.brandDeep : T.ink,
+                    }}>{km ? t("radius_km").replace("{n}", km) : t("radius_any").replace("{n}", FAR_KM)}</button>
+                  );
+                })}
+              </div>
+            )}
+
             {liveFar && live.length > 0 && (
               <Notice tone="info">
                 <b>{t("av_far_title").replace("{n}", NEAR_KM)}</b> {t("av_far_note")}
               </Notice>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {shown.map((row) => (
+
+            {(() => {
+              const card = (row) => (
                 <ListingCard
                   key={row.id}
                   row={row}
@@ -720,10 +796,40 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                 />
-              ))}
-            </div>
+              );
+              const heading = (text) => (
+                <h2 style={{ fontSize: 16.5, fontWeight: 800, color: T.ink, margin: "6px 0 10px",
+                             display: "flex", alignItems: "center", gap: 7 }}>{text}</h2>
+              );
+              return (
+                <>
+                  {pinShown.length > 0 && (
+                    <>
+                      {heading(<>📮 {t("pin_title").replace("{pin}", pin)}
+                        <span style={{ fontWeight: 600, color: T.inkFaint }}>· {pinShown.length}</span></>)}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 22 }}>
+                        {pinShown.map(card)}
+                      </div>
+                      {shown.length > 0 && heading(t("pin_rest"))}
+                    </>
+                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {shown.map(card)}
+                  </div>
+                </>
+              );
+            })()}
 
-            {!loading && shown.length === 0 && <EmptyState isAdmin={isAdmin} onAdd={onAdd} />}
+            {!loading && shown.length === 0 && pinShown.length === 0 && (
+              hasPos && radius && radius < FAR_KM ? (
+                <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                  <p style={{ fontSize: 15, color: T.inkSoft, margin: "0 0 12px" }}>
+                    {t("radius_none").replace("{n}", radius)}
+                  </p>
+                  <Btn onClick={() => setRadius(0)}>{t("radius_wider")}</Btn>
+                </div>
+              ) : <EmptyState isAdmin={isAdmin} onAdd={onAdd} />
+            )}
           </>
         )}
       </div>
@@ -1203,6 +1309,16 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                        onChange={(v) => setPlace({ ...place, area: v })} />
           </BigField>
 
+          {/* Here, not on the optional step: customers see everybody in their
+              own PIN code first, so this is what puts a listing in front of
+              its neighbours. */}
+          <BigField label={t("p_pincode")} hint={t("w2_pin_hint")}>
+            <input style={{ ...bigInput, maxWidth: 200, fontWeight: 800, letterSpacing: 1 }}
+                   value={f.pincode} inputMode="numeric" maxLength={6}
+                   placeholder={place.pin || "799001"}
+                   onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          </BigField>
+
           <Btn full onClick={() => {
             if (!f.full_name.trim()) return setErr(t("e_name"));
             if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
@@ -1277,12 +1393,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           <BigField label={t("p_landmark")} hint={t("p_addr_private_note")}>
             <input style={bigInput} value={f.landmark} placeholder={t("p_landmark_ph")}
                    onChange={(e) => set("landmark", e.target.value)} />
-          </BigField>
-
-          <BigField label={t("p_pincode")}>
-            <input style={{ ...bigInput, maxWidth: 200 }} value={f.pincode} inputMode="numeric"
-                   maxLength={6} placeholder="799001"
-                   onChange={(e) => set("pincode", e.target.value)} />
           </BigField>
 
           <BigField label={t("w3_about")}>
@@ -1929,6 +2039,7 @@ export default function ServicesPage({
             area: p.area || "", state: p.state,
             lat: typeof p.lat === "number" ? p.lat : undefined,
             lng: typeof p.lng === "number" ? p.lng : undefined,
+            pin: /^\d{6}$/.test(String(p.pin || "")) ? String(p.pin) : undefined,
           };
         }
       }
@@ -1955,6 +2066,17 @@ export default function ServicesPage({
     }).catch(() => {});
     return () => { alive = false; };
   }, [place.area, place.state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A position with no PIN code: the nearest PIN, so "same PIN code first"
+  // works for everybody, not only those who typed theirs.
+  useEffect(() => {
+    if (place.pin || typeof place.lat !== "number") return;
+    let alive = true;
+    pinNear(place.lat, place.lng).then((r) => {
+      if (alive && r) setPlace((p) => (p.lat === place.lat && !p.pin ? { ...p, pin: r.pincode } : p));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [place.lat, place.lng, place.pin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const geo = useMyLocation();
   useEffect(() => {

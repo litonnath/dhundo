@@ -20,7 +20,7 @@
 // ===========================================================================
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName } from "./regions.js";
+import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinNear, pinLookup } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -1408,6 +1408,7 @@ export function LocationPill({ place, onOpen, compact }) {
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>
           {stateName((place && place.state) || DEFAULT_STATE, lang)}
+          {place && place.pin ? ` · ${place.pin}` : ""}
         </span>
       </span>
       <span style={{ color: T.inkFaint, flexShrink: 0 }}><Icon name="chev" size={16} /></span>
@@ -1433,6 +1434,14 @@ export function LocationSheet({ place, onChange, onClose }) {
   // The places nearest the phone, from the place table, to tap when the
   // guess is not quite right.
   const [near, setNear] = useState([]);
+  // The PIN code: filled in from the position, or typed. Results show
+  // everybody in the same PIN code first.
+  const [pin, setPin] = useState((place && place.pin) || "");
+  const pinFor = async (xy) => {
+    if (!xy || typeof xy.lat !== "number") return null;
+    const r = await pinNear(xy.lat, xy.lng).catch(() => null);
+    return r ? r.pincode : null;
+  };
   // Metres. Shown so a 30-metre fix and a 2-kilometre one do not look alike.
   const [acc, setAcc] = useState(null);
 
@@ -1457,6 +1466,8 @@ export function LocationSheet({ place, onChange, onClose }) {
     // The map service names the nearest mapped TOWN when a village is only
     // a dot on the map; the place table knows the village itself.
     const close = typeof got.lat === "number" ? await nearestPlaces(got.lat, got.lng) : [];
+    const gotPin = await pinFor(got);
+    if (gotPin) setPin(gotPin);
     setNear(close.filter((r) => r.km <= 5));
     const fromMap = got.area ? snapToKnown(got.state || state, got.area) : null;
     const named = bestNearName(close, fromMap);
@@ -1485,8 +1496,21 @@ export function LocationSheet({ place, onChange, onClose }) {
   const done = async () => {
     let xy = fix;
     if (!xy && area.trim()) xy = await placeCoords(state, area.trim()).catch(() => null);
-    onChange({ area: area.trim(), state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined });
+    const typed6 = pin.replace(/\D/g, "");
+    const p6 = typed6.length === 6 ? typed6 : await pinFor(xy);
+    onChange({ area: area.trim(), state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
+               pin: p6 || undefined });
     onClose();
+  };
+  // A typed PIN on its own is a location: its name and position come with it.
+  const typePin = async (v) => {
+    const d = v.replace(/\D/g, "").slice(0, 6);
+    setPin(d);
+    if (d.length !== 6) return;
+    const r = await pinLookup(d);
+    if (!r) return;
+    if (typeof r.lat === "number") setFix({ lat: r.lat, lng: r.lng });
+    if (!area.trim() && r.place) { setArea(r.place); setGuessed(r.place); }
   };
 
   return (
@@ -1537,6 +1561,23 @@ export function LocationSheet({ place, onChange, onClose }) {
             {t("location_denied")}
           </div>
         )}
+
+        {/* The PIN code: everybody knows theirs, and people in the same PIN
+            are shown first. Filled in from the position; typing one alone
+            is enough to set the location. */}
+        <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
+                        padding: "8px 12px", borderRadius: 11, border: `1px solid ${T.line}`,
+                        background: T.white }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: T.ink }}>{t("loc_pin")}</span>
+            <span style={{ display: "block", fontSize: 12, color: T.inkFaint, lineHeight: 1.4 }}>{t("loc_pin_hint")}</span>
+          </span>
+          <input value={pin} onChange={(e) => typePin(e.target.value)} inputMode="numeric"
+                 maxLength={6} placeholder="799001" aria-label={t("loc_pin")} style={{
+            ...input, width: 110, minHeight: 44, fontSize: 17, fontWeight: 800, letterSpacing: 1,
+            textAlign: "center",
+          }} />
+        </label>
 
         {/* Shown the moment a name is guessed, phrased as a question rather
             than an announcement. Somebody who sees the wrong village named
@@ -1638,7 +1679,9 @@ export function LocationSheet({ place, onChange, onClose }) {
               // A name from the built-in list carries no position: look it up,
               // so results still sort by distance.
               if (!xy) xy = await placeCoords(state, p).catch(() => null);
-              onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined });
+              const p6 = await pinFor(xy);
+              onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
+                         pin: p6 || undefined });
               onClose();
             }}
           />

@@ -323,6 +323,52 @@ export async function nearestPlaces(lat, lng) {
   }
 }
 
+// The PIN code nearest a position -- how "same PIN code" is worked out for
+// somebody who did not type theirs. { pincode, place, district } or null.
+export async function pinNear(lat, lng) {
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_pin_near`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ p_lat: lat, p_lng: lng }),
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const r = Array.isArray(rows) ? rows[0] : rows;
+    return r && r.pincode ? r : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// A typed PIN code: where it is and what it is called.
+export async function pinLookup(pin) {
+  const d = String(pin || "").replace(/\D/g, "");
+  if (d.length !== 6) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_pincode_lookup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ p_pin: d }),
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const r = Array.isArray(rows) ? rows[0] : rows;
+    return r && r.pincode ? r : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 // The name to show for a phone position: the nearest village or locality
 // from the place table when one is close (a post office only when very
 // close, its position being rougher), otherwise what the map service said.
