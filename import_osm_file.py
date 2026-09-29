@@ -63,6 +63,16 @@ WORK = os.path.expanduser("~/osm")
 PLACE_VALUES = list(KIND)   # city, town, village, hamlet, suburb, ...
 NEAREST_DEGREES = 0.2       # ~20 km: how far outside a boundary still counts
 
+# States whose boundary OpenStreetMap cannot assemble into a closed outline.
+# Arunachal Pradesh's border is disputed and tagged so that the relation does
+# not form a polygon in Geofabrik's extract. A place that falls in no state
+# at all but inside this box is Arunachal: the box starts north of Assam
+# (already tested first) and east of Bhutan's eastern edge.
+#   state: (min_lat, max_lat, min_lng, max_lng)
+FALLBACK_BOXES = {
+    "Arunachal Pradesh": (26.6, 29.5, 91.55, 97.45),
+}
+
 # ISO code -> state, both spellings where ISO renamed one ("CT|CG").
 ISO_TO_STATE = {}
 for _state, _codes in STATES.items():
@@ -178,6 +188,9 @@ class Locator:
         # boundary with tens of thousands of points.
         self.items = [(s, g.bounds, prep(g), g.simplify(0.01))
                       for s, g in areas.items()]
+        # Only for states that really had no boundary this time.
+        self.fallback = [(s, box) for s, box in FALLBACK_BOXES.items()
+                         if s not in areas]
 
     def state_of(self, lat, lng):
         p = Point(lng, lat)
@@ -188,6 +201,12 @@ class Locator:
                 if x0 <= lng <= x1 and y0 <= lat <= y1 and pg.contains(p):
                     return state
                 near.append((state, g))
+        # Before "nearest": inside no outline but inside a missing state's
+        # box means that state. Otherwise Itanagar, 15 km from the Assam
+        # border, would be filed in Assam.
+        for state, (la0, la1, ln0, ln1) in self.fallback:
+            if la0 <= lat <= la1 and ln0 <= lng <= ln1:
+                return state
         best, best_d = None, NEAREST_DEGREES
         for state, g in near:
             d = g.distance(p)
