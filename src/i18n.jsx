@@ -424,6 +424,8 @@ const STRINGS = {
     trust_3_s: "People who can come today",
 
     install_app: "Install app",
+    install_banner: "Get the Dhundo app on your phone",
+    install_short: "Install",
     install_title: "Put this on your phone",
     install_body: "Get the app file and install it, the normal way. No Play Store needed.",
     install_ios: "On iPhone: tap Share, then 'Add to Home Screen'.",
@@ -852,6 +854,8 @@ const STRINGS = {
     trust_3_s: "যারা আজই আসতে পারেন",
 
     install_app: "অ্যাপ ইনস্টল",
+    install_banner: "ফোনে Dhundo অ্যাপ নিন",
+    install_short: "ইনস্টল",
     install_title: "ফোনে রেখে দিন",
     install_body: "অ্যাপ ফাইলটা নামিয়ে সাধারণ নিয়মেই ইনস্টল করুন। প্লে স্টোর লাগবে না।",
     install_ios: "আইফোনে: Share চাপুন, তারপর 'Add to Home Screen'।",
@@ -1279,6 +1283,8 @@ const STRINGS = {
     trust_3_s: "जो आज ही आ सकते हैं",
 
     install_app: "ऐप इंस्टॉल करें",
+    install_banner: "अपने फ़ोन में Dhundo ऐप लें",
+    install_short: "इंस्टॉल",
     install_title: "इसे फ़ोन में रखें",
     install_body: "ऐप फाइल डाउनलोड करके आम तरीके से इंस्टॉल करें। प्ले स्टोर की ज़रूरत नहीं।",
     install_ios: "आईफ़ोन पर: Share दबाएँ, फिर 'Add to Home Screen'।",

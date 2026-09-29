@@ -26,7 +26,7 @@ import {
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
-  BottomNav, AccountPage, ProfilePage, LanguageGate, PopularTrades, matchTrade,
+  BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
@@ -288,7 +288,7 @@ function rateLabel(min, max, suffix = "/day") {
 }
 
 // -------------------------------------------------------------------- browse
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -472,6 +472,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
+            <InstallBanner onOpen={onInstall} />
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
             </h2>
@@ -2010,6 +2011,7 @@ export default function ServicesPage({
           // state means "let me deal with my listing", so send them there.
           onAdd={() => setTab(hasListing && !isAdmin ? "mine" : "add")}
           place={place} setPlace={setPlace}
+          onInstall={() => setInstallOpen(true)}
         />
       )}
 

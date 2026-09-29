@@ -21,7 +21,7 @@
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote } from "./regions.js";
-import { useMyLocation, useInstallPrompt } from "./device.jsx";
+import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
@@ -349,6 +349,38 @@ export function InstallButton({ onOpen }) {
     >
       <Icon name="download" size={15} />
       {t("install_app")}
+    </button>
+  );
+}
+
+// On the front screen: one clear bar to get the app. Not inside the app
+// itself, not once it is installed, and not on an iPhone, which cannot
+// install the APK.
+export function InstallBanner({ onOpen }) {
+  const { isIos, installed } = useInstallPrompt();
+  const { t } = useI18n();
+  if (installed || isIos || isInstalledApp()) return null;
+  return (
+    <button onClick={onOpen} style={{
+      width: "100%", display: "flex", alignItems: "center", gap: 12, marginBottom: 18,
+      padding: "12px 14px", borderRadius: 16, cursor: "pointer", textAlign: "left",
+      background: "linear-gradient(90deg, #054291, #0A5BC4)", border: "none",
+      color: "#fff", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(5,66,145,0.25)",
+    }}>
+      <span style={{
+        width: 44, height: 44, borderRadius: 12, background: "#fff", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}><img src="/logo-mark.png" alt="" width="34" height="34" /></span>
+      <span style={{ flex: 1, fontSize: 15, fontWeight: 800, lineHeight: 1.3 }}>
+        {t("install_banner")}
+      </span>
+      <span style={{
+        display: "inline-flex", alignItems: "center", gap: 6, background: "#fff",
+        color: "#054291", borderRadius: 22, padding: "9px 14px", fontSize: 14,
+        fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0,
+      }}>
+        <Icon name="download" size={16} /> {t("install_short")}
+      </span>
     </button>
   );
 }

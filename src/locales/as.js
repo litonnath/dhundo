@@ -354,6 +354,8 @@ export default {
   trust_3_t: "আপোনাৰ ওচৰৰ",
   trust_3_s: "আজিয়েই আহিব পৰা মানুহ",
   install_app: "এপ ইনষ্টল কৰক",
+  install_banner: "আপোনাৰ ফোনত Dhundo এপ লওক",
+  install_short: "ইনষ্টল",
   install_title: "এইটো আপোনাৰ ফোনত ৰাখক",
   install_body: "এপ ফাইলটো লৈ সাধাৰণভাৱে ইনষ্টল কৰক। Play Store নালাগে।",
   install_ios: "iPhone ত: Share টিপক, তাৰ পিছত 'Add to Home Screen'।",
