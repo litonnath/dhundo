@@ -65,6 +65,10 @@ const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
+    ex_title: "See how Dhundo works",
+    ex_note: "These are examples, not real people. Real people near you appear here the moment they switch on \"Available now\".",
+    ex_tag: "Example",
+    ex_cant_call: "Example — not a real person",
     mode_find: "Find help",
     mode_work: "Work",
     wk_title: "Get work near you",
@@ -470,6 +474,10 @@ const STRINGS = {
   },
 
   bn: {
+    ex_title: "দেখুন Dhundo কীভাবে কাজ করে",
+    ex_note: "এগুলো শুধু উদাহরণ, আসল মানুষ নয়। আপনার কাছের আসল মানুষরা \"এখন পাওয়া যাবে\" চালু করলেই এখানে দেখা যাবে।",
+    ex_tag: "উদাহরণ",
+    ex_cant_call: "উদাহরণ — আসল মানুষ নয়",
     mode_find: "সাহায্য খুঁজুন",
     mode_work: "কাজ",
     wk_title: "কাছেই কাজ পান",
@@ -874,6 +882,10 @@ const STRINGS = {
     m_views: "বার নম্বর দেখা হয়েছে",
   },
   hi: {
+    ex_title: "देखें Dhundo कैसे काम करता है",
+    ex_note: "ये सिर्फ़ उदाहरण हैं, असली लोग नहीं। आपके पास के असली लोग \"अभी उपलब्ध\" चालू करते ही यहाँ दिखेंगे।",
+    ex_tag: "उदाहरण",
+    ex_cant_call: "उदाहरण — असली व्यक्ति नहीं",
     mode_find: "मदद ढूंढें",
     mode_work: "काम",
     wk_title: "पास में काम पाएँ",

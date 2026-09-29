@@ -1934,6 +1934,13 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
             <span style={{ fontSize: 16.5, fontWeight: 800, color: T.ink }}>
               {row.display_name}
             </span>
+            {row.is_example && (
+              <span style={{
+                fontSize: 10.5, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
+                color: T.amber, background: "#FFF5E0", border: "1px solid rgba(178,106,0,0.3)",
+                padding: "2px 7px", borderRadius: 6,
+              }}>{t("ex_tag")}</span>
+            )}
             {row.verified && (
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11,
@@ -2085,7 +2092,16 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
       <div style={{
         display: "flex", gap: 9, alignItems: "center", padding: "10px 14px 14px",
       }}>
-        {revealed ? (
+        {row.is_example ? (
+          // An example card is never callable: there is nobody behind it.
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 7, minHeight: 46,
+            padding: "0 14px", borderRadius: 10, background: T.paper,
+            border: `1px dashed ${T.line}`, color: T.inkFaint, fontSize: 13, fontWeight: 700,
+          }}>
+            <Icon name="alert" size={16} /> {t("ex_cant_call")}
+          </span>
+        ) : revealed ? (
           <a href={`tel:${String(revealed).replace(/\s/g, "")}`} style={{
             display: "inline-flex", alignItems: "center", gap: 8, background: T.green,
             color: "#fff", padding: "12px 18px", borderRadius: 10, fontWeight: 700,

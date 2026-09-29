@@ -2,6 +2,10 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ex_title: "Dhundo ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ನೋಡಿ",
+  ex_note: "ಇವು ಉದಾಹರಣೆಗಳು ಮಾತ್ರ, ನಿಜವಾದ ವ್ಯಕ್ತಿಗಳಲ್ಲ. ನಿಮ್ಮ ಹತ್ತಿರದ ನಿಜವಾದ ವ್ಯಕ್ತಿಗಳು \"ಈಗ ಲಭ್ಯ\" ಆನ್ ಮಾಡಿದ ತಕ್ಷಣ ಇಲ್ಲಿ ಕಾಣುತ್ತಾರೆ.",
+  ex_tag: "ಉದಾಹರಣೆ",
+  ex_cant_call: "ಉದಾಹರಣೆ — ನಿಜವಾದ ವ್ಯಕ್ತಿಯಲ್ಲ",
   mode_find: "ಸಹಾಯ ಹುಡುಕಿ",
   mode_work: "ಕೆಲಸ",
   wk_title: "ಹತ್ತಿರದಲ್ಲೇ ಕೆಲಸ ಪಡೆಯಿರಿ",

@@ -2,6 +2,10 @@
 // i18n.jsx. Written to be plain and spoken. Worth a read by a native speaker
 // before promoting it; each line is a one-line fix.
 export default {
+  ex_title: "ਦੇਖੋ Dhundo ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ",
+  ex_note: "ਇਹ ਸਿਰਫ਼ ਉਦਾਹਰਣਾਂ ਹਨ, ਅਸਲੀ ਲੋਕ ਨਹੀਂ। ਤੁਹਾਡੇ ਨੇੜੇ ਦੇ ਅਸਲੀ ਲੋਕ \"ਹੁਣ ਉਪਲਬਧ\" ਚਾਲੂ ਕਰਦੇ ਹੀ ਇੱਥੇ ਦਿਖਣਗੇ।",
+  ex_tag: "ਉਦਾਹਰਣ",
+  ex_cant_call: "ਉਦਾਹਰਣ — ਅਸਲੀ ਵਿਅਕਤੀ ਨਹੀਂ",
   mode_find: "ਮਦਦ ਲੱਭੋ",
   mode_work: "ਕੰਮ",
   wk_title: "ਨੇੜੇ ਕੰਮ ਪਾਓ",

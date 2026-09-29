@@ -32,7 +32,7 @@ import { captureFromUrl, redeemPending } from "./referral.js";
 import { useMyLocation } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
-import { useI18n, tradeName, STATES, DEFAULT_STATE } from "./i18n.jsx";
+import { useI18n, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 
 // ---------------------------------------------------------------- data layer
 function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
@@ -324,6 +324,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
   // switches on shows up without anybody pulling to refresh. On the home
   // screen it is everyone nearby; inside a category, that category.
   const [live, setLive] = useState([]);
+  const [liveLoaded, setLiveLoaded] = useState(false);
   const [onlyLive, setOnlyLive] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -343,8 +344,9 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
             [x.display_name, x.trade_name, x.locality, x.city]
               .some((v) => String(v || "").toLowerCase().includes(q)));
           setLive(rows);
+          setLiveLoaded(true);
         })
-        .catch(() => alive && setLive([]));
+        .catch(() => { if (alive) { setLive([]); setLiveLoaded(true); } });
     fetchLive();
     const id = setInterval(fetchLive, 60000);
     return () => { alive = false; clearInterval(id); };
@@ -420,6 +422,34 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showGrid ? (
           <>
+            {/* Nobody real is available nearby yet: show what a listing
+                looks like, labelled as examples on the heading AND on every
+                card, and not callable. They live here in the code, never in
+                the database, and go away by themselves the moment one real
+                person nearby switches on. */}
+            {liveLoaded && live.length === 0 && (
+              <div style={{ marginBottom: 30 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 6px" }}>
+                  {t("ex_title")}
+                </h2>
+                <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>
+                  {t("ex_note")}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {exampleRows((place && place.area) || stateName(state, lang)).map((row) => (
+                    <ListingCard
+                      key={row.id}
+                      row={row}
+                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                      tradeLabel={row.trade_name}
+                      canCall={false}
+                      onCall={() => {}}
+                      otherLabels={tradeLabels}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {live.length > 0 && (
               <div style={{ marginBottom: 30 }}>
                 <h2 style={{
@@ -582,6 +612,31 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
       </div>
     </>
   );
+}
+
+// ----------------------------------------------------------------- examples
+//
+// What a listing looks like, for a first visit to a place where nobody has
+// switched on yet. Every one carries is_example, which puts an "Example" tag
+// beside the name and replaces Call with "not a real person" -- they are a
+// picture of the product, never a claim that these people exist.
+function exampleRows(place) {
+  const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+  const base = { is_example: true, available_now: true, locality: null, city: place };
+  return [
+    { ...base, id: "example-auto", display_name: "Ramesh", trade_name: "Auto rickshaw",
+      trade_group: "Drivers", trade_kind: "worker", distance_km: 0.8,
+      live_seen_at: ago(2) },
+    { ...base, id: "example-mason", display_name: "Sunil", trade_name: "Mason (mistri)",
+      trade_group: "Construction", trade_kind: "worker", distance_km: 1.4,
+      day_rate_min: 700, day_rate_max: 900, years_experience: 8, live_seen_at: ago(5) },
+    { ...base, id: "example-electrician", display_name: "Bikash", trade_name: "Electrician",
+      trade_group: "Repairs", trade_kind: "worker", distance_km: 2.3,
+      day_rate_min: 600, day_rate_max: 800, years_experience: 5, live_seen_at: ago(1) },
+    { ...base, id: "example-shop", display_name: "Maa Tara Hardware & Cement",
+      trade_name: "Cement shop", trade_group: "Suppliers", trade_kind: "supplier",
+      distance_km: 2.9, live_seen_at: ago(0) },
+  ];
 }
 
 // ---------------------------------------------------------------------- form
