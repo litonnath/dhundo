@@ -1013,8 +1013,15 @@ function ListingForm({ api, trades, user, isAdmin, onDone, place, setPlace }) {
               </div>
               {/* Full-width rows rather than wrapped chips: a trade name in
                   Bengali runs long, and a half-cut chip is not something you
-                  tap with confidence. */}
-              <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+                  tap with confidence. Inside their own scrolling box, about
+                  five rows tall: a group like Suppliers has a dozen, and the
+                  whole page scrolling pushed "Next" out of sight. */}
+              <div style={{
+                display: "grid", gap: 8, marginBottom: 14,
+                maxHeight: 316, overflowY: "auto", overscrollBehavior: "contain",
+                padding: 8, border: `1px solid ${T.line}`, borderRadius: 14,
+                background: T.paper,
+              }}>
                 {trades.filter((x) => x.group_name === group).map((tr) => {
                   const on = picked.includes(tr.slug);
                   return (
