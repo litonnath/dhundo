@@ -28,7 +28,7 @@ import {
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown } from "./regions.js";
+import { snapToKnown, placeCoords } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -1927,6 +1927,18 @@ export default function ServicesPage({
   useEffect(() => {
     try { window.localStorage.setItem("dhundo_place", JSON.stringify(place)); } catch (_) {}
   }, [place]);
+
+  // An area saved before places carried a position (or typed by hand): look
+  // its position up once, so the search sorts by distance instead of
+  // matching the area name exactly.
+  useEffect(() => {
+    if (!place.area || typeof place.lat === "number") return;
+    let alive = true;
+    placeCoords(place.state, place.area).then((xy) => {
+      if (alive && xy) setPlace((p) => (p.area === place.area && typeof p.lat !== "number" ? { ...p, ...xy } : p));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [place.area, place.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const geo = useMyLocation();
   useEffect(() => {

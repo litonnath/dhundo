@@ -280,6 +280,20 @@ async function searchDb(state, q, signal) {
   }
 }
 
+// Where a named place is, for a place chosen WITHOUT a position -- a name
+// from the built-in list, or one typed by hand. Without it the search can
+// only match the area name exactly, and a customer in "Dharmanagar" never
+// sees a shop listed under the village next door. An exact name match from
+// the place table, or null.
+export async function placeCoords(state, name) {
+  const n = String(name || "").trim();
+  if (n.length < 3) return null;
+  const rows = await searchDb(state, n);
+  const low = n.toLowerCase();
+  const hit = rows.find((r) => String(r.place || "").toLowerCase() === low && typeof r.lat === "number");
+  return hit ? { lat: hit.lat, lng: hit.lng } : null;
+}
+
 export async function searchRemote(state, query, signal) {
   const typed = String(query || "").trim();
   // Typed in an Indian script: search under each likely English spelling

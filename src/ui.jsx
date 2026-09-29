@@ -20,7 +20,7 @@
 // ===========================================================================
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote } from "./regions.js";
+import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -1474,8 +1474,10 @@ export function LocationSheet({ place, onChange, onClose }) {
   // Without them the browse falls back to name matching, which is the thing
   // the distance work exists to replace.
   const [fix, setFix] = useState(null);
-  const done = () => {
-    onChange({ area: area.trim(), state, lat: fix && fix.lat, lng: fix && fix.lng });
+  const done = async () => {
+    let xy = fix;
+    if (!xy && area.trim()) xy = await placeCoords(state, area.trim()).catch(() => null);
+    onChange({ area: area.trim(), state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined });
     onClose();
   };
 
@@ -1598,13 +1600,13 @@ export function LocationSheet({ place, onChange, onClose }) {
             // the fold, so the tap looked as if it had done nothing. The
             // place's own position comes along when it has one, so results
             // sort by distance even for somebody who never shares GPS.
-            onPick={(p, meta) => {
+            onPick={async (p, meta) => {
               const hasXY = meta && typeof meta.lat === "number" && typeof meta.lng === "number";
-              onChange({
-                area: p, state,
-                lat: hasXY ? meta.lat : (fix && fix.lat),
-                lng: hasXY ? meta.lng : (fix && fix.lng),
-              });
+              let xy = hasXY ? { lat: meta.lat, lng: meta.lng } : fix;
+              // A name from the built-in list carries no position: look it up,
+              // so results still sort by distance.
+              if (!xy) xy = await placeCoords(state, p).catch(() => null);
+              onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined });
               onClose();
             }}
           />
