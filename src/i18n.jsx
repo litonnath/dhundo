@@ -65,6 +65,8 @@ const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
+    nav_account: "Account",
+    voice_listen: "Speak to search",
     ex_title: "See how Dhundo works",
     ex_note: "These are examples, not real people. Real people near you appear here the moment they switch on \"Available now\".",
     ex_tag: "Example",
@@ -474,6 +476,8 @@ const STRINGS = {
   },
 
   bn: {
+    nav_account: "অ্যাকাউন্ট",
+    voice_listen: "বলে খুঁজুন",
     ex_title: "দেখুন Dhundo কীভাবে কাজ করে",
     ex_note: "এগুলো শুধু উদাহরণ, আসল মানুষ নয়। আপনার কাছের আসল মানুষরা \"এখন পাওয়া যাবে\" চালু করলেই এখানে দেখা যাবে।",
     ex_tag: "উদাহরণ",
@@ -882,6 +886,8 @@ const STRINGS = {
     m_views: "বার নম্বর দেখা হয়েছে",
   },
   hi: {
+    nav_account: "खाता",
+    voice_listen: "बोलकर खोजें",
     ex_title: "देखें Dhundo कैसे काम करता है",
     ex_note: "ये सिर्फ़ उदाहरण हैं, असली लोग नहीं। आपके पास के असली लोग \"अभी उपलब्ध\" चालू करते ही यहाँ दिखेंगे।",
     ex_tag: "उदाहरण",

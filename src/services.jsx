@@ -26,6 +26,7 @@ import {
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
+  BottomNav, AccountPage, LanguageGate, PopularTrades, matchTrade,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
@@ -376,7 +377,12 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
     setRevealing(row.id);
     try {
       const r = one(await api.reveal(row.id));
-      if (r && r.ok) setRevealed((p) => ({ ...p, [row.id]: r.phone }));
+      if (r && r.ok) {
+        setRevealed((p) => ({ ...p, [row.id]: r.phone }));
+        // One tap should be a call. The number stays on the card too, with
+        // WhatsApp beside it, for anybody who would rather message.
+        try { window.location.href = `tel:${String(r.phone).replace(/\s/g, "")}`; } catch (_) {}
+      }
       else setNote(
         r && r.reason === "rate_limited"
           ? t("e_rate")
@@ -417,41 +423,28 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
 
   return (
     <>
-      <Hero search={search} setSearch={setSearch} />
+      <Hero search={search} setSearch={setSearch} compact={!showGrid} onVoice={(said) => {
+        // A trade name, in any language, goes straight to that trade;
+        // anything else becomes an ordinary search.
+        const tr = matchTrade(said, trades);
+        if (tr) { setSearch(""); setGroup(tr.group_name); setTrade(tr.slug); }
+        else setSearch(said);
+      }} />
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showGrid ? (
           <>
-            {/* Nobody real is available nearby yet: show what a listing
-                looks like, labelled as examples on the heading AND on every
-                card, and not callable. They live here in the code, never in
-                the database, and go away by themselves the moment one real
-                person nearby switches on. */}
-            {liveLoaded && live.length === 0 && (
-              <div style={{ marginBottom: 30 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 6px" }}>
-                  {t("ex_title")}
-                </h2>
-                <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>
-                  {t("ex_note")}
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {exampleRows((place && place.area) || stateName(state, lang)).map((row) => (
-                    <ListingCard
-                      key={row.id}
-                      row={row}
-                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
-                      tradeLabel={row.trade_name}
-                      canCall={false}
-                      onCall={() => {}}
-                      otherLabels={tradeLabels}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Home, in the order a first-time visitor needs it: the jobs
+                people ask for most as big tiles, one tap to people; who can
+                come right now; every category; then, only while nobody real
+                is available nearby, two labelled examples. */}
+            <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
+              {t("what_need")}
+            </h2>
+            <PopularTrades trades={trades}
+                           onPick={(tr) => { setGroup(tr.group_name); setTrade(tr.slug); }} />
             {live.length > 0 && (
-              <div style={{ marginBottom: 30 }}>
+              <div style={{ marginTop: 28 }}>
                 <h2 style={{
                   fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 12px",
                   display: "flex", alignItems: "center", gap: 8,
@@ -475,10 +468,39 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
                 </div>
               </div>
             )}
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 14px" }}>
-              {t("what_need")}
+
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: "28px 0 12px" }}>
+              {t("all_categories")}
             </h2>
             <CategoryGrid groups={groups} counts={counts} onPick={setGroup} />
+            {/* Nobody real is available nearby yet: show what a listing
+                looks like, labelled as examples on the heading AND on every
+                card, and not callable. They live here in the code, never in
+                the database, and go away by themselves the moment one real
+                person nearby switches on. */}
+            {liveLoaded && live.length === 0 && (
+              <div style={{ marginTop: 30 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 6px" }}>
+                  {t("ex_title")}
+                </h2>
+                <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>
+                  {t("ex_note")}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {exampleRows((place && place.area) || stateName(state, lang)).slice(0, 2).map((row) => (
+                    <ListingCard
+                      key={row.id}
+                      row={row}
+                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                      tradeLabel={row.trade_name}
+                      canCall={false}
+                      onCall={() => {}}
+                      otherLabels={tradeLabels}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <TrustBar />
           </>
         ) : (
@@ -1782,6 +1804,19 @@ export default function ServicesPage({
   }), [base, supabaseUrl, user]);
   const { t, lang } = useI18n();
   const [tab, setTab] = useState("browse");
+
+  // First visit: a full-screen language choice, once. Anybody who already
+  // picked a language (or was here before this screen existed) skips it.
+  const [langGate, setLangGate] = useState(() => {
+    try {
+      return !window.localStorage.getItem("dhundo_lang_chosen") &&
+             !window.localStorage.getItem("services_lang");
+    } catch (_) { return false; }
+  });
+  const closeLangGate = () => {
+    try { window.localStorage.setItem("dhundo_lang_chosen", "1"); } catch (_) {}
+    setLangGate(false);
+  };
   const [installOpen, setInstallOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
@@ -1888,12 +1923,12 @@ export default function ServicesPage({
   // Rapido's customer app and captain app, as one app with a switch. The
   // last mode used is remembered; somebody with a listing who has never
   // chosen starts in Work, because that is why a worker opens the app.
-  const WORK_TABS = ["work", "mine"];
-  const mode = WORK_TABS.includes(tab) || (tab === "add" && !isAdmin) ? "work" : "find";
-  const setMode = (m) => {
-    try { window.localStorage.setItem("dhundo_mode", m); } catch (_) {}
-    setTab(m === "work" ? "work" : "browse");
-  };
+  // Remember the half of the app last used, for next time.
+  useEffect(() => {
+    if (tab === "work" || tab === "browse") {
+      try { window.localStorage.setItem("dhundo_mode", tab === "work" ? "work" : "find"); } catch (_) {}
+    }
+  }, [tab]);
   const modeChosen = useRef(false);
   useEffect(() => {
     if (!hasListing || isAdmin || modeChosen.current) return;
@@ -1944,23 +1979,16 @@ export default function ServicesPage({
       background: T.paper, minHeight: "100vh",
       fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       color: T.ink,
+      // Room for the bottom bar, so it never covers the last card.
+      paddingBottom: "calc(72px + env(safe-area-inset-bottom))",
     }}>
+      {langGate && <LanguageGate onDone={closeLangGate} />}
       <Header
         tab={tab}
         setTab={setTab}
         isAdmin={isAdmin}
-        account={signedIn ? user : null}
-        onSignOut={onSignOut}
-        onSignIn={onSignIn}
-        onInstall={() => setInstallOpen(true)}
         place={place}
         onOpenLocation={() => setLocOpen(true)}
-        hasListing={hasListing}
-        walletPaise={walletPaise}
-        onOpenWallet={() => setWalletOpen(true)}
-        mode={mode}
-        onMode={setMode}
-        online={avail.online}
       />
 
       {outside && (
@@ -2021,7 +2049,7 @@ export default function ServicesPage({
         </div>
       )}
 
-      {tab !== "browse" && tab !== "mine" && tab !== "work" && (
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "26px 16px 60px" }}>
           {tab === "add" && (
             <>
@@ -2061,8 +2089,25 @@ export default function ServicesPage({
         </div>
       )}
 
+      {tab === "account" && (
+        <AccountPage
+          account={signedIn ? user : null}
+          walletPaise={walletPaise}
+          onOpenWallet={() => setWalletOpen(true)}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onInstall={() => setInstallOpen(true)}
+          hasListing={hasListing}
+          onOpenListing={() => setTab("mine")}
+          onList={() => setTab("add")}
+        />
+      )}
+
       <SiteFooter setTab={setTab} hasListing={hasListing && !isAdmin}
                   onInstall={() => setInstallOpen(true)} />
+
+      <BottomNav tab={tab} setTab={setTab} online={avail.online}
+                 signedIn={signedIn} hasListing={hasListing} />
     </div>
   );
 }

@@ -2,6 +2,8 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  nav_account: "একাউণ্ট",
+  voice_listen: "কৈ বিচাৰক",
   ex_title: "চাওক Dhundo কেনেকৈ কাম কৰে",
   ex_note: "এইবোৰ কেৱল উদাহৰণ, প্ৰকৃত মানুহ নহয়। আপোনাৰ ওচৰৰ প্ৰকৃত মানুহে \"এতিয়া উপলব্ধ\" অন কৰাৰ লগে লগে ইয়াত দেখা যাব।",
   ex_tag: "উদাহৰণ",

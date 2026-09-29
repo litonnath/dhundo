@@ -2,6 +2,8 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  nav_account: "അക്കൗണ്ട്",
+  voice_listen: "സംസാരിച്ച് തിരയൂ",
   ex_title: "Dhundo എങ്ങനെ പ്രവർത്തിക്കുന്നു എന്ന് കാണൂ",
   ex_note: "ഇവ ഉദാഹരണങ്ങൾ മാത്രമാണ്, യഥാർത്ഥ ആളുകളല്ല. നിങ്ങളുടെ അടുത്തുള്ള യഥാർത്ഥ ആളുകൾ \"ഇപ്പോൾ ലഭ്യം\" ഓണാക്കുമ്പോൾ ഇവിടെ കാണാം.",
   ex_tag: "ഉദാഹരണം",

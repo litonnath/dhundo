@@ -2,6 +2,8 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  nav_account: "ଖାତା",
+  voice_listen: "କହି ଖୋଜନ୍ତୁ",
   ex_title: "Dhundo କିପରି କାମ କରେ ଦେଖନ୍ତୁ",
   ex_note: "ଏଗୁଡ଼ିକ କେବଳ ଉଦାହରଣ, ପ୍ରକୃତ ଲୋକ ନୁହଁନ୍ତି। ଆପଣଙ୍କ ପାଖର ପ୍ରକୃତ ଲୋକ \"ଏବେ ଉପଲବ୍ଧ\" ଚାଲୁ କରିବା ମାତ୍ରେ ଏଠାରେ ଦେଖାଯିବେ।",
   ex_tag: "ଉଦାହରଣ",

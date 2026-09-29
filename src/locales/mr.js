@@ -2,6 +2,8 @@
 // Written to be plain and spoken, like the Hindi and Bengali. Worth a read by
 // a native speaker before promoting it; each line is a one-line fix.
 export default {
+  nav_account: "खाते",
+  voice_listen: "बोलून शोधा",
   ex_title: "Dhundo कसे काम करते ते पाहा",
   ex_note: "ही फक्त उदाहरणे आहेत, खरी माणसे नाहीत. तुमच्या जवळची खरी माणसे \"आत्ता उपलब्ध\" चालू करताच इथे दिसतील.",
   ex_tag: "उदाहरण",

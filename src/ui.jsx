@@ -19,7 +19,7 @@
 //     bundle stays small enough to open on a 3G connection
 // ===========================================================================
 import React, { useState } from "react";
-import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote } from "./regions.js";
 import { useMyLocation, useInstallPrompt } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
@@ -1566,115 +1566,101 @@ export function LocationSheet({ place, onChange, onClose }) {
 // Two rows on a phone: identity and location on top, navigation below. The
 // single-row version pushed the tabs onto a wrapped third line and left the
 // location squeezed to three characters.
-export function Header({
-  tab, setTab, isAdmin, account, onSignOut, onSignIn, onInstall,
-  place, onOpenLocation, hasListing = false, walletPaise = null, onOpenWallet,
-  mode = "find", onMode, online = false,
-}) {
+export function Header({ setTab, isAdmin, tab, place, onOpenLocation }) {
   const { t } = useI18n();
+  // One row: who we are, where you are, which language. Everything you DO
+  // lives in the bottom bar, within reach of a thumb -- two rows of small
+  // controls up here was more than a first-time user could take in, and on
+  // a 360px phone the language button was pushed off the edge.
   return (
     <div style={{
       background: T.white, borderBottom: `1px solid ${T.line}`,
       position: "sticky", top: 0, zIndex: 50,
     }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "8px 14px 0" }}>
-        {/* Row one is identity and place -- the two things that have to be
-            legible before anything else. The language and install controls
-            moved down to row two so they cannot squeeze the location. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => setTab("browse")}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
-                     minHeight: 44, flexShrink: 0 }}
-            aria-label="Dhundo"
-          >
-            <DhundoLogo size={31} />
-          </button>
-
-          <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
-
-          {/* No spacer div after this: a flex:1 spacer and a flex:1 pill
-              split the leftover space between them, which is how the area
-              name ended up truncated to "Krishna..." with 90px of empty
-              header beside it. The pill takes the room instead. */}
-          <LocationPill place={place} onOpen={onOpenLocation} />
-
-          {account ? (
-            // Was 12.5px in inkFaint with no border -- barely visible, and
-            // the only way out of the app. Now a real bordered control at
-            // full ink, the same size as Sign in was.
-            <button onClick={onSignOut} title={account.phone || ""} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0,
-              background: T.white, border: `1px solid ${T.line}`, borderRadius: 22,
-              cursor: "pointer", padding: "8px 13px", fontSize: 13.5, fontWeight: 700,
-              color: T.ink, minHeight: 40, whiteSpace: "nowrap", fontFamily: "inherit",
-            }}>
-              <Icon name="user" size={16} style={{ color: T.brandDark }} />
-              {t("nav_signout")}
-            </button>
-          ) : (
-            <button onClick={onSignIn} style={{
-              display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-              background: "none", border: "none", cursor: "pointer", padding: "0 2px",
-              fontSize: 13.5, fontWeight: 700, color: T.brandDark, minHeight: 44,
-              whiteSpace: "nowrap", fontFamily: "inherit",
-            }}>
-              <Icon name="user" size={18} />{t("nav_signin")}
-            </button>
-          )}
-        </div>
-
-        {/* Navigation. Scrolls sideways rather than wrapping, so the header
-            keeps the same height whatever the language. */}
-        <div style={{
-          display: "flex", gap: 6, alignItems: "center", padding: "2px 0 8px",
-          overflowX: "auto", scrollbarWidth: "none",
-        }}>
-          <ModeSwitch mode={mode} onMode={onMode} online={online} />
-          {/* Work mode's own tabs. "List yourself" disappears once the
-              person has a listing: it would lead to a form that refuses a
-              second one, and "My listing" is right beside it. */}
-          {mode === "work" && !hasListing && !isAdmin && (
-            <Chip active={tab === "add"} onClick={() => setTab("add")}>{t("nav_list")}</Chip>
-          )}
-          {mode === "work" && account && hasListing && (
-            <Chip active={tab === "mine"} onClick={() => setTab("mine")}>{t("nav_mine")}</Chip>
-          )}
-          {/* An admin adds other people's listings from either mode. */}
-          {isAdmin && (
-            <Chip active={tab === "add"} onClick={() => setTab("add")}>{t("nav_add")}</Chip>
-          )}
-          {isAdmin && (
-            <Chip active={tab === "manage"} onClick={() => setTab("manage")}>{t("nav_manage")}</Chip>
-          )}
-          {/* The balance, carried in the nav row rather than row one: row one
-              is the logo, the location and the way out, and adding a fourth
-              control there is what squeezed the area name to three letters
-              the last time. The row scrolls sideways, so it always fits.
-              Shown only once the balance has actually loaded -- a chip that
-              says ₹0 and then changes to ₹5 looks like money appearing from
-              nowhere. */}
-          {/* Its own button rather than a Chip: Chip is a plain <button> and
-              the icon inside it stacked above the amount instead of sitting
-              beside it. inline-flex fixes that. */}
-          {account && walletPaise !== null && (
-            <button onClick={onOpenWallet} aria-label={t("wal_title")} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0,
-              padding: "9px 14px", borderRadius: 22, minHeight: 40,
-              border: `1px solid ${T.line}`, background: T.white, color: T.ink,
-              fontSize: 13.5, fontWeight: 800, cursor: "pointer",
-              fontFamily: "inherit", whiteSpace: "nowrap",
-            }}>
-              <Icon name="wallet" size={16} style={{ color: T.brandDark }} />
-              {rupees(walletPaise)}
-            </button>
-          )}
-          <span style={{ flex: 1, minWidth: 8 }} />
-          <InstallButton onOpen={onInstall} />
-          <LanguageSwitch />
-        </div>
+      <div style={{
+        maxWidth: 1000, margin: "0 auto", padding: "8px 14px",
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <button
+          onClick={() => setTab("browse")}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
+                   minHeight: 44, flexShrink: 0 }}
+          aria-label="Dhundo"
+        >
+          <DhundoLogo size={31} />
+        </button>
+        <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
+        <LocationPill place={place} onOpen={onOpenLocation} />
+        <LanguageSwitch />
       </div>
+
+      {/* An admin's extra tools, on their own row so nobody else sees them. */}
+      {isAdmin && (
+        <div style={{
+          maxWidth: 1000, margin: "0 auto", padding: "0 14px 8px",
+          display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none",
+        }}>
+          <Chip active={tab === "add"} onClick={() => setTab("add")}>{t("nav_add")}</Chip>
+          <Chip active={tab === "manage"} onClick={() => setTab("manage")}>{t("nav_manage")}</Chip>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ------------------------------------------------------------- bottom bar
+//
+// Find, Work, Account: the three things anybody comes here to do, as big
+// icons with words under them, where a thumb already is -- the pattern
+// every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
+// carries a green dot while the worker is online, so they can see from any
+// screen that customers can still find them.
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false }) {
+  const { t } = useI18n();
+  const workTabs = ["work", "mine"];
+  const current =
+    tab === "account" ? "account"
+    : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
+    : "find";
+  const item = (key, icon, label, go, dot) => {
+    const on = current === key;
+    return (
+      <button key={key} onClick={go} aria-current={on ? "page" : undefined} style={{
+        flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", gap: 3, minHeight: 60, background: "none",
+        border: "none", cursor: "pointer", fontFamily: "inherit", position: "relative",
+        color: on ? T.brandDark : T.inkFaint,
+      }}>
+        <span style={{
+          width: 52, height: 30, borderRadius: 15, display: "flex", alignItems: "center",
+          justifyContent: "center", background: on ? T.brandSoft : "transparent",
+          position: "relative",
+        }}>
+          <Icon name={icon} size={23} />
+          {dot && (
+            <span style={{
+              position: "absolute", top: 3, right: 10, width: 9, height: 9, borderRadius: "50%",
+              background: "#1FA85A", border: "2px solid #fff",
+            }} />
+          )}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: on ? 800 : 600, lineHeight: 1.1 }}>{label}</span>
+      </button>
+    );
+  };
+  return (
+    <nav aria-label="Dhundo" style={{
+      position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60,
+      background: T.white, borderTop: `1px solid ${T.line}`,
+      boxShadow: "0 -4px 18px rgba(15,20,25,0.06)",
+      paddingBottom: "env(safe-area-inset-bottom)",
+    }}>
+      <div style={{ maxWidth: 560, margin: "0 auto", display: "flex" }}>
+        {item("find", "search", t("mode_find"), () => setTab("browse"))}
+        {item("work", "construction", t("mode_work"), () => setTab("work"), online)}
+        {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+      </div>
+    </nav>
   );
 }
 
@@ -1689,41 +1675,6 @@ export function LiveDot({ light = false }) {
     }}>
       <style>{"@keyframes dhundoPulse{0%,100%{opacity:1}50%{opacity:.45}}"}</style>
     </span>
-  );
-}
-
-// ----------------------------------------------------------- mode switch
-// Find | Work, the split between the customer app and the captain app.
-// A green dot on Work while the worker is online, so they can see from any
-// screen that customers can still find them.
-function ModeSwitch({ mode, onMode, online }) {
-  const { t } = useI18n();
-  const seg = (m, label) => {
-    const on = mode === m;
-    return (
-      <button onClick={() => onMode && onMode(m)} aria-pressed={on} style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "8px 14px", borderRadius: 20, border: "none", minHeight: 36,
-        background: on ? T.brandDark : "transparent", color: on ? "#fff" : T.inkSoft,
-        fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-        whiteSpace: "nowrap",
-      }}>
-        {m === "work" && online && (
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2BC46F",
-                         boxShadow: "0 0 0 3px rgba(43,196,111,0.25)" }} />
-        )}
-        {label}
-      </button>
-    );
-  };
-  return (
-    <div style={{
-      display: "inline-flex", flexShrink: 0, padding: 2, borderRadius: 22,
-      background: T.paper, border: `1px solid ${T.line}`,
-    }}>
-      {seg("find", t("mode_find"))}
-      {seg("work", t("mode_work"))}
-    </div>
   );
 }
 
@@ -1759,14 +1710,16 @@ export function OutOfArea({ state, showing, onDismiss }) {
 // The area field used to live here beside the search box. It has moved into
 // the header, where it is set once and stays visible -- having it in two
 // places meant two sources of truth for the single most important filter.
-export function Hero({ search, setSearch }) {
+export function Hero({ search, setSearch, onVoice, compact = false }) {
   const { t } = useI18n();
+  // Compact once somebody is looking at results: the welcome line has done
+  // its job, and on a small phone it was pushing the first card off screen.
   return (
     <div style={{
       background: `linear-gradient(160deg, ${T.brandDeep} 0%, ${T.brandDark} 55%, ${T.brand} 100%)`,
-      padding: "30px 16px 58px", position: "relative",
+      padding: compact ? "12px 16px 50px" : "30px 16px 58px", position: "relative",
     }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", display: compact ? "none" : "block" }}>
         <h1 style={{
           color: "#fff", fontSize: "clamp(23px, 5vw, 34px)", fontWeight: 800,
           lineHeight: 1.2, margin: "0 0 9px", letterSpacing: -0.4, maxWidth: 620,
@@ -1778,7 +1731,7 @@ export function Hero({ search, setSearch }) {
       </div>
 
       <div style={{
-        maxWidth: 1000, margin: "22px auto -44px", background: T.white,
+        maxWidth: 1000, margin: compact ? "0 auto -44px" : "22px auto -44px", background: T.white,
         borderRadius: 14, padding: 10, boxShadow: "0 14px 34px rgba(0,40,60,0.18)",
       }}>
         <div style={{
@@ -1788,7 +1741,9 @@ export function Hero({ search, setSearch }) {
           <span style={{ color: T.inkFaint }}><Icon name="search" size={20} /></span>
           <input value={search} onChange={(e) => setSearch(e.target.value)}
                  placeholder={t("search_ph")}
-                 style={{ ...input, border: "none", padding: "13px 0", background: "transparent" }} />
+                 style={{ ...input, border: "none", padding: "13px 0", background: "transparent",
+                          fontSize: 16 }} />
+          {onVoice && <VoiceButton onHeard={onVoice} />}
         </div>
       </div>
     </div>
@@ -2102,17 +2057,31 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
             <Icon name="alert" size={16} /> {t("ex_cant_call")}
           </span>
         ) : revealed ? (
-          <a href={`tel:${String(revealed).replace(/\s/g, "")}`} style={{
-            display: "inline-flex", alignItems: "center", gap: 8, background: T.green,
-            color: "#fff", padding: "12px 18px", borderRadius: 10, fontWeight: 700,
-            fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
-          }}>
-            <Icon name="phone" size={18} /> {revealed}
-          </a>
+          <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+            <a href={`tel:${String(revealed).replace(/\s/g, "")}`} style={{
+              display: "inline-flex", alignItems: "center", gap: 8, background: T.green,
+              color: "#fff", padding: "12px 18px", borderRadius: 10, fontWeight: 700,
+              fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
+            }}>
+              <Icon name="phone" size={18} /> {revealed}
+            </a>
+            <a href={waLink(revealed)} target="_blank" rel="noopener noreferrer"
+               aria-label="WhatsApp" style={{
+              display: "inline-flex", alignItems: "center", gap: 7, background: "#25D366",
+              color: "#fff", padding: "12px 14px", borderRadius: 10, fontWeight: 700,
+              fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.8-1.1-4.6-4-4.8-4.2-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.1z"/>
+              </svg>
+              WhatsApp
+            </a>
+          </span>
         ) : (
-          <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}>
-            <Icon name="phone" size={17} />
-            {revealing ? "…" : canCall ? t("show_number") : t("signin_to_call")}
+          <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}
+               style={{ minHeight: 48, fontSize: 16 }}>
+            <Icon name="phone" size={18} />
+            {revealing ? "…" : canCall ? t("ft_call") : t("signin_to_call")}
           </Btn>
         )}
 
@@ -2280,4 +2249,225 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
       </div>
     </footer>
   );
+}
+
+// A WhatsApp chat link for a revealed number. Ten digits are Indian mobile
+// numbers and get the 91 country code WhatsApp needs.
+export function waLink(phone) {
+  let d = String(phone || "").replace(/\D/g, "");
+  if (d.length === 10) d = "91" + d;
+  return `https://wa.me/${d}`;
+}
+
+// ---------------------------------------------------------------- account
+// Everything about "me" in one place, as big rows: sign in, my listing,
+// wallet, install, sign out. It replaces four small controls that used to
+// be spread over two header rows.
+export function AccountPage({
+  account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
+  hasListing = false, onOpenListing, onList,
+}) {
+  const { t } = useI18n();
+  const row = (icon, label, onClick, extra) => (
+    <button onClick={onClick} style={{
+      width: "100%", display: "flex", alignItems: "center", gap: 14, minHeight: 60,
+      padding: "12px 16px", background: T.white, border: `1px solid ${T.line}`,
+      borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+      fontSize: 16, fontWeight: 700, color: T.ink,
+    }}>
+      <span style={{
+        width: 40, height: 40, borderRadius: 12, background: T.brandSoft, color: T.brandDark,
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}><Icon name={icon} size={21} /></span>
+      <span style={{ flex: 1 }}>{label}</span>
+      {extra}
+      <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+    </button>
+  );
+  return (
+    <div style={{ maxWidth: 560, margin: "0 auto", padding: "22px 16px 30px" }}>
+      {!account ? (
+        <div style={{
+          background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22,
+          marginBottom: 14,
+        }}>
+          <p style={{ fontSize: 15, color: T.inkSoft, lineHeight: 1.6, margin: "0 0 16px" }}>
+            {t("au_why")}
+          </p>
+          <Btn full onClick={onSignIn} style={{ fontSize: 17, minHeight: 54 }}>
+            <Icon name="user" size={19} /> {t("nav_signin")}
+          </Btn>
+        </div>
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
+          padding: "4px 2px",
+        }}>
+          <span style={{
+            width: 52, height: 52, borderRadius: "50%", background: T.brandDark, color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 21, fontWeight: 800,
+          }}>{((account.full_name || "?").trim().charAt(0) || "?").toUpperCase()}</span>
+          <span>
+            <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>
+              {account.full_name || prettyPhone(account.phone)}
+            </span>
+            <span style={{ display: "block", fontSize: 14, color: T.inkSoft }}>
+              {prettyPhone(account.phone)}
+            </span>
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {account && (hasListing
+          ? row("edit", t("nav_mine"), onOpenListing)
+          : row("construction", t("nav_list"), onList))}
+        {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
+        {row("download", t("install_app"), onInstall)}
+        {account && row("back", t("nav_signout"), onSignOut)}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------- first-visit lang
+// The very first screen, once: every language as a big button in its own
+// script. Somebody who cannot read English will never find a small "EN" in
+// a corner -- but they will find বাংলা or हिन्दी on a full screen.
+export function LanguageGate({ onDone }) {
+  const { lang, setLang } = useI18n();
+  return (
+    <div role="dialog" aria-modal="true" style={{
+      position: "fixed", inset: 0, zIndex: 200, background: T.paper, overflowY: "auto",
+    }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "28px 16px 32px" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+          <DhundoLogo size={40} />
+        </div>
+        <h1 style={{ fontSize: 20, fontWeight: 800, textAlign: "center", margin: "0 0 4px" }}>
+          Choose your language
+        </h1>
+        <p style={{ fontSize: 15, color: T.inkSoft, textAlign: "center", margin: "0 0 20px", lineHeight: 1.6 }}>
+          भाषा चुनें · ভাষা বেছে নিন · மொழியைத் தேர்ந்தெடுக்கவும்
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {LANGS.map((l) => {
+            const on = l.code === lang;
+            return (
+              <button key={l.code} onClick={() => { setLang(l.code); onDone(); }} style={{
+                minHeight: 64, borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
+                fontSize: 20, fontWeight: 800,
+                border: `2px solid ${on ? T.brandDark : T.line}`,
+                background: on ? T.brandSoft : T.white, color: on ? T.brandDeep : T.ink,
+              }}>{l.label}</button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --------------------------------------------------------- popular trades
+// The trades people ask for most, as big tiles that go straight to people:
+// one tap for "plumber" instead of Repairs -> Plumber. Ordered by how many
+// listings each has, so what shows first is what has somebody behind it.
+export function PopularTrades({ trades, onPick, limit = 8 }) {
+  const { lang } = useI18n();
+  const top = [...trades]
+    .sort((a, b) => Number(b.listing_count || 0) - Number(a.listing_count || 0))
+    .slice(0, limit);
+  if (!top.length) return null;
+  return (
+    <div style={{
+      display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+    }}>
+      {top.map((tr) => {
+        const s = groupStyle(tr.group_name);
+        return (
+          <button key={tr.slug} onClick={() => onPick(tr)} style={{
+            display: "flex", alignItems: "center", gap: 11, minHeight: 64,
+            padding: "10px 12px", borderRadius: 14, cursor: "pointer", textAlign: "left",
+            background: T.white, border: `1px solid ${T.line}`, fontFamily: "inherit",
+            boxShadow: "0 1px 2px rgba(15,20,25,0.04)",
+          }}>
+            <span style={{
+              width: 42, height: 42, borderRadius: 12, background: s.bg, color: s.fg,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}><Icon name={s.icon} size={23} /></span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.2 }}>
+              {tradeName(tr, lang)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------- voice search
+// Speak instead of type, in the language the app is showing. Chrome on
+// Android supports every Indian language here; where the browser cannot
+// listen, the button simply does not appear.
+const SPEECH_LANG = {
+  en: "en-IN", hi: "hi-IN", bn: "bn-IN", mr: "mr-IN", te: "te-IN", ta: "ta-IN",
+  gu: "gu-IN", kn: "kn-IN", ml: "ml-IN", or: "or-IN", pa: "pa-IN", as: "as-IN",
+};
+export function VoiceButton({ onHeard }) {
+  const { t, lang } = useI18n();
+  const [listening, setListening] = useState(false);
+  const Rec = typeof window !== "undefined" &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (!Rec) return null;
+  const start = () => {
+    try {
+      const r = new Rec();
+      r.lang = SPEECH_LANG[lang] || "en-IN";
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      r.onresult = (e) => {
+        const said = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript;
+        if (said) onHeard(said.trim());
+      };
+      r.onend = () => setListening(false);
+      r.onerror = () => setListening(false);
+      setListening(true);
+      r.start();
+    } catch (_) { setListening(false); }
+  };
+  return (
+    <button onClick={start} aria-label={t("voice_listen")} title={t("voice_listen")} style={{
+      width: 44, height: 44, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+      border: "none", display: "flex", alignItems: "center", justifyContent: "center",
+      background: listening ? T.red : T.brandDark, color: "#fff",
+      animation: listening ? "dhundoPulse 1s ease-in-out infinite" : "none",
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="9" y="3" width="6" height="11" rx="3" />
+        <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+      </svg>
+    </button>
+  );
+}
+
+// Which trade somebody meant, from what they typed or said -- in any of the
+// languages the trade names exist in. "प्लंबर", "plumber" and "প্লাম্বার"
+// all land on the same trade instead of a text search that finds nothing.
+export function matchTrade(text, trades) {
+  const q = String(text || "").trim().toLowerCase();
+  if (q.length < 2) return null;
+  let best = null;
+  for (const tr of trades) {
+    for (const name of [tr.name_en, tr.name_hi, tr.name_bn]) {
+      const n = String(name || "").toLowerCase();
+      if (!n) continue;
+      if (n === q) return tr;
+      const first = n.split(/[\s(,/]+/)[0];
+      if (!best && (q.includes(first) && first.length >= 3)) best = tr;
+    }
+  }
+  return best;
 }
