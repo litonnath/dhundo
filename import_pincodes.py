@@ -56,16 +56,66 @@ import urllib.request
 import zipfile
 from collections import defaultdict
 
-STATES = {"Tripura", "Delhi", "Haryana"}
+# Every state and union territory -- must match src/states.js.
+STATES = {
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry",
+}
 
-# GeoNames spells some state names differently from the app. Only the ones
-# that actually differ are listed; anything else passes through untouched.
+# What GeoNames and India Post call some states instead of the app's name.
+# Anything not listed passes through unchanged.
 STATE_ALIASES = {
     "NCT": "Delhi",
     "National Capital Territory of Delhi": "Delhi",
-    "Delhi": "Delhi",
-    "Tripura": "Tripura",
-    "Haryana": "Haryana",
+    "NCT of Delhi": "Delhi",
+    "New Delhi": "Delhi",
+    "Orissa": "Odisha",
+    "Pondicherry": "Puducherry",
+    "Uttaranchal": "Uttarakhand",
+    "Andaman and Nicobar": "Andaman and Nicobar Islands",
+    "Andaman & Nicobar Islands": "Andaman and Nicobar Islands",
+    "Andaman & Nicobar": "Andaman and Nicobar Islands",
+    "Jammu & Kashmir": "Jammu and Kashmir",
+    "Dadra and Nagar Haveli": "Dadra and Nagar Haveli and Daman and Diu",
+    "Daman and Diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "Dadra & Nagar Haveli": "Dadra and Nagar Haveli and Daman and Diu",
+    "Daman & Diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "Chattisgarh": "Chhattisgarh",
+    "Telengana": "Telangana",
 }
 
 POSTAL_ZIP = "https://download.geonames.org/export/zip/IN.zip"

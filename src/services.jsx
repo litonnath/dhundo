@@ -24,14 +24,14 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import {
   T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
-  AreaField, AreaInput, CityPicker, StateSwitch, groupStyle, groupLabel, WalletSheet,
+  AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { useMyLocation } from "./device.jsx";
 import MyListing from "./profile.jsx";
-import { useI18n, tradeName, STATES, stateName } from "./i18n.jsx";
+import { useI18n, tradeName, STATES, DEFAULT_STATE } from "./i18n.jsx";
 
 // ---------------------------------------------------------------- data layer
 function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
@@ -264,7 +264,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
   // The area and the state are set in the header and owned by the page, so
   // there is one answer to "where am I looking?" rather than two.
   const locality = (place && place.area) || "";
-  const state = (place && place.state) || STATES[0];
+  const state = (place && place.state) || DEFAULT_STATE;
   const [list, setList] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -922,22 +922,18 @@ function ListingForm({ api, trades, user, isAdmin, onDone, place, setPlace }) {
                 {t("w2_district").replace("{d}", f.district)}
               </div>
             )}
-            <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
-              {STATES.map((st) => (
-                <Chip key={st} active={place.state === st}
-                      onClick={() => {
-                        if (place.state === st) return;
-                        // A city belongs to a state. Keeping it across a
-                        // change would file somebody in a city their state
-                        // does not contain -- the same class of bug as
-                        // "Champaknagar, Delhi".
-                        setF((p) => ({ ...p, city_id: null, city_name: "", district: "" }));
-                        setPlace({ area: "", state: st });
-                      }}>
-                  {stateName(st, lang)}
-                </Chip>
-              ))}
-            </div>
+            <StateSelect
+              value={place.state}
+              style={{ marginTop: 10 }}
+              onChange={(st) => {
+                if (place.state === st) return;
+                // A city belongs to a state. Keeping it across a change
+                // would file somebody in a city their state does not
+                // contain -- the same class of bug as "Champaknagar, Delhi".
+                setF((p) => ({ ...p, city_id: null, city_name: "", district: "" }));
+                setPlace({ area: "", state: st });
+              }}
+            />
           </BigField>
 
           <BigField label={t("w2_area")}>
@@ -1676,7 +1672,7 @@ export default function ServicesPage({
       const old = window.localStorage.getItem("services_state");
       if (old && STATES.includes(old)) return { area: "", state: old };
     } catch (_) {}
-    return { area: "", state: STATES[0] };
+    return { area: "", state: DEFAULT_STATE };
   });
   const [outside, setOutside] = useState(null);
 

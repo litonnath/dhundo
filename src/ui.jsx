@@ -19,7 +19,7 @@
 //     bundle stays small enough to open on a 3G connection
 // ===========================================================================
 import React, { useState } from "react";
-import { useI18n, LANGS, STATES, stateName } from "./i18n.jsx";
+import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote } from "./regions.js";
 import { useMyLocation, useInstallPrompt } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph } from "./brand.jsx";
@@ -110,31 +110,43 @@ const SHORT = { "Home & Domestic": "Home" };
 // Group names live in the database in English only (unlike the trades, which
 // carry name_bn). Rather than a migration for eight strings that are pure
 // presentation, they are translated here.
-const GROUP_BN = {
-  "Construction": "নির্মাণ",
-  "Drivers": "ড্রাইভার",
-  "Home & Domestic": "ঘরের কাজ",
-  "Food": "রান্না",
-  "Repairs": "মেরামত",
-  "Vehicle": "গাড়ি",
-  "Events": "অনুষ্ঠান",
-  "Suppliers": "দোকান",
-  "Other": "অন্যান্য",
-};
-const GROUP_HI = {
-  "Construction": "निर्माण",
-  "Drivers": "ड्राइवर",
-  "Home & Domestic": "घर का काम",
-  "Food": "खाना",
-  "Repairs": "मरम्मत",
-  "Vehicle": "गाड़ी",
-  "Events": "आयोजन",
-  "Suppliers": "दुकान",
-  "Other": "अन्य",
+const GROUP_NAMES = {
+  bn: { "Construction": "নির্মাণ", "Drivers": "ড্রাইভার", "Home & Domestic": "ঘরের কাজ",
+        "Food": "রান্না", "Repairs": "মেরামত", "Vehicle": "গাড়ি", "Events": "অনুষ্ঠান",
+        "Suppliers": "দোকান", "Other": "অন্যান্য" },
+  hi: { "Construction": "निर्माण", "Drivers": "ड्राइवर", "Home & Domestic": "घर का काम",
+        "Food": "खाना", "Repairs": "मरम्मत", "Vehicle": "गाड़ी", "Events": "आयोजन",
+        "Suppliers": "दुकान", "Other": "अन्य" },
+  mr: { "Construction": "बांधकाम", "Drivers": "ड्रायव्हर", "Home & Domestic": "घरकाम",
+        "Food": "जेवण", "Repairs": "दुरुस्ती", "Vehicle": "गाडी", "Events": "कार्यक्रम",
+        "Suppliers": "दुकान", "Other": "इतर" },
+  te: { "Construction": "నిర్మాణం", "Drivers": "డ్రైవర్లు", "Home & Domestic": "ఇంటి పని",
+        "Food": "వంట", "Repairs": "రిపేర్లు", "Vehicle": "వాహనం", "Events": "ఫంక్షన్లు",
+        "Suppliers": "దుకాణాలు", "Other": "ఇతర" },
+  ta: { "Construction": "கட்டுமானம்", "Drivers": "டிரைவர்", "Home & Domestic": "வீட்டு வேலை",
+        "Food": "சமையல்", "Repairs": "பழுது", "Vehicle": "வாகனம்", "Events": "நிகழ்ச்சி",
+        "Suppliers": "கடைகள்", "Other": "மற்றவை" },
+  gu: { "Construction": "બાંધકામ", "Drivers": "ડ્રાઇવર", "Home & Domestic": "ઘરકામ",
+        "Food": "રસોઈ", "Repairs": "રિપેર", "Vehicle": "વાહન", "Events": "પ્રસંગ",
+        "Suppliers": "દુકાન", "Other": "અન્ય" },
+  kn: { "Construction": "ಕಟ್ಟಡ ಕೆಲಸ", "Drivers": "ಡ್ರೈವರ್", "Home & Domestic": "ಮನೆಗೆಲಸ",
+        "Food": "ಅಡುಗೆ", "Repairs": "ರಿಪೇರಿ", "Vehicle": "ವಾಹನ", "Events": "ಸಮಾರಂಭ",
+        "Suppliers": "ಅಂಗಡಿ", "Other": "ಇತರೆ" },
+  ml: { "Construction": "നിർമ്മാണം", "Drivers": "ഡ്രൈവർ", "Home & Domestic": "വീട്ടുജോലി",
+        "Food": "പാചകം", "Repairs": "റിപ്പയർ", "Vehicle": "വാഹനം", "Events": "പരിപാടികൾ",
+        "Suppliers": "കടകൾ", "Other": "മറ്റുള്ളവ" },
+  or: { "Construction": "ନିର୍ମାଣ", "Drivers": "ଡ୍ରାଇଭର", "Home & Domestic": "ଘର କାମ",
+        "Food": "ରୋଷେଇ", "Repairs": "ମରାମତି", "Vehicle": "ଗାଡ଼ି", "Events": "ଉତ୍ସବ",
+        "Suppliers": "ଦୋକାନ", "Other": "ଅନ୍ୟାନ୍ୟ" },
+  pa: { "Construction": "ਉਸਾਰੀ", "Drivers": "ਡਰਾਈਵਰ", "Home & Domestic": "ਘਰ ਦਾ ਕੰਮ",
+        "Food": "ਖਾਣਾ", "Repairs": "ਮੁਰੰਮਤ", "Vehicle": "ਗੱਡੀ", "Events": "ਸਮਾਗਮ",
+        "Suppliers": "ਦੁਕਾਨ", "Other": "ਹੋਰ" },
+  as: { "Construction": "নিৰ্মাণ", "Drivers": "ড্ৰাইভাৰ", "Home & Domestic": "ঘৰুৱা কাম",
+        "Food": "ৰন্ধন", "Repairs": "মেৰামতি", "Vehicle": "গাড়ী", "Events": "অনুষ্ঠান",
+        "Suppliers": "দোকান", "Other": "অন্যান্য" },
 };
 export const groupLabel = (g, lang) =>
-  (lang === "hi" && GROUP_HI[g]) ||
-  (lang === "bn" && GROUP_BN[g]) || SHORT[g] || g;
+  (GROUP_NAMES[lang] && GROUP_NAMES[lang][g]) || SHORT[g] || g;
 
 // ---------------------------------------------------------------- dismissing
 //
@@ -264,36 +276,46 @@ export function Notice({ tone = "info", children }) {
 // ------------------------------------------------------------------ language
 function LanguageSwitch() {
   const { lang, setLang } = useI18n();
-  // A segmented control rather than a toggle: with two languages you can show
-  // "the other one", with three that is meaningless. Each option shows its own
-  // script, so somebody who cannot read the current language can still find
-  // theirs.
+  // A dropdown now: twelve languages do not fit in a header as buttons. The
+  // closed box shows the current language's short name in its own script;
+  // the open list shows every language in ITS own script, so somebody who
+  // cannot read the current one can still find theirs.
+  const cur = LANGS.find((l) => l.code === lang) || LANGS[0];
   return (
-    <div style={{
-      display: "inline-flex", alignItems: "center", gap: 2, background: T.paper,
-      border: `1px solid ${T.line}`, borderRadius: 22, padding: 2,
+    <label style={{
+      position: "relative", display: "inline-flex", alignItems: "center", gap: 4,
+      background: T.paper, border: `1px solid ${T.line}`, borderRadius: 22,
+      padding: "0 10px", minHeight: 36, cursor: "pointer",
+      color: T.brandDark, fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap",
     }}>
-      {LANGS.map((l) => {
-        const on = l.code === lang;
-        return (
-          <button
-            key={l.code}
-            onClick={() => setLang(l.code)}
-            aria-label={l.label}
-            aria-pressed={on}
-            style={{
-              padding: "6px 10px", borderRadius: 20, border: "none",
-              background: on ? T.brandDark : "transparent",
-              color: on ? "#fff" : T.inkSoft,
-              fontSize: 12.5, fontWeight: 700, cursor: "pointer",
-              minHeight: 34, whiteSpace: "nowrap", fontFamily: "inherit",
-            }}
-          >{l.short}</button>
-        );
-      })}
-    </div>
+      <span aria-hidden="true">{cur.short}</span>
+      <Icon name="chev" size={13} style={{ color: T.inkFaint }} />
+      <select
+        value={lang}
+        onChange={(e) => setLang(e.target.value)}
+        aria-label="Language / भाषा / ভাষা"
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          opacity: 0, cursor: "pointer", fontSize: 16,
+        }}
+      >
+        {LANGS.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.label}{l.code !== "en" ? ` (${LANGS_EN[l.code]})` : ""}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
+
+// English names beside the native ones in the list, for the admin or helper
+// setting a phone up for somebody else.
+const LANGS_EN = {
+  hi: "Hindi", bn: "Bengali", mr: "Marathi", te: "Telugu", ta: "Tamil",
+  gu: "Gujarati", kn: "Kannada", ml: "Malayalam", or: "Odia", pa: "Punjabi",
+  as: "Assamese",
+};
 
 // ------------------------------------------------------------------- install
 export function InstallButton({ onOpen }) {
@@ -795,28 +817,52 @@ export function InstallSheet({ onClose }) {
 }
 
 // --------------------------------------------------------------------- state
+// A native dropdown rather than a row of buttons: thirty-six states and
+// union territories do not fit as buttons, and a phone's own picker is the
+// easiest long list to scroll with a thumb.
+export function StateSelect({ value, onChange, dark = false, big = false, style }) {
+  const { lang } = useI18n();
+  return (
+    <div style={{ position: "relative", display: "inline-block", maxWidth: "100%", ...style }}>
+      <select
+        value={STATES.includes(value) ? value : ""}
+        onChange={(e) => e.target.value && onChange(e.target.value)}
+        style={{
+          appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+          width: "100%", maxWidth: "100%", fontFamily: "inherit",
+          fontSize: big ? 15.5 : 16, fontWeight: 700, cursor: "pointer",
+          padding: big ? "13px 40px 13px 14px" : "7px 34px 7px 13px",
+          minHeight: big ? 52 : 36, borderRadius: big ? 11 : 20,
+          border: dark ? "1px solid rgba(255,255,255,0.55)" : `1.5px solid ${T.brandDark}`,
+          background: dark ? "transparent" : (big ? T.brandSoft : T.white),
+          color: dark ? "#fff" : T.brandDeep,
+        }}
+      >
+        {!STATES.includes(value) && <option value="">—</option>}
+        {STATES.map((st) => (
+          <option key={st} value={st} style={{ color: T.ink }}>
+            {stateName(st, lang)}{lang !== "en" && stateName(st, lang) !== st ? ` (${st})` : ""}
+          </option>
+        ))}
+      </select>
+      <Icon name="chev" size={15} style={{
+        position: "absolute", right: big ? 14 : 12, top: "50%",
+        transform: "translateY(-50%)", pointerEvents: "none",
+        color: dark ? "#fff" : T.brandDark,
+      }} />
+    </div>
+  );
+}
+
 export function StateSwitch({ value, onChange, dark }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   return (
     <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
       <span style={{
         fontSize: 12, fontWeight: 700, letterSpacing: 0.3,
         color: dark ? "rgba(255,255,255,0.7)" : T.inkFaint, textTransform: "uppercase",
       }}>{t("state_label")}</span>
-      {STATES.map((st) => {
-        const on = st === value;
-        return (
-          <button key={st} onClick={() => onChange(st)} style={{
-            padding: "6px 13px", borderRadius: 20, fontSize: 13, fontWeight: 700,
-            cursor: "pointer", minHeight: 34, whiteSpace: "nowrap", fontFamily: "inherit",
-            border: dark
-              ? `1px solid ${on ? "#fff" : "rgba(255,255,255,0.4)"}`
-              : `1px solid ${on ? T.brandDark : T.line}`,
-            background: dark ? (on ? "#fff" : "transparent") : (on ? T.brandDark : T.white),
-            color: dark ? (on ? T.brandDeep : "#fff") : (on ? "#fff" : T.ink),
-          }}>{stateName(st, lang)}</button>
-        );
-      })}
+      <StateSelect value={value} onChange={onChange} dark={dark} />
     </div>
   );
 }
@@ -1321,7 +1367,7 @@ export function LocationPill({ place, onOpen, compact }) {
           display: "block", fontSize: 11, color: T.inkFaint, fontWeight: 600,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>
-          {stateName((place && place.state) || STATES[0], lang)}
+          {stateName((place && place.state) || DEFAULT_STATE, lang)}
         </span>
       </span>
       <span style={{ color: T.inkFaint, flexShrink: 0 }}><Icon name="chev" size={16} /></span>
@@ -1334,7 +1380,7 @@ export function LocationSheet({ place, onChange, onClose }) {
   useDismissable(true, onClose);
   const geo = useMyLocation();
   const [area, setArea] = useState((place && place.area) || "");
-  const [state, setState] = useState((place && place.state) || STATES[0]);
+  const [state, setState] = useState((place && place.state) || DEFAULT_STATE);
   const [outside, setOutside] = useState(null);
   const [cleared, setCleared] = useState(null);
   // Set when the name in `area` was GUESSED from coordinates rather than
@@ -1416,26 +1462,8 @@ export function LocationSheet({ place, onChange, onClose }) {
 
         {/* The state comes FIRST now. It decides what the area field even
             means, so asking for the area above it had the order backwards. */}
-        <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
-          {STATES.map((st) => {
-            const on = st === state;
-            return (
-              <button key={st} onClick={() => pickState(st)} style={{
-                display: "flex", alignItems: "center", gap: 10, width: "100%",
-                padding: "13px 14px", borderRadius: 11, minHeight: 52, cursor: "pointer",
-                fontFamily: "inherit", fontSize: 15.5, fontWeight: on ? 800 : 500,
-                border: `1.5px solid ${on ? T.brandDark : T.line}`,
-                background: on ? T.brandSoft : T.white,
-                color: on ? T.brandDeep : T.ink, textAlign: "left",
-              }}>
-                <span style={{ color: on ? T.brandDark : "transparent", flexShrink: 0 }}>
-                  <Icon name="check" size={20} />
-                </span>
-                {stateName(st, lang)}
-              </button>
-            );
-          })}
-        </div>
+        <StateSelect value={state} onChange={pickState} big
+                     style={{ display: "block", width: "100%", marginBottom: 16 }} />
 
         {geo.supported && (
           <button

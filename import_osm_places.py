@@ -32,8 +32,8 @@
 # isolated_dwelling and farm. "hamlet" and "neighbourhood" are the two that
 # matter here -- a para is almost always one or the other.
 #
-# Overpass is donated infrastructure. This is three queries, run once, with
-# a long timeout and a pause between them. Do not put it on a schedule.
+# Overpass is donated infrastructure. This is one query per state, run once,
+# with a long timeout and a pause between them. Do not put it on a schedule.
 # ===========================================================================
 
 import json
@@ -43,11 +43,47 @@ import time
 import urllib.error
 import urllib.request
 
-# The ISO codes OSM tags Indian states with.
+# The ISO 3166-2 codes OSM tags Indian states with. Where ISO renamed a code
+# (Chhattisgarh CT->CG, Odisha OR->OD, Telangana TG->TS, Uttarakhand UT->UK in
+# 2023) both are listed, because OSM boundaries carry whichever a mapper last
+# set. Every state and union territory -- must match src/states.js.
 STATES = {
-    "Tripura": "IN-TR",
-    "Delhi": "IN-DL",
-    "Haryana": "IN-HR",
+    "Andhra Pradesh": "AP",
+    "Arunachal Pradesh": "AR",
+    "Assam": "AS",
+    "Bihar": "BR",
+    "Chhattisgarh": "CT|CG",
+    "Goa": "GA",
+    "Gujarat": "GJ",
+    "Haryana": "HR",
+    "Himachal Pradesh": "HP",
+    "Jharkhand": "JH",
+    "Karnataka": "KA",
+    "Kerala": "KL",
+    "Madhya Pradesh": "MP",
+    "Maharashtra": "MH",
+    "Manipur": "MN",
+    "Meghalaya": "ML",
+    "Mizoram": "MZ",
+    "Nagaland": "NL",
+    "Odisha": "OR|OD",
+    "Punjab": "PB",
+    "Rajasthan": "RJ",
+    "Sikkim": "SK",
+    "Tamil Nadu": "TN",
+    "Telangana": "TG|TS",
+    "Tripura": "TR",
+    "Uttar Pradesh": "UP",
+    "Uttarakhand": "UT|UK",
+    "West Bengal": "WB",
+    "Andaman and Nicobar Islands": "AN",
+    "Chandigarh": "CH",
+    "Dadra and Nagar Haveli and Daman and Diu": "DH|DN|DD",
+    "Delhi": "DL",
+    "Jammu and Kashmir": "JK",
+    "Ladakh": "LA",
+    "Lakshadweep": "LD",
+    "Puducherry": "PY",
 }
 
 ENDPOINTS = [
@@ -69,8 +105,8 @@ BATCH = 500
 
 def overpass(state_iso):
     q = f"""
-[out:json][timeout:300];
-area["ISO3166-2"="{state_iso}"][admin_level=4]->.a;
+[out:json][timeout:900][maxsize:1073741824];
+area["ISO3166-2"~"^IN-({state_iso})$"][admin_level=4]->.a;
 (
   node(area.a)["place"~"^({PLACE_TYPES})$"];
   way(area.a)["place"~"^({PLACE_TYPES})$"];
@@ -85,7 +121,7 @@ out center tags;
                 url, data=q.encode(),
                 headers={"User-Agent": "dhundo-import/1.0 (services.shortlistone.com)"},
                 method="POST")
-            with urllib.request.urlopen(req, timeout=330) as r:
+            with urllib.request.urlopen(req, timeout=960) as r:
                 return json.loads(r.read())
         except Exception as e:
             last = e
@@ -173,42 +209,48 @@ def main():
         print("No key given.")
         sys.exit(1)
 
-    print("\nAsking OpenStreetMap. This takes a minute or two per state.\n")
-    all_rows = []
-    for state, iso in STATES.items():
+    # All of India by default, or only the states named on the command line:
+    #     python3 import_osm_places.py "West Bengal" Assam
+    wanted = sys.argv[1:] or list(STATES)
+    unknown = [w for w in wanted if w not in STATES]
+    if unknown:
+        print("Not a state this app knows: " + ", ".join(unknown))
+        sys.exit(1)
+
+    print(f"\nAsking OpenStreetMap about {len(wanted)} state(s). "
+          "Small states take a minute, Uttar Pradesh or Maharashtra much longer.\n")
+
+    # Uploaded state by state rather than all at the end: the whole country
+    # is far too many rows to hold at once, and a failure halfway through
+    # should not throw away the states that already worked.
+    added = fixed = 0
+    by_state = {}
+    for state in wanted:
         try:
-            all_rows += collect(state, iso)
+            rows = collect(state, STATES[state])
         except SystemExit:
             raise
         except Exception as e:
             print(f"    {state} failed: {e}")
+            time.sleep(5)
+            continue
+        by_state[state] = len(rows)
+
+        for i in range(0, len(rows), BATCH):
+            added += count_of(post(url, key, "services_load_regions",
+                                   {"p_rows": rows[i:i + BATCH]}), "inserted")
+        # Coordinates too -- this also backfills the GeoNames rows.
+        located = [r for r in rows if r.get("lat") is not None]
+        for i in range(0, len(located), BATCH):
+            fixed += count_of(post(url, key, "services_load_region_coords",
+                                   {"p_rows": located[i:i + BATCH]}), "updated")
+        print(f"    loaded {state}", flush=True)
         time.sleep(5)   # Overpass is donated; do not hammer it
 
-    if not all_rows:
+    if not by_state:
         print("Nothing returned.")
         sys.exit(1)
-
-    by_state = {}
-    for r in all_rows:
-        by_state[r["state"]] = by_state.get(r["state"], 0) + 1
     print("\nTotal: " + ", ".join(f"{k} {v:,}" for k, v in sorted(by_state.items())))
-
-    print("\nLoading names …")
-    added = 0
-    for i in range(0, len(all_rows), BATCH):
-        chunk = all_rows[i:i + BATCH]
-        added += count_of(post(url, key, "services_load_regions",
-                               {"p_rows": chunk}), "inserted")
-        print(f"  {min(i + BATCH, len(all_rows)):,} / {len(all_rows):,}", flush=True)
-
-    print("\nLoading coordinates (this also backfills the GeoNames rows) …")
-    located = [r for r in all_rows if r.get("lat") is not None]
-    fixed = 0
-    for i in range(0, len(located), BATCH):
-        chunk = located[i:i + BATCH]
-        fixed += count_of(post(url, key, "services_load_region_coords",
-                               {"p_rows": chunk}), "updated")
-        print(f"  {min(i + BATCH, len(located)):,} / {len(located):,}", flush=True)
 
     print(f"\nDone. {added:,} new places, {fixed:,} rows given coordinates.")
     print("\nCheck it:")

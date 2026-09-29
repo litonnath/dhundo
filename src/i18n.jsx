@@ -1,5 +1,5 @@
 // ===========================================================================
-// i18n.jsx -- English and Bengali.
+// i18n.jsx -- English, Hindi, Bengali, and nine more loaded on demand.
 //
 // WHY BENGALI IS NOT AN AFTERTHOUGHT HERE
 // Most of the people this directory is for read Bengali more comfortably than
@@ -22,24 +22,46 @@
 // ===========================================================================
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-// The three states the directory covers. Adding a fourth means a line here
-// AND a line in the CHECK constraint in sql/57 -- deliberately, because it is
-// a decision about where the product operates, not a display tweak.
-export const STATES = ["Tripura", "Delhi", "Haryana"];
+// Every state and union territory. The list and its translated names live in
+// states.js; they are re-exported here because this is where the rest of the
+// app has always imported them from.
+export { STATES, DEFAULT_STATE, stateName, normalizeState } from "./states.js";
 
-const STATE_NAMES = {
-  bn: { Tripura: "ত্রিপুরা", Delhi: "দিল্লি", Haryana: "হরিয়ানা" },
-  hi: { Tripura: "त्रिपुरा", Delhi: "दिल्ली", Haryana: "हरियाणा" },
-};
-export function stateName(state, lang) {
-  return (STATE_NAMES[lang] && STATE_NAMES[lang][state]) || state;
-}
-
+// English, Hindi and Bengali are built into this file. The rest are loaded
+// only when somebody picks one (see LOADERS below), so a Tripura phone on a
+// slow connection does not download Tamil it will never show.
+//
+// Ordered by how many people speak each, after English. `short` is what the
+// picker shows when it has little room; `label` is the language's own name
+// in its own script, so somebody who cannot read the current language can
+// still find theirs.
 export const LANGS = [
-  { code: "en", label: "English", short: "EN" },
-  { code: "bn", label: "বাংলা",   short: "বাং" },
-  { code: "hi", label: "हिन्दी",  short: "हिं" },
+  { code: "en", label: "English",   short: "EN" },
+  { code: "hi", label: "हिन्दी",     short: "हिं" },
+  { code: "bn", label: "বাংলা",      short: "বাং" },
+  { code: "mr", label: "मराठी",      short: "मरा" },
+  { code: "te", label: "తెలుగు",     short: "తెలు" },
+  { code: "ta", label: "தமிழ்",      short: "தமி" },
+  { code: "gu", label: "ગુજરાતી",    short: "ગુજ" },
+  { code: "kn", label: "ಕನ್ನಡ",      short: "ಕನ್ನ" },
+  { code: "ml", label: "മലയാളം",    short: "മല" },
+  { code: "or", label: "ଓଡ଼ିଆ",       short: "ଓଡ଼ି" },
+  { code: "pa", label: "ਪੰਜਾਬੀ",     short: "ਪੰਜਾ" },
+  { code: "as", label: "অসমীয়া",    short: "অস" },
 ];
+
+const LOADERS = {
+  mr: () => import("./locales/mr.js"),
+  te: () => import("./locales/te.js"),
+  ta: () => import("./locales/ta.js"),
+  gu: () => import("./locales/gu.js"),
+  kn: () => import("./locales/kn.js"),
+  ml: () => import("./locales/ml.js"),
+  or: () => import("./locales/or.js"),
+  pa: () => import("./locales/pa.js"),
+  as: () => import("./locales/as.js"),
+};
+const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
@@ -283,7 +305,7 @@ const STRINGS = {
     loc_state: "Or pick a state",
     loc_done: "Done",
     oos_title: "We're not in {x} yet.",
-    oos_body: "Dhundo covers Tripura, Delhi and Haryana right now. Leave your number and we'll tell you when we reach {x}.",
+    oos_body: "Dhundo works only in India right now. You can still browse listings in any Indian state.",
     oos_browse: "Browse {s} anyway",
     au_signin: "Sign in",
     au_signup: "Create account",
@@ -318,7 +340,7 @@ const STRINGS = {
     hero_sub: "Find local, checked people near you and call them directly. No commission, no middleman, no waiting.",
     state_label: "State",
     not_here_yet: "We're not in {x} yet.",
-    we_cover: "Right now we cover Tripura, Delhi and Haryana.",
+    we_cover: "We cover every state in India.",
     showing: "Showing",
     search_ph: "mistri, driver, cook, cement…",
     area_ph: "Your area",
@@ -395,7 +417,7 @@ const STRINGS = {
     e_taken: "That number is already listed by someone else.",
     e_badphone: "That phone number doesn't look right.",
     e_badtrade: "Choose a category from the list.",
-    e_badstate: "Choose one of the three states.",
+    e_badstate: "Choose a state from the list.",
     e_notadmin: "You don't have permission to add listings.",
     e_signin: "Please sign in first.",
     e_save: "Couldn't save that.",
@@ -664,7 +686,7 @@ const STRINGS = {
     loc_state: "অথবা রাজ্য বাছুন",
     loc_done: "হয়ে গেছে",
     oos_title: "{x}-এ আমরা এখনও নেই।",
-    oos_body: "Dhundo এখন ত্রিপুরা, দিল্লি আর হরিয়ানায় কাজ করে। {x}-এ পৌঁছলে আপনাকে জানাব।",
+    oos_body: "Dhundo এখন শুধু ভারতে কাজ করে। তবু যেকোনো রাজ্যের লিস্টিং দেখতে পারেন।",
     oos_browse: "{s} দেখুন",
     au_signin: "সাইন ইন",
     au_signup: "অ্যাকাউন্ট খুলুন",
@@ -699,7 +721,7 @@ const STRINGS = {
     hero_sub: "আপনার কাছের যাচাই করা লোকজন খুঁজুন আর সরাসরি ফোন করুন। কোনো কমিশন নেই, দালাল নেই, অপেক্ষা নেই।",
     state_label: "রাজ্য",
     not_here_yet: "{x}-তে আমরা এখনো নেই।",
-    we_cover: "এখন আমরা ত্রিপুরা, দিল্লি আর হরিয়ানায় আছি।",
+    we_cover: "আমরা ভারতের সব রাজ্যে আছি।",
     showing: "দেখাচ্ছে",
     search_ph: "মিস্ত্রি, ড্রাইভার, রাঁধুনি, সিমেন্ট…",
     area_ph: "আপনার এলাকা",
@@ -776,7 +798,7 @@ const STRINGS = {
     e_taken: "এই নম্বর আগে থেকেই অন্য কারো নামে আছে।",
     e_badphone: "ফোন নম্বরটা ঠিক মনে হচ্ছে না।",
     e_badtrade: "তালিকা থেকে একটি বিভাগ বেছে নিন।",
-    e_badstate: "তিনটি রাজ্যের একটি বেছে নিন।",
+    e_badstate: "তালিকা থেকে একটি রাজ্য বেছে নিন।",
     e_notadmin: "আপনার নাম যোগ করার অনুমতি নেই।",
     e_signin: "আগে সাইন ইন করুন।",
     e_save: "সংরক্ষণ করা গেল না।",
@@ -1044,7 +1066,7 @@ const STRINGS = {
     loc_state: "या राज्य चुनें",
     loc_done: "हो गया",
     oos_title: "{x} में हम अभी नहीं हैं।",
-    oos_body: "Dhundo अभी त्रिपुरा, दिल्ली और हरियाणा में है। {x} पहुँचते ही आपको बताएँगे।",
+    oos_body: "Dhundo अभी सिर्फ़ भारत में है। फिर भी आप किसी भी राज्य की लिस्टिंग देख सकते हैं।",
     oos_browse: "फिर भी {s} देखें",
     au_signin: "साइन इन",
     au_signup: "खाता बनाएँ",
@@ -1079,7 +1101,7 @@ const STRINGS = {
     hero_sub: "अपने पास के जाँचे हुए लोग खोजें और सीधे फ़ोन करें। कोई कमीशन नहीं, कोई बिचौलिया नहीं, कोई इंतज़ार नहीं।",
     state_label: "राज्य",
     not_here_yet: "{x} में हम अभी नहीं हैं।",
-    we_cover: "फ़िलहाल हम त्रिपुरा, दिल्ली और हरियाणा में हैं।",
+    we_cover: "हम भारत के सभी राज्यों में हैं।",
     showing: "दिखा रहे हैं",
     search_ph: "मिस्त्री, ड्राइवर, रसोइया, सीमेंट…",
     area_ph: "आपका इलाका",
@@ -1153,7 +1175,7 @@ const STRINGS = {
     e_name: "नाम लिखें।",
     e_phone: "10 अंकों का फ़ोन नंबर लिखें।",
     e_category: "एक श्रेणी चुनें।",
-    e_badstate: "तीन राज्यों में से एक चुनें।",
+    e_badstate: "सूची से एक राज्य चुनें।",
     e_taken: "यह नंबर पहले से किसी और के नाम है।",
     e_badphone: "यह फ़ोन नंबर ठीक नहीं लग रहा।",
     e_badtrade: "सूची से एक श्रेणी चुनें।",
@@ -1190,14 +1212,17 @@ const KEY = "services_lang";
 function initialLang() {
   try {
     const saved = window.localStorage.getItem(KEY);
-    if (saved && STRINGS[saved]) return saved;
+    if (saved && KNOWN.has(saved)) return saved;
   } catch (_) {}
-  // Default to the browser's preference when it is Bengali, English otherwise.
-  // Guessing Bengali for everyone would be wrong as often as it is right.
+  // Default to the browser's preference when it is one we have, English
+  // otherwise. Guessing a regional language for everyone would be wrong as
+  // often as it is right.
   try {
-    const nav = (window.navigator.language || "").toLowerCase();
-    if (nav.startsWith("bn")) return "bn";
-    if (nav.startsWith("hi")) return "hi";
+    const prefs = window.navigator.languages || [window.navigator.language || ""];
+    for (const p of prefs) {
+      const code = String(p || "").toLowerCase().split("-")[0];
+      if (KNOWN.has(code)) return code;
+    }
   } catch (_) {}
   return "en";
 }
@@ -1206,11 +1231,24 @@ const Ctx = createContext({ lang: "en", setLang: () => {}, t: (k) => k });
 
 export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(initialLang);
+  // Bumped when a lazily loaded language arrives, so t() is rebuilt and the
+  // screen redraws in it. Until then t() falls back to English.
+  const [loaded, setLoaded] = useState(0);
 
   const setLang = useCallback((next) => {
+    if (!KNOWN.has(next)) return;
     setLangState(next);
     try { window.localStorage.setItem(KEY, next); } catch (_) {}
   }, []);
+
+  useEffect(() => {
+    if (STRINGS[lang] || !LOADERS[lang]) return;
+    let alive = true;
+    LOADERS[lang]()
+      .then((m) => { STRINGS[lang] = m.default; if (alive) setLoaded((n) => n + 1); })
+      .catch(() => {});   // offline: English stays, and the next pick retries
+    return () => { alive = false; };
+  }, [lang]);
 
   // Keeps the document language honest for screen readers and for the
   // browser's own "translate this page?" prompt.
@@ -1220,7 +1258,8 @@ export function I18nProvider({ children }) {
   // shows readable text rather than a blank.
   const t = useCallback(
     (k) => (STRINGS[lang] && STRINGS[lang][k]) || STRINGS.en[k] || k,
-    [lang]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lang, loaded]
   );
 
   return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
@@ -1228,12 +1267,15 @@ export function I18nProvider({ children }) {
 
 export const useI18n = () => useContext(Ctx);
 
-// Category names come from the database in both languages.
-// hi -> bn -> en. The fallback exists for a category added later without a
-// translation; sql/58 fills all 71, so it should never fire today.
+// Category names come from the database in English, Hindi and Bengali only.
+// The other languages borrow the closest one people there can read: Marathi
+// shares Hindi's script, Assamese nearly shares Bengali's, and the rest get
+// English -- which is also how most trade words are said out loud anyway.
+const TRADE_FALLBACK = { mr: "hi", as: "bn" };
 export function tradeName(trade, lang) {
   if (!trade) return "";
-  if (lang === "hi" && trade.name_hi) return trade.name_hi;
-  if (lang === "bn" && trade.name_bn) return trade.name_bn;
+  const l = TRADE_FALLBACK[lang] || lang;
+  if (l === "hi" && trade.name_hi) return trade.name_hi;
+  if (l === "bn" && trade.name_bn) return trade.name_bn;
   return trade.name_en;
 }

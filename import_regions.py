@@ -42,7 +42,67 @@ import sys
 import urllib.request
 import zipfile
 
-STATES = {"Tripura", "Delhi", "Haryana"}
+# Every state and union territory -- must match src/states.js.
+STATES = {
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry",
+}
+
+# What GeoNames and India Post call some states instead of the app's name.
+# Anything not listed passes through unchanged.
+STATE_ALIASES = {
+    "NCT": "Delhi",
+    "National Capital Territory of Delhi": "Delhi",
+    "NCT of Delhi": "Delhi",
+    "New Delhi": "Delhi",
+    "Orissa": "Odisha",
+    "Pondicherry": "Puducherry",
+    "Uttaranchal": "Uttarakhand",
+    "Andaman and Nicobar": "Andaman and Nicobar Islands",
+    "Andaman & Nicobar Islands": "Andaman and Nicobar Islands",
+    "Andaman & Nicobar": "Andaman and Nicobar Islands",
+    "Jammu & Kashmir": "Jammu and Kashmir",
+    "Dadra and Nagar Haveli": "Dadra and Nagar Haveli and Daman and Diu",
+    "Daman and Diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "Dadra & Nagar Haveli": "Dadra and Nagar Haveli and Daman and Diu",
+    "Daman & Diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "Chattisgarh": "Chhattisgarh",
+    "Telengana": "Telangana",
+}
 
 GEONAMES = "https://download.geonames.org/export/dump/"
 ADMIN1 = GEONAMES + "admin1CodesASCII.txt"
@@ -97,6 +157,7 @@ def load_places(a1, a2):
                 if fclass != "P" or not name:
                     continue
                 state = a1.get(f"IN.{admin1}")
+                state = STATE_ALIASES.get(state, state)
                 if state not in STATES:
                     continue
                 district = a2.get(f"IN.{admin1}.{admin2}") if admin2 else None

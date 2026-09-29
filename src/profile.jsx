@@ -33,10 +33,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   T, Icon, Btn, Chip, Notice, input, AreaField, AreaInput, CityPicker, ConfirmDelete,
+  StateSelect,
   groupStyle, groupLabel,
   plateLooksRight,
 } from "./ui.jsx";
-import { useI18n, tradeName, STATES, stateName } from "./i18n.jsx";
+import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import MapPicker from "./mappicker.jsx";
 import { useMyLocation } from "./device.jsx";
 
@@ -144,7 +145,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             day_rate_min: one.day_rate_min ?? "",
             day_rate_max: one.day_rate_max ?? "",
             locality: one.locality || "",
-            state: one.state || STATES[0],
+            state: one.state || DEFAULT_STATE,
             about: one.about || "",
             photos: one.photos || [],
             avatar_url: one.avatar_url || "",
@@ -843,19 +844,16 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               {t("p_gps_hint")}
             </div>
 
-            <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
-              {STATES.map((st) => (
-                <Chip key={st} active={f.state === st}
-                      onClick={() => {
-                        setF((p) => ({
-                          ...p, state: st, locality: p.state === st ? p.locality : "",
-                        }));
-                        setDirty((d) => ({ ...d, contact: true }));
-                      }}>
-                  {stateName(st, lang)}
-                </Chip>
-              ))}
-            </div>
+            <StateSelect
+              value={f.state}
+              style={{ marginTop: 12 }}
+              onChange={(st) => {
+                setF((p) => ({
+                  ...p, state: st, locality: p.state === st ? p.locality : "",
+                }));
+                setDirty((d) => ({ ...d, contact: true }));
+              }}
+            />
           </Row>
         </Section>
       </div>

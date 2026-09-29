@@ -209,6 +209,7 @@ export function snapToKnown(state, detected) {
 // local list stays rather than being replaced by this.
 // ===========================================================================
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { STATE_CENTERS, normalizeState } from "./states.js";
 
 const PHOTON = "https://photon.komoot.io/api/";
 
@@ -281,8 +282,10 @@ export async function searchRemote(state, query, signal) {
   const fromDb = mine.filter((r) => !isKnownPlace(state, r.place));
   if (fromDb.length > 0) return fromDb.slice(0, 15);
 
+  const c = STATE_CENTERS[state];
+  const bias = c ? { lat: c[0], lon: c[1] } : BIAS;
   const url = `${PHOTON}?q=${encodeURIComponent(q)}&limit=25&lang=en` +
-              `&lat=${BIAS.lat}&lon=${BIAS.lon}`;
+              `&lat=${bias.lat}&lon=${bias.lon}`;
 
   let body;
   try {
@@ -299,9 +302,9 @@ export async function searchRemote(state, query, signal) {
   (body.features || []).forEach((feat) => {
     const p = feat.properties || {};
     if (p.countrycode && p.countrycode !== "IN") return;
-    // Restricted to the state being browsed: this app serves three, and
-    // offering a Ramnagar in Uttar Pradesh would file a listing somewhere it
-    // can never be found.
+    // Restricted to the state being browsed: offering a Ramnagar in Uttar
+    // Pradesh to somebody picking a place in Bihar would file a listing
+    // somewhere it can never be found.
     if (state && p.state && !sameState(p.state, state)) return;
     const key = p.osm_key || "";
     const val = p.osm_value || "";
@@ -348,6 +351,7 @@ export async function searchRemote(state, query, signal) {
 
 // OSM writes some state names differently from the way this app does.
 function sameState(osmState, ours) {
+  if (normalizeState(osmState) === ours) return true;
   const a = norm(osmState), b = norm(ours);
   if (a === b) return true;
   if (b === "delhi") return a.includes("delhi");          // "National Capital Territory of Delhi"

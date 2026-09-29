@@ -3,6 +3,7 @@
 // and install itself onto their phone.
 // ===========================================================================
 import { useState, useEffect, useCallback, useRef } from "react";
+import { normalizeState } from "./states.js";
 
 // ---------------------------------------------------------------------------
 // LOCATION
@@ -84,8 +85,11 @@ export function useMyLocation() {
                   lat: latitude, lng: longitude, accuracy,
                 });
               }
+              // accept-language=en: the app stores state and place names in
+              // English, and without this Nominatim answers in whatever the
+              // browser prefers -- "ত্রিপুরা" never matches "Tripura".
               const url =
-                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16" +
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&accept-language=en" +
                 `&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`;
 
               const ctrl = new AbortController();
@@ -108,7 +112,9 @@ export function useMyLocation() {
               // The state matters as much as the locality: if somebody is in
               // Assam, the useful answer is "we are not there yet", not a
               // silent empty result list.
-              const st = a.state || null;
+              // Normalised, so "NCT of Delhi" or "Orissa" match the app's
+              // list. Outside India this stays whatever OSM said.
+              const st = a.state ? normalizeState(a.state) : (a.country_code === "in" ? null : a.country || null);
 
               if (!alive.current) return resolve(null);
               if (!area && !st) { setState("error"); return resolve(null); }
