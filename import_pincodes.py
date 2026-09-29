@@ -188,6 +188,51 @@ def rows_from_csv(path):
     return rows
 
 
+def merge_by_pincode(rows):
+    """One row per PIN code.
+
+    The source lists every POST OFFICE, and one PIN code usually covers
+    several (155k offices, about 19k PIN codes). services_pincodes is keyed
+    on the PIN code, and Postgres refuses to upsert the same key twice in
+    one statement -- which is what a batch containing two offices of one
+    PIN code asks it to do, and why the upload died with an HTTP 500.
+
+    Kept: the first office's name, district and state (the head office is
+    usually listed first), and the average of the offices' coordinates,
+    which is closer to the middle of the area than any single office.
+    """
+    merged = {}
+    sums = {}
+    for r in rows:
+        pin = r["pincode"]
+        if pin not in merged:
+            merged[pin] = dict(r)
+            sums[pin] = [0.0, 0.0, 0]
+        try:
+            lat, lng = float(r["lat"]), float(r["lng"])
+        except (TypeError, ValueError):
+            continue
+        s = sums[pin]
+        s[0] += lat; s[1] += lng; s[2] += 1
+    for pin, row in merged.items():
+        lat, lng, n = sums[pin]
+        if n:
+            row["lat"], row["lng"] = round(lat / n, 6), round(lng / n, 6)
+        else:
+            row["lat"] = row["lng"] = None
+    return list(merged.values())
+
+
+def fix_ladakh(rows):
+    """Ladakh became its own union territory in 2019; GeoNames still files it
+    under Jammu and Kashmir. Its PIN codes are the 194 series (Leh and
+    Kargil), so those are moved across."""
+    for r in rows:
+        if r["pincode"].startswith("194") and r["state"] == "Jammu and Kashmir":
+            r["state"] = "Ladakh"
+    return rows
+
+
 def report(rows):
     """What is actually in hand, before anything is uploaded."""
     per_state = defaultdict(lambda: [0, 0])
@@ -243,6 +288,9 @@ def main():
         skipped = {}
     else:
         rows, skipped = rows_from_geonames()
+    offices = len(rows)
+    rows = merge_by_pincode(fix_ladakh(rows))
+    print(f"  {offices:,} post offices -> {len(rows):,} distinct PIN codes")
 
     total, coords = report(rows)
     if skipped:
