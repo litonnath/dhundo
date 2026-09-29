@@ -285,12 +285,18 @@ async function searchDb(state, q, signal) {
 // only match the area name exactly, and a customer in "Dharmanagar" never
 // sees a shop listed under the village next door. An exact name match from
 // the place table, or null.
-export async function placeCoords(state, name) {
+//
+// `near` is a hint for places that share a name -- the heading the name was
+// listed under ("Agartala" for Ramnagar), matched against the district and
+// block, so Ramnagar in Agartala is not taken for a Ramnagar elsewhere.
+export async function placeCoords(state, name, near) {
   const n = String(name || "").trim();
   if (n.length < 3) return null;
   const rows = await searchDb(state, n);
   const low = n.toLowerCase();
-  const hit = rows.find((r) => String(r.place || "").toLowerCase() === low && typeof r.lat === "number");
+  const exact = rows.filter((r) => String(r.place || "").toLowerCase() === low && typeof r.lat === "number");
+  const h = String(near || "").toLowerCase();
+  const hit = (h && exact.find((r) => String(r.group || "").toLowerCase().includes(h))) || exact[0];
   return hit ? { lat: hit.lat, lng: hit.lng } : null;
 }
 

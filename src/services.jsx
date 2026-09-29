@@ -521,6 +521,20 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const shown = (onlyLive ? live : [...live, ...list.filter((r) => !liveIds.has(r.id))])
     .filter((r) => !pinIds.has(r.id) && inRadius(r));
 
+  // Same PIN code or same town: said in words instead of a distance. Inside
+  // one town the positions are often rough, and "18 km" from Panisagar to
+  // Panisagar is wrong. Someone available NOW keeps their live distance --
+  // that one is from where they actually are.
+  const eq = (a, b) => !!a && !!b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  const nearLabelFor = (row) => {
+    if (row.available_now) return null;
+    if (pinIds.has(row.id)) return t("same_pin_badge");
+    const myTown = place && place.city;
+    const myArea = place && place.area;
+    if (eq(row.city, myTown) || eq(row.city, myArea) || eq(row.locality, myArea)) return t("same_town_badge");
+    return null;
+  };
+
   // Debounced: one request per pause, not one per keystroke. On the
   // connections this audience has, that is the difference between usable and
   // not.
@@ -737,7 +751,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       area: got.area || p.area,
                       state: got.state && STATES.includes(got.state) ? got.state : p.state,
                       // A new position may be in another PIN; worked out again.
-                      lat: got.lat, lng: got.lng, pin: undefined,
+                      lat: got.lat, lng: got.lng, pin: undefined, city: undefined,
                     }));
                   }}
                   disabled={geo.state === "locating"}
@@ -795,6 +809,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealed={revealed[row.id]}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
+                  nearLabel={nearLabelFor(row)}
                 />
               );
               const heading = (text) => (
@@ -2040,6 +2055,7 @@ export default function ServicesPage({
             lat: typeof p.lat === "number" ? p.lat : undefined,
             lng: typeof p.lng === "number" ? p.lng : undefined,
             pin: /^\d{6}$/.test(String(p.pin || "")) ? String(p.pin) : undefined,
+            city: typeof p.city === "string" && p.city ? p.city : undefined,
           };
         }
       }
@@ -2073,7 +2089,8 @@ export default function ServicesPage({
     if (place.pin || typeof place.lat !== "number") return;
     let alive = true;
     pinNear(place.lat, place.lng).then((r) => {
-      if (alive && r) setPlace((p) => (p.lat === place.lat && !p.pin ? { ...p, pin: r.pincode } : p));
+      if (alive && r) setPlace((p) => (p.lat === place.lat && !p.pin
+        ? { ...p, pin: r.pincode, city: p.city || r.place || undefined } : p));
     }).catch(() => {});
     return () => { alive = false; };
   }, [place.lat, place.lng, place.pin]); // eslint-disable-line react-hooks/exhaustive-deps

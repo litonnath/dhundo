@@ -1016,7 +1016,7 @@ export function AreaPicker({ state, value, onPick, autoFocus }) {
             {g.places.map((p) => {
               const on = p === value;
               return (
-                <button key={p} onClick={() => onPick(p)} style={{
+                <button key={p} onClick={() => onPick(p, { group: g.group })} style={{
                   display: "flex", alignItems: "center", gap: 9, width: "100%",
                   padding: "12px 14px", minHeight: 48, cursor: "pointer", textAlign: "left",
                   border: "none", borderBottom: `1px solid ${T.line}`,
@@ -1437,11 +1437,18 @@ export function LocationSheet({ place, onChange, onClose }) {
   // The PIN code: filled in from the position, or typed. Results show
   // everybody in the same PIN code first.
   const [pin, setPin] = useState((place && place.pin) || "");
+  // The town the PIN code belongs to (the head post office), so a listing
+  // in the same town can say so instead of showing a distance.
+  const [town, setTown] = useState((place && place.city) || "");
+  // The PIN nearest a position: { pincode, place } or null.
   const pinFor = async (xy) => {
     if (!xy || typeof xy.lat !== "number") return null;
-    const r = await pinNear(xy.lat, xy.lng).catch(() => null);
-    return r ? r.pincode : null;
+    return pinNear(xy.lat, xy.lng).catch(() => null);
   };
+  // Which name the current position belongs to. A GPS position is where the
+  // PHONE is; picking another area afterwards must not keep it -- that is
+  // how picking Ramnagar kept the PIN code of Tilthai.
+  const [fixFor, setFixFor] = useState(null);
   // Metres. Shown so a 30-metre fix and a 2-kilometre one do not look alike.
   const [acc, setAcc] = useState(null);
 
@@ -1467,7 +1474,7 @@ export function LocationSheet({ place, onChange, onClose }) {
     // a dot on the map; the place table knows the village itself.
     const close = typeof got.lat === "number" ? await nearestPlaces(got.lat, got.lng) : [];
     const gotPin = await pinFor(got);
-    if (gotPin) setPin(gotPin);
+    if (gotPin) { setPin(gotPin.pincode); setTown(gotPin.place || ""); }
     setNear(close.filter((r) => r.km <= 5));
     const fromMap = got.area ? snapToKnown(got.state || state, got.area) : null;
     const named = bestNearName(close, fromMap);
@@ -1475,6 +1482,7 @@ export function LocationSheet({ place, onChange, onClose }) {
       setArea(named);
       setGuessed(named);
     }
+    setFixFor(named || "");
   };
 
   // Changing the state invalidates the area, because an area name only means
@@ -1494,12 +1502,16 @@ export function LocationSheet({ place, onChange, onClose }) {
   // the distance work exists to replace.
   const [fix, setFix] = useState(null);
   const done = async () => {
-    let xy = fix;
-    if (!xy && area.trim()) xy = await placeCoords(state, area.trim()).catch(() => null);
+    const a = area.trim();
+    // The position belongs to the name only if it was found for that name.
+    let xy = fix && (fixFor === null || fixFor === "" || fixFor === a) ? fix : null;
+    if (!xy && a) xy = await placeCoords(state, a).catch(() => null);
     const typed6 = pin.replace(/\D/g, "");
-    const p6 = typed6.length === 6 ? typed6 : await pinFor(xy);
-    onChange({ area: area.trim(), state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
-               pin: p6 || undefined });
+    let p6 = typed6.length === 6 ? typed6 : null;
+    let tw = town;
+    if (!p6) { const r = await pinFor(xy); p6 = r && r.pincode; tw = (r && r.place) || ""; }
+    onChange({ area: a, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
+               pin: p6 || undefined, city: tw || undefined });
     onClose();
   };
   // A typed PIN on its own is a location: its name and position come with it.
@@ -1509,7 +1521,8 @@ export function LocationSheet({ place, onChange, onClose }) {
     if (d.length !== 6) return;
     const r = await pinLookup(d);
     if (!r) return;
-    if (typeof r.lat === "number") setFix({ lat: r.lat, lng: r.lng });
+    setTown(r.place || "");
+    if (typeof r.lat === "number") { setFix({ lat: r.lat, lng: r.lng }); setFixFor(area.trim() || r.place || ""); }
     if (!area.trim() && r.place) { setArea(r.place); setGuessed(r.place); }
   };
 
@@ -1675,13 +1688,17 @@ export function LocationSheet({ place, onChange, onClose }) {
             // sort by distance even for somebody who never shares GPS.
             onPick={async (p, meta) => {
               const hasXY = meta && typeof meta.lat === "number" && typeof meta.lng === "number";
-              let xy = hasXY ? { lat: meta.lat, lng: meta.lng } : fix;
+              // The place's own position. The phone's GPS position only when
+              // this is the very place it was found for -- never for another
+              // area picked afterwards.
+              let xy = hasXY ? { lat: meta.lat, lng: meta.lng } : (fix && fixFor === p ? fix : null);
               // A name from the built-in list carries no position: look it up,
-              // so results still sort by distance.
-              if (!xy) xy = await placeCoords(state, p).catch(() => null);
-              const p6 = await pinFor(xy);
+              // under the heading it was listed in, so results still sort by
+              // distance and the PIN code is the one for THIS place.
+              if (!xy) xy = await placeCoords(state, p, meta && meta.group).catch(() => null);
+              const r = await pinFor(xy);
               onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
-                         pin: p6 || undefined });
+                         pin: (r && r.pincode) || undefined, city: (r && r.place) || undefined });
               onClose();
             }}
           />
@@ -1961,7 +1978,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade }) {
+                              otherLabels, trade, nearLabel }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -2121,7 +2138,15 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               <Icon name="pin" size={14} style={{ color: T.inkFaint }} />
               {row.locality ? `${row.locality}, ${row.city}` : row.city}
             </span>
-            {distance && (
+            {/* Same town or same PIN code: said in words, not as a number
+                of km. Positions inside a town are often rough, and "18 km"
+                between two people in Panisagar is simply wrong. */}
+            {nearLabel ? (
+              <>
+                {dot}
+                <span style={{ fontWeight: 800, color: T.green }}>{nearLabel}</span>
+              </>
+            ) : distance && (
               <>
                 {dot}
                 <span style={{ fontWeight: 700, color: T.brandDark }}>{distance}</span>
