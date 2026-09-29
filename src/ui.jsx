@@ -26,7 +26,7 @@ import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
 import { tradeKeysFor } from "./tradewords.js";
-import { TradePicture, GroupPicture } from "./tradepics.jsx";
+import { TradePicture } from "./tradepics.jsx";
 
 export const T = {
   ink: "#0F1419",
@@ -1771,38 +1771,43 @@ export function Hero({ search, setSearch, onVoice, compact = false }) {
 // The previous version used big bordered cards: at 390px only two fitted per
 // row, so eight categories filled the whole screen and the listings below
 // were never seen.
-export function CategoryGrid({ groups, onPick }) {
-  const { lang } = useI18n();
+export function CategoryGrid({ groups, counts, onPick }) {
+  const { t, lang } = useI18n();
   return (
     <div style={{
-      // Three across on a phone: big enough that each picture reads.
-      display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+      display: "grid", gap: "14px 4px",
+      // Four across on the narrowest phone we care about, and simply more on
+      // a wider screen -- no breakpoints to maintain. The arithmetic is tight
+      // and worth writing down: a 360px screen minus 32px of page padding
+      // leaves 328px, and 4x72 + 3x4 = 300. At the previous 78px and 6px gap
+      // it came to 330 and silently fell back to three.
+      gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
     }}>
       {groups.map((g) => {
         const s = groupStyle(g);
-        const icon = (
-          <span style={{
-            width: "100%", height: "100%", background: s.bg, color: s.fg,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}><Icon name={s.icon} size={30} /></span>
-        );
+        const n = counts[g] || 0;
         return (
           <button key={g} onClick={() => onPick(g)} style={{
-            display: "flex", flexDirection: "column", padding: 0, overflow: "hidden",
-            borderRadius: 14, cursor: "pointer", background: T.white,
-            border: `1px solid ${T.line}`, fontFamily: "inherit",
-            boxShadow: "0 1px 4px rgba(15,20,25,0.05)",
+            background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+            minHeight: 44, fontFamily: "inherit",
           }}>
-            <span style={{ display: "block", width: "100%", aspectRatio: "4 / 3", background: s.bg }}>
-              <GroupPicture group={g} fallback={icon} />
+            <span style={{
+              width: 54, height: 54, borderRadius: "50%", background: s.bg, color: s.fg,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Icon name={s.icon} size={26} />
             </span>
             <span style={{
-              display: "block", padding: "7px 6px 9px", fontSize: 13, fontWeight: 800,
-              color: T.ink, textAlign: "center", lineHeight: 1.25, width: "100%",
-              boxSizing: "border-box",
+              fontSize: 12, fontWeight: 700, color: T.ink, textAlign: "center",
+              lineHeight: 1.25, hyphens: "none",
             }}>
               {groupLabel(g, lang)}
             </span>
+            {/* The listing count used to print here as a bare numeral --
+                "Construction 6" with nothing to say what 6 was. It is on the
+                trade chips inside the category, where it has a noun next to
+                it. */}
           </button>
         );
       })}
