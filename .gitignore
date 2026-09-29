@@ -1,0 +1,27 @@
+node_modules/
+dist/
+shots/
+_to_delete/
+dhundo-deploy.zip
+
+# Secrets -- none of these may ever be committed or deployed.
+.env
+.env.*
+*.pem
+id_rsa*
+
+# Android signing. Losing this file means never being able to update the
+# Play Store listing; publishing it means somebody else can sign an app as
+# you. It belongs in neither git nor /var/www.
+*.keystore
+*key-info*
+*.aab
+Dhundo - Google Play package/
+Dhundo - Google Play package.zip
+
+# This one is per-deployment and is restored from the server, not the repo.
+src/config.js
+
+# The public download copy is deliberately NOT ignored -- it has to ship:
+#   public/dhundo.apk
+# Everything else Android-signing-related above still is.

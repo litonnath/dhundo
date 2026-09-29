@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.shortlistone.dhundo",
+      "sha256_cert_fingerprints": [
+        "30:F0:47:DA:5D:3B:05:04:C3:D7:0E:F5:7D:6F:7D:68:15:2A:7C:D3:EA:5E:07:55:02:06:23:E1:18:EE:4A:30"
+      ]
+    }
+  }
+]
