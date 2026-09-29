@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ft_links: "ముఖ్యమైన లింకులు",
+  ft_help: "సహాయం & సంప్రదింపు",
+  ft_call: "కాల్ చేయండి",
   w1_sub_multi: "మీరు చేసే పనులన్నీ ఎంచుకోండి. వేర్వేరు పనులు చేస్తే ఒకటి కంటే ఎక్కువ ఎంచుకోండి.",
   w1_picked: "మీరు చేసేవి",
   w1_main: "ముఖ్యమైనది",

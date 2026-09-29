@@ -2,6 +2,9 @@
 // i18n.jsx. Written to be plain and spoken. Worth a read by a native speaker
 // before promoting it; each line is a one-line fix.
 export default {
+  ft_links: "ਜ਼ਰੂਰੀ ਲਿੰਕ",
+  ft_help: "ਮਦਦ ਅਤੇ ਸੰਪਰਕ",
+  ft_call: "ਫ਼ੋਨ ਕਰੋ",
   w1_sub_multi: "ਤੁਸੀਂ ਜੋ ਵੀ ਕੰਮ ਕਰਦੇ ਹੋ ਸਭ ਚੁਣੋ। ਵੱਖ-ਵੱਖ ਕੰਮ ਲੈਂਦੇ ਹੋ ਤਾਂ ਇੱਕ ਤੋਂ ਵੱਧ ਚੁਣੋ।",
   w1_picked: "ਤੁਸੀਂ ਕਰਦੇ ਹੋ",
   w1_main: "ਮੁੱਖ",

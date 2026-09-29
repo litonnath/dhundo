@@ -53,6 +53,18 @@ export function DhundoGlyph({ size = 24 }) {
 
 // Mark + wordmark. `tagline` is optional and is left off in tight rows,
 // where it costs ~70px that the location control needs more.
+// How people reach Dhundo, shown in the page footer. Fill these in and the
+// footer's "Help & contact" column appears; leave them empty and it stays
+// hidden rather than showing a number nobody answers.
+//   phone:    "+91 98620 12345"   (shown as written, dialled without spaces)
+//   whatsapp: "919862012345"      (country code, digits only)
+//   email:    "help@example.com"
+export const CONTACT = {
+  phone: "",
+  whatsapp: "",
+  email: "",
+};
+
 export function DhundoLogo({ size = 34, showWord = true, tagline = null, ink = "#0F1419" }) {
   return (
     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>

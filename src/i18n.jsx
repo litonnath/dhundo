@@ -65,6 +65,9 @@ const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
+    ft_links: "Quick links",
+    ft_help: "Help & contact",
+    ft_call: "Call",
     w1_sub_multi: "Pick everything you do. Tap more than one if you take different work.",
     w1_picked: "You do",
     w1_main: "Main",
@@ -446,6 +449,9 @@ const STRINGS = {
   },
 
   bn: {
+    ft_links: "দরকারি লিংক",
+    ft_help: "সাহায্য ও যোগাযোগ",
+    ft_call: "ফোন করুন",
     w1_sub_multi: "যা যা কাজ করেন সব বাছুন। একাধিক কাজ করলে একাধিক টিপুন।",
     w1_picked: "আপনি করেন",
     w1_main: "প্রধান",
@@ -826,6 +832,9 @@ const STRINGS = {
     m_views: "বার নম্বর দেখা হয়েছে",
   },
   hi: {
+    ft_links: "ज़रूरी लिंक",
+    ft_help: "मदद और संपर्क",
+    ft_call: "फ़ोन करें",
     w1_sub_multi: "जो-जो काम करते हैं सब चुनें। एक से ज़्यादा काम हो तो एक से ज़्यादा दबाएँ।",
     w1_picked: "आप करते हैं",
     w1_main: "मुख्य",

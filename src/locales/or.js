@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ft_links: "ଦରକାରୀ ଲିଙ୍କ",
+  ft_help: "ସାହାଯ୍ୟ ଓ ଯୋଗାଯୋଗ",
+  ft_call: "ଫୋନ କରନ୍ତୁ",
   w1_sub_multi: "ଆପଣ କରୁଥିବା ସବୁ କାମ ବାଛନ୍ତୁ। ଅଲଗା ଅଲଗା କାମ ନେଉଥିଲେ ଏକାଧିକ ବାଛନ୍ତୁ।",
   w1_picked: "ଆପଣ କରନ୍ତି",
   w1_main: "ମୁଖ୍ୟ",

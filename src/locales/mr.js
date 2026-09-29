@@ -2,6 +2,9 @@
 // Written to be plain and spoken, like the Hindi and Bengali. Worth a read by
 // a native speaker before promoting it; each line is a one-line fix.
 export default {
+  ft_links: "महत्त्वाच्या लिंक",
+  ft_help: "मदत आणि संपर्क",
+  ft_call: "फोन करा",
   w1_sub_multi: "तुम्ही करता ती सगळी कामे निवडा. वेगवेगळी कामे घेत असाल तर एकापेक्षा जास्त निवडा.",
   w1_picked: "तुम्ही करता",
   w1_main: "मुख्य",

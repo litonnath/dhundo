@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ft_links: "പ്രധാന ലിങ്കുകൾ",
+  ft_help: "സഹായവും ബന്ധപ്പെടലും",
+  ft_call: "വിളിക്കുക",
   w1_sub_multi: "നിങ്ങൾ ചെയ്യുന്ന എല്ലാ ജോലികളും തിരഞ്ഞെടുക്കുക. പല ജോലികൾ ചെയ്യുമെങ്കിൽ ഒന്നിൽ കൂടുതൽ തിരഞ്ഞെടുക്കാം.",
   w1_picked: "നിങ്ങൾ ചെയ്യുന്നത്",
   w1_main: "പ്രധാനം",

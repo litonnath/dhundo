@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ft_links: "দৰকাৰী লিংক",
+  ft_help: "সহায় আৰু যোগাযোগ",
+  ft_call: "ফোন কৰক",
   w1_sub_multi: "আপুনি কৰা সকলো কাম বাছক। বেলেগ বেলেগ কাম লয় যদি এটাতকৈ বেছি বাছক।",
   w1_picked: "আপুনি কৰে",
   w1_main: "মূল",

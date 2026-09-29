@@ -25,7 +25,7 @@ import {
   T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
-  plateLooksRight, CloseButton, useDismissable, ConfirmDelete,
+  plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
@@ -1871,22 +1871,8 @@ export default function ServicesPage({
         </div>
       )}
 
-      {/* Required, not decorative: the place names, villages and PIN code
-          positions come from OpenStreetMap (ODbL) and GeoNames (CC BY 4.0),
-          and both licences make a visible credit a condition of use. Kept
-          in English -- it names organisations and licences, not an action. */}
-      <footer style={{
-        maxWidth: 1000, margin: "0 auto", padding: "18px 16px 28px",
-        fontSize: 11.5, lineHeight: 1.6, color: T.inkFaint, textAlign: "center",
-      }}>
-        Place data ©{" "}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer"
-           style={{ color: "inherit" }}>OpenStreetMap contributors</a>
-        {" "}(ODbL) and{" "}
-        <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer"
-           style={{ color: "inherit" }}>GeoNames</a>
-        {" "}(CC BY 4.0)
-      </footer>
+      <SiteFooter setTab={setTab} hasListing={hasListing && !isAdmin}
+                  onInstall={() => setInstallOpen(true)} />
     </div>
   );
 }

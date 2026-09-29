@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  ft_links: "முக்கிய இணைப்புகள்",
+  ft_help: "உதவி & தொடர்பு",
+  ft_call: "அழையுங்கள்",
   w1_sub_multi: "நீங்கள் செய்யும் எல்லா வேலைகளையும் தேர்ந்தெடுங்கள். வெவ்வேறு வேலைகள் செய்தால் ஒன்றுக்கு மேல் தேர்ந்தெடுக்கலாம்.",
   w1_picked: "நீங்கள் செய்வது",
   w1_main: "முதன்மை",

@@ -22,7 +22,7 @@ import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote } from "./regions.js";
 import { useMyLocation, useInstallPrompt } from "./device.jsx";
-import { DhundoLogo, DhundoGlyph } from "./brand.jsx";
+import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
 
@@ -2096,5 +2096,96 @@ export function TrustBar() {
         </div>
       ))}
     </div>
+  );
+}
+
+// -------------------------------------------------------------------- footer
+//
+// Three short columns on a wide screen, stacked on a phone: who Dhundo is,
+// where to go, and how to reach a person. The contact column appears only
+// when CONTACT in brand.jsx has something in it.
+//
+// The data credit on the last line is required, not decorative: place
+// names, villages and PIN code positions come from OpenStreetMap (ODbL) and
+// GeoNames (CC BY 4.0), and both licences make a visible credit a condition
+// of use. It stays in English -- it names organisations and licences.
+export function SiteFooter({ setTab, hasListing = false, onInstall }) {
+  const { t } = useI18n();
+  const year = new Date().getFullYear();
+  const heading = {
+    fontSize: 11.5, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
+    color: T.inkFaint, margin: "0 0 8px",
+  };
+  const link = {
+    display: "block", background: "none", border: "none", padding: "6px 0",
+    fontSize: 14, color: T.inkSoft, textAlign: "left", cursor: "pointer",
+    fontFamily: "inherit", textDecoration: "none", lineHeight: "20px",
+  };
+  const go = (tab) => () => {
+    setTab(tab);
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) {}
+  };
+  const hasContact = CONTACT.phone || CONTACT.whatsapp || CONTACT.email;
+
+  return (
+    <footer style={{ background: T.white, borderTop: `1px solid ${T.line}`, marginTop: 20 }}>
+      <div style={{
+        maxWidth: 1000, margin: "0 auto", padding: "26px 16px 14px",
+        display: "grid", gap: 22,
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+      }}>
+        <div>
+          <DhundoLogo size={30} />
+          <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "10px 0 0", maxWidth: 260 }}>
+            {t("tagline")}<br />{t("trust_2_s")}
+          </p>
+        </div>
+
+        <nav aria-label={t("ft_links")}>
+          <p style={heading}>{t("ft_links")}</p>
+          <button style={link} onClick={go("browse")}>{t("nav_find")}</button>
+          <button style={link} onClick={go(hasListing ? "mine" : "add")}>
+            {hasListing ? t("nav_mine") : t("nav_list")}
+          </button>
+          {onInstall && <button style={link} onClick={onInstall}>{t("install_app")}</button>}
+        </nav>
+
+        {hasContact && (
+          <div>
+            <p style={heading}>{t("ft_help")}</p>
+            {CONTACT.phone && (
+              <a style={link} href={`tel:${CONTACT.phone.replace(/[^+\d]/g, "")}`}>
+                {t("ft_call")}: {CONTACT.phone}
+              </a>
+            )}
+            {CONTACT.whatsapp && (
+              <a style={link} href={`https://wa.me/${CONTACT.whatsapp}`}
+                 target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            )}
+            {CONTACT.email && (
+              <a style={link} href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div style={{
+        maxWidth: 1000, margin: "0 auto", padding: "12px 16px 26px",
+        borderTop: `1px solid ${T.line}`,
+        fontSize: 11.5, lineHeight: 1.6, color: T.inkFaint,
+        display: "flex", flexWrap: "wrap", gap: "4px 14px", justifyContent: "space-between",
+      }}>
+        <span>© {year} Dhundo</span>
+        <span>
+          Place data ©{" "}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer"
+             style={{ color: "inherit" }}>OpenStreetMap contributors</a>
+          {" "}(ODbL) and{" "}
+          <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer"
+             style={{ color: "inherit" }}>GeoNames</a>
+          {" "}(CC BY 4.0)
+        </span>
+      </div>
+    </footer>
   );
 }
