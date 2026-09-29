@@ -37,6 +37,11 @@ import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 
 // ---------------------------------------------------------------- data layer
+// How far "near" is for people available right now, and how far to look
+// when nobody is that near.
+const NEAR_KM = 30;
+const FAR_KM = 100;
+
 function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
   const anonHeaders = {
     "Content-Type": "application/json",
@@ -120,7 +125,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_lat: typeof o.lat === "number" ? o.lat : null,
         p_lng: typeof o.lng === "number" ? o.lng : null,
         p_state: o.state || null, p_trade: o.trade || null, p_group: o.group || null,
-        p_radius_km: o.radiusKm || 15, p_limit: o.limit || 20,
+        p_radius_km: o.radiusKm || NEAR_KM, p_limit: o.limit || 20,
       }),
     selfRegister: (p) => rpc("services_self_register", p, true),
     adminUpsert: (p) => rpc("services_admin_upsert", p, true),
@@ -357,6 +362,10 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // screen it is everyone nearby; inside a category, that category.
   const [live, setLive] = useState([]);
   const [liveLoaded, setLiveLoaded] = useState(false);
+  // True when nobody is live within NEAR_KM and the list shows the nearest
+  // people farther out instead -- better a driver 40 km away who can be
+  // called than an empty screen.
+  const [liveFar, setLiveFar] = useState(false);
   const [onlyLive, setOnlyLive] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -366,6 +375,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
         trade: showGrid ? null : (trade || (typedTrade && typedTrade.slug)),
         group: showGrid || typedTrade ? null : group,
         limit: showGrid ? 8 : 20,
+        radiusKm: FAR_KM,
       })
         .then((r) => {
           if (!alive) return;
@@ -379,10 +389,16 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               [x.display_name, x.trade_name, x.locality, x.city]
                 .some((v) => qs.some((w) => String(v || "").toLowerCase().includes(w))));
           }
-          setLive(rows);
+          // Everyone within NEAR_KM when there is anyone; otherwise the
+          // nearest farther out, marked as such. Without the customer's
+          // position there is no distance to split on.
+          const near = rows.filter((x) => x.distance_km == null || Number(x.distance_km) <= NEAR_KM);
+          const far = near.length === 0 && rows.length > 0;
+          setLive(far ? rows : near);
+          setLiveFar(far);
           setLiveLoaded(true);
         })
-        .catch(() => { if (alive) { setLive([]); setLiveLoaded(true); } });
+        .catch(() => { if (alive) { setLive([]); setLiveFar(false); setLiveLoaded(true); } });
     fetchLive();
     const id = setInterval(fetchLive, 60000);
     return () => { alive = false; clearInterval(id); };
@@ -484,8 +500,13 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 12px",
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
-                  <LiveDot /> {t("av_near")}
+                  <LiveDot /> {liveFar ? t("av_far_title").replace("{n}", NEAR_KM) : t("av_near")}
                 </h2>
+                {liveFar && (
+                  <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "-4px 0 12px" }}>
+                    {t("av_far_note")}
+                  </p>
+                )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {live.slice(0, 5).map((row) => (
                     <ListingCard
@@ -620,6 +641,11 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               ) : null}
             </div>
 
+            {liveFar && live.length > 0 && (
+              <Notice tone="info">
+                <b>{t("av_far_title").replace("{n}", NEAR_KM)}</b> {t("av_far_note")}
+              </Notice>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {shown.map((row) => (
                 <ListingCard
