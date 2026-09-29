@@ -30,7 +30,6 @@ import {
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
-import { TradePicture } from "./tradepics.jsx";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { useMyLocation, isInstalledApp } from "./device.jsx";
 import MyListing from "./profile.jsx";
@@ -541,51 +540,17 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
               )}
             </div>
 
-            {/* The trades in this category as pictures in a row that
-                scrolls sideways -- an auto, a car, a truck -- so the right
-                one is found by looking, not by reading. */}
             {group && inGroup.length > 0 && (
-              <div style={{
-                display: "flex", gap: 9, overflowX: "auto", marginBottom: 18,
-                padding: "2px 2px 6px", scrollbarWidth: "none",
-              }}>
-                {[{ slug: null }, ...inGroup].map((tr) => {
-                  const on = tr.slug ? trade === tr.slug : !trade;
-                  const gs = groupStyle(group);
-                  return (
-                    <button key={tr.slug || "all"} onClick={() => setTrade(tr.slug)} style={{
-                      flex: "0 0 104px", display: "flex", flexDirection: "column", padding: 0,
-                      overflow: "hidden", borderRadius: 13, cursor: "pointer", fontFamily: "inherit",
-                      background: on ? T.brandSoft : T.white,
-                      border: `2px solid ${on ? T.brandDark : T.line}`,
-                    }}>
-                      <span style={{ display: "block", width: "100%", height: 62, background: gs.bg }}>
-                        {tr.slug ? (
-                          <TradePicture trade={tr} fallback={
-                            <span style={{ width: "100%", height: "100%", display: "flex",
-                                           alignItems: "center", justifyContent: "center", color: gs.fg }}>
-                              <Icon name={gs.icon} size={24} />
-                            </span>
-                          } />
-                        ) : (
-                          <span style={{ width: "100%", height: "100%", display: "flex",
-                                         alignItems: "center", justifyContent: "center", color: gs.fg }}>
-                            <Icon name={gs.icon} size={28} />
-                          </span>
-                        )}
-                      </span>
-                      <span style={{
-                        display: "block", padding: "6px 7px 8px", fontSize: 12.5, lineHeight: 1.25,
-                        fontWeight: on ? 800 : 700, color: on ? T.brandDeep : T.ink, textAlign: "left",
-                      }}>
-                        {tr.slug ? tradeName(tr, lang) : t("all")}
-                        {tr.slug && Number(tr.listing_count) > 0 && (
-                          <span style={{ opacity: 0.6 }}> · {tr.listing_count}</span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
+                <Chip active={!trade} onClick={() => setTrade(null)}>{t("all")}</Chip>
+                {inGroup.map((tr) => (
+                  <Chip key={tr.slug} active={trade === tr.slug} onClick={() => setTrade(tr.slug)}>
+                    {tradeName(tr, lang)}
+                    {Number(tr.listing_count) > 0 && (
+                      <span style={{ opacity: 0.6 }}> · {tr.listing_count}</span>
+                    )}
+                  </Chip>
+                ))}
               </div>
             )}
 
@@ -1039,17 +1004,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                       }}>
                       <span style={{ color: on ? T.brandDark : "transparent", flexShrink: 0 }}>
                         <Icon name="check" size={19} />
-                      </span>
-                      <span style={{
-                        width: 56, height: 38, borderRadius: 8, overflow: "hidden", flexShrink: 0,
-                        background: groupStyle(tr.group_name).bg,
-                      }}>
-                        <TradePicture trade={tr} fallback={
-                          <span style={{
-                            width: "100%", height: "100%", display: "flex", alignItems: "center",
-                            justifyContent: "center", color: groupStyle(tr.group_name).fg,
-                          }}><Icon name={groupStyle(tr.group_name).icon} size={20} /></span>
-                        } />
                       </span>
                       <span style={{ flex: 1 }}>{tradeName(tr, lang)}</span>
                       {/* Which one is the headline. It is the first thing
