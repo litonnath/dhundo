@@ -42,13 +42,7 @@ jobs = [
     # square was drawn on transparency and then saved as RGB, which turned
     # the corners BLACK -- and Android shows this icon on the launch screen.
     # "round" marks the ones that keep their transparency.
-    ("public/icon-192.png",          192, 0.66, "round", WHITE),
-    ("public/icon-round-192.png",    192, 0.66, "round", WHITE),   # new names: no cache has these
-    ("public/icon-round-512.png",    512, 0.66, "round", WHITE),
-    ("public/icon-512.png",          512, 0.66, "round", WHITE),
     ("public/apple-touch-icon.png",  180, 0.80, 0.0,  WHITE),   # iOS masks it itself
-    ("public/icon-maskable-512.png", 512, 0.60, 0.0,  WHITE),
-    ("public/icon-maskable-round-512.png", 512, 0.60, 0.0, WHITE),
 ]
 
 for path, px, frac, rad, bg in jobs:
@@ -60,7 +54,7 @@ for path, px, frac, rad, bg in jobs:
 
 
 # ---------------------------------------------------------------------------
-# THE APP ICONS THE MANIFEST USES: icon-blue-192/512 and the maskable one.
+# THE APP ICONS: icon-192.png, icon-512.png and icon-maskable-512.png.
 # Solid Dhundo blue with the logo in a white circle, and NOTHING transparent.
 # Transparent corners came out black on the Android launch screen (and look
 # black in a phone's image viewer); a blue square on the blue launch screen
@@ -80,8 +74,10 @@ def blue_icon(px, circle_frac, mark_frac):
     im.alpha_composite(MARK.resize((m, m), Image.LANCZOS), ((px - m) // 2, (px - m) // 2))
     return im.convert("RGB")
 
-for path, px, cf, mf in [("public/icon-blue-192.png", 192, 0.72, 0.50),
-                         ("public/icon-blue-512.png", 512, 0.72, 0.50),
-                         ("public/icon-maskable-blue-512.png", 512, 0.70, 0.48)]:
+# Written to the SAME names the manifest and the APK builder have always
+# used, so nothing else has to change when the picture does.
+for path, px, cf, mf in [("public/icon-192.png", 192, 0.72, 0.50),
+                         ("public/icon-512.png", 512, 0.72, 0.50),
+                         ("public/icon-maskable-512.png", 512, 0.70, 0.48)]:
     blue_icon(px, cf, mf).save(path)
     print("wrote", path, px)
