@@ -25,12 +25,13 @@ import {
   T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
-  plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter,
+  plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { useMyLocation } from "./device.jsx";
 import MyListing from "./profile.jsx";
+import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tradeName, STATES, DEFAULT_STATE } from "./i18n.jsx";
 
 // ---------------------------------------------------------------- data layer
@@ -89,6 +90,27 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     // No viewer id: 59 reads it from the signed token. Passing one was how
     // a caller could spend somebody else's hourly reveal budget.
     reveal: (workerId) => rpc("services_reveal_contact", { p_worker_id: workerId }, true),
+
+    // ------------------------------------------------- available now (80)
+    // The worker's switch. p_hours given = go online for that long; null =
+    // a heartbeat that only moves the position. The account comes from the
+    // signed token, never from here.
+    setAvailability: (on, pos, hours) =>
+      rpc("services_set_availability", {
+        p_on: !!on,
+        p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null,
+        p_accuracy: pos && typeof pos.accuracy === "number" ? Math.round(pos.accuracy) : null,
+        p_hours: hours || null,
+      }, true),
+    myAvailability: () => rpc("services_my_availability", {}, true),
+    // Anyone can ask: the answer is cards and distances, never positions.
+    availableWorkers: (o = {}) =>
+      rpc("services_available_workers", {
+        p_lat: typeof o.lat === "number" ? o.lat : null,
+        p_lng: typeof o.lng === "number" ? o.lng : null,
+        p_state: o.state || null, p_trade: o.trade || null, p_group: o.group || null,
+        p_radius_km: o.radiusKm || 15, p_limit: o.limit || 20,
+      }),
     selfRegister: (p) => rpc("services_self_register", p, true),
     adminUpsert: (p) => rpc("services_admin_upsert", p, true),
     adminList: (status, limit = 200, state = null) =>
@@ -296,6 +318,43 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
   }, [api, trade, group, search, locality, state, showGrid,
       place && place.lat, place && place.lng]);
 
+  // ----------------------------------------------------- available now (80)
+  // Who can take work right now, nearest by where they are NOW. Fetched
+  // beside the ordinary search and refreshed every minute, so a worker who
+  // switches on shows up without anybody pulling to refresh. On the home
+  // screen it is everyone nearby; inside a category, that category.
+  const [live, setLive] = useState([]);
+  const [onlyLive, setOnlyLive] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const fetchLive = () =>
+      api.availableWorkers({
+        lat: place && place.lat, lng: place && place.lng, state,
+        trade: showGrid ? null : trade, group: showGrid ? null : group,
+        limit: showGrid ? 8 : 20,
+      })
+        .then((r) => {
+          if (!alive) return;
+          let rows = many(r);
+          // A typed search narrows the live list the same way it narrows
+          // the ordinary one, by name, trade or area.
+          const q = search.trim().toLowerCase();
+          if (q) rows = rows.filter((x) =>
+            [x.display_name, x.trade_name, x.locality, x.city]
+              .some((v) => String(v || "").toLowerCase().includes(q)));
+          setLive(rows);
+        })
+        .catch(() => alive && setLive([]));
+    fetchLive();
+    const id = setInterval(fetchLive, 60000);
+    return () => { alive = false; clearInterval(id); };
+  }, [api, state, trade, group, showGrid, search, place && place.lat, place && place.lng]);
+
+  // Available first, then everybody else once; the live copy of a card wins
+  // because its distance is from where the worker is now.
+  const liveIds = useMemo(() => new Set(live.map((r) => r.id)), [live]);
+  const shown = onlyLive ? live : [...live, ...list.filter((r) => !liveIds.has(r.id))];
+
   // Debounced: one request per pause, not one per keystroke. On the
   // connections this audience has, that is the difference between usable and
   // not.
@@ -361,6 +420,31 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showGrid ? (
           <>
+            {live.length > 0 && (
+              <div style={{ marginBottom: 30 }}>
+                <h2 style={{
+                  fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 12px",
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <LiveDot /> {t("av_near")}
+                </h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {live.slice(0, 5).map((row) => (
+                    <ListingCard
+                      key={row.id}
+                      row={row}
+                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                      tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
+                      canCall={!!(user && user.id)}
+                      revealing={revealing === row.id}
+                      revealed={revealed[row.id]}
+                      onCall={handleCall}
+                      otherLabels={tradeLabels}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 14px" }}>
               {t("what_need")}
             </h2>
@@ -429,6 +513,19 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
                   : total === 0 ? ""
                   : `${total} ${total === 1 ? t("result") : t("results")}`}
               </span>
+              {/* The Rapido question -- who can come NOW -- as one tap. */}
+              {live.length > 0 && (
+                <button onClick={() => setOnlyLive((v) => !v)} aria-pressed={onlyLive} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  borderRadius: 20, padding: "7px 12px", minHeight: 38, cursor: "pointer",
+                  fontSize: 12.5, fontWeight: 800, fontFamily: "inherit",
+                  border: `1.5px solid ${onlyLive ? T.green : "rgba(18,128,74,0.35)"}`,
+                  background: onlyLive ? T.green : T.greenSoft,
+                  color: onlyLive ? "#fff" : T.green,
+                }}>
+                  <LiveDot light={onlyLive} /> {t("av_filter")} · {live.length}
+                </button>
+              )}
               <span style={{ flex: 1 }} />
               {typeof (place && place.lat) === "number" ? (
                 <span style={{
@@ -464,7 +561,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {list.map((row) => (
+              {shown.map((row) => (
                 <ListingCard
                   key={row.id}
                   row={row}
@@ -479,7 +576,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
               ))}
             </div>
 
-            {!loading && total === 0 && <EmptyState isAdmin={isAdmin} onAdd={onAdd} />}
+            {!loading && shown.length === 0 && <EmptyState isAdmin={isAdmin} onAdd={onAdd} />}
           </>
         )}
       </div>
@@ -1731,6 +1828,32 @@ export default function ServicesPage({
     return () => { alive = false; };
   }, [api, signedIn, reloadKey]);
 
+  // ------------------------------------------------------------ two modes
+  // Find (a customer looking for help) and Work (a worker taking jobs) --
+  // Rapido's customer app and captain app, as one app with a switch. The
+  // last mode used is remembered; somebody with a listing who has never
+  // chosen starts in Work, because that is why a worker opens the app.
+  const WORK_TABS = ["work", "mine"];
+  const mode = WORK_TABS.includes(tab) || (tab === "add" && !isAdmin) ? "work" : "find";
+  const setMode = (m) => {
+    try { window.localStorage.setItem("dhundo_mode", m); } catch (_) {}
+    setTab(m === "work" ? "work" : "browse");
+  };
+  const modeChosen = useRef(false);
+  useEffect(() => {
+    if (!hasListing || isAdmin || modeChosen.current) return;
+    modeChosen.current = true;
+    let saved = null;
+    try { saved = window.localStorage.getItem("dhundo_mode"); } catch (_) {}
+    if (saved !== "find" && tab === "browse") setTab("work");
+    // Only on first learning that this person has a listing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasListing, isAdmin]);
+
+  // The heartbeat runs here, not in the Work screen, so a worker's
+  // position keeps going while they look at their listing or wallet.
+  const avail = useAvailability(api, signedIn && hasListing && !isAdmin);
+
   // Attempted on every sign-in, not only on sign-up: the database decides
   // whether a code may be attached, and says no once a person has already
   // been referred or their listing is published. A failure is silent -- a
@@ -1780,6 +1903,9 @@ export default function ServicesPage({
         hasListing={hasListing}
         walletPaise={walletPaise}
         onOpenWallet={() => setWalletOpen(true)}
+        mode={mode}
+        onMode={setMode}
+        online={avail.online}
       />
 
       {outside && (
@@ -1823,6 +1949,15 @@ export default function ServicesPage({
         />
       )}
 
+      {tab === "work" && (
+        <WorkerHome
+          avail={avail} signedIn={signedIn} hasListing={hasListing}
+          onSignIn={onSignIn}
+          onList={() => setTab("add")}
+          onOpenListing={() => setTab("mine")}
+        />
+      )}
+
       {tab === "mine" && signedIn && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "22px 16px 60px" }}>
           <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("nav_mine")}</h1>
@@ -1831,7 +1966,7 @@ export default function ServicesPage({
         </div>
       )}
 
-      {tab !== "browse" && tab !== "mine" && (
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "26px 16px 60px" }}>
           {tab === "add" && (
             <>

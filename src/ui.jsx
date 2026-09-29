@@ -1569,6 +1569,7 @@ export function LocationSheet({ place, onChange, onClose }) {
 export function Header({
   tab, setTab, isAdmin, account, onSignOut, onSignIn, onInstall,
   place, onOpenLocation, hasListing = false, walletPaise = null, onOpenWallet,
+  mode = "find", onMode, online = false,
 }) {
   const { t } = useI18n();
   return (
@@ -1629,22 +1630,19 @@ export function Header({
           display: "flex", gap: 6, alignItems: "center", padding: "2px 0 8px",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
-          <Chip active={tab === "browse"} onClick={() => setTab("browse")}>{t("nav_find")}</Chip>
-          {/* "List yourself" disappears once the person has a listing. It
-              would take them to a form that refuses to save a second one,
-              and "My listing" -- where they actually want to go to add a
-              category or fix a rate -- is right beside it. An admin keeps
-              the tab, because they add other people's listings. */}
-          {(isAdmin || !hasListing) && (
-            <Chip active={tab === "add"} onClick={() => setTab("add")}>
-              {isAdmin ? t("nav_add") : t("nav_list")}
-            </Chip>
+          <ModeSwitch mode={mode} onMode={onMode} online={online} />
+          {/* Work mode's own tabs. "List yourself" disappears once the
+              person has a listing: it would lead to a form that refuses a
+              second one, and "My listing" is right beside it. */}
+          {mode === "work" && !hasListing && !isAdmin && (
+            <Chip active={tab === "add"} onClick={() => setTab("add")}>{t("nav_list")}</Chip>
           )}
-          {/* Only for somebody signed in: there is nothing behind it
-              otherwise, and a tab that always leads to a sign-in wall trains
-              people to ignore the row. */}
-          {account && (
+          {mode === "work" && account && hasListing && (
             <Chip active={tab === "mine"} onClick={() => setTab("mine")}>{t("nav_mine")}</Chip>
+          )}
+          {/* An admin adds other people's listings from either mode. */}
+          {isAdmin && (
+            <Chip active={tab === "add"} onClick={() => setTab("add")}>{t("nav_add")}</Chip>
           )}
           {isAdmin && (
             <Chip active={tab === "manage"} onClick={() => setTab("manage")}>{t("nav_manage")}</Chip>
@@ -1676,6 +1674,55 @@ export function Header({
           <LanguageSwitch />
         </div>
       </div>
+    </div>
+  );
+}
+
+// A small pulsing green dot: "this is happening now".
+export function LiveDot({ light = false }) {
+  return (
+    <span aria-hidden="true" style={{
+      display: "inline-block", width: 9, height: 9, borderRadius: "50%", flexShrink: 0,
+      background: light ? "#fff" : "#1FA85A",
+      boxShadow: `0 0 0 3px ${light ? "rgba(255,255,255,0.35)" : "rgba(31,168,90,0.22)"}`,
+      animation: "dhundoPulse 1.6s ease-in-out infinite",
+    }}>
+      <style>{"@keyframes dhundoPulse{0%,100%{opacity:1}50%{opacity:.45}}"}</style>
+    </span>
+  );
+}
+
+// ----------------------------------------------------------- mode switch
+// Find | Work, the split between the customer app and the captain app.
+// A green dot on Work while the worker is online, so they can see from any
+// screen that customers can still find them.
+function ModeSwitch({ mode, onMode, online }) {
+  const { t } = useI18n();
+  const seg = (m, label) => {
+    const on = mode === m;
+    return (
+      <button onClick={() => onMode && onMode(m)} aria-pressed={on} style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "8px 14px", borderRadius: 20, border: "none", minHeight: 36,
+        background: on ? T.brandDark : "transparent", color: on ? "#fff" : T.inkSoft,
+        fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+        whiteSpace: "nowrap",
+      }}>
+        {m === "work" && online && (
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2BC46F",
+                         boxShadow: "0 0 0 3px rgba(43,196,111,0.25)" }} />
+        )}
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div style={{
+      display: "inline-flex", flexShrink: 0, padding: 2, borderRadius: 22,
+      background: T.paper, border: `1px solid ${T.line}`,
+    }}>
+      {seg("find", t("mode_find"))}
+      {seg("work", t("mode_work"))}
     </div>
   );
 }
@@ -1833,12 +1880,21 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
   const isSupplier = row.trade_kind === "supplier";
   const initial = (row.display_name || "?").trim().charAt(0).toUpperCase();
 
+  // Live distances get a decimal under 10 km: "1.4 km" is the whole point
+  // of knowing where an auto is now, and rounding it to "1 km" hides it.
+  const km = row.distance_km === null || row.distance_km === undefined
+    ? null : Number(row.distance_km);
   const distance =
-    typeof row.distance_km === "number"
-      ? (row.distance_km < 1
+    typeof km === "number" && !Number.isNaN(km)
+      ? (km < (row.available_now ? 0.3 : 1)
           ? t("dist_near")
-          : t("dist_km").replace("{n}", String(Math.round(row.distance_km))))
+          : t("dist_km").replace("{n}", String(row.available_now && km < 10
+              ? km.toFixed(1) : Math.round(km))))
       : null;
+
+  const liveMins = row.available_now && row.live_seen_at
+    ? Math.max(0, Math.round((Date.now() - new Date(row.live_seen_at)) / 60000))
+    : null;
 
   const hasMore = !!(
     row.about ||
@@ -1888,6 +1944,26 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               </span>
             )}
           </div>
+
+          {/* Live: switched on in Work mode and heard from recently. A shop
+              is "open", a person is "available". */}
+          {row.available_now && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
+                fontSize: 12.5, fontWeight: 800, color: "#fff", background: "#1FA85A",
+                padding: "4px 10px", borderRadius: 20,
+              }}>
+                <LiveDot light />
+                {isSupplier ? t("av_badge_shop") : t("av_badge")}
+              </span>
+              {liveMins !== null && (
+                <span style={{ fontSize: 12, color: T.inkFaint }}>
+                  {liveMins < 1 ? t("av_seen_now") : t("av_seen").replace("{n}", String(liveMins))}
+                </span>
+              )}
+            </div>
+          )}
 
           <div style={{
             display: "inline-block", marginTop: 5, fontSize: 12, fontWeight: 700,
