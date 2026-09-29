@@ -2075,7 +2075,9 @@ export default function ServicesPage({
             lat: typeof p.lat === "number" ? p.lat : undefined,
             lng: typeof p.lng === "number" ? p.lng : undefined,
             pin: /^\d{6}$/.test(String(p.pin || "")) ? String(p.pin) : undefined,
-            city: typeof p.city === "string" && p.city ? p.city : undefined,
+            // Saved before post office suffixes were dropped: "Dharmanagar H.O".
+            city: typeof p.city === "string" && p.city
+              ? p.city.replace(/\s+(?:H\.?\s?O|S\.?\s?O|B\.?\s?O|G\.?\s?P\.?\s?O)\.?$/i, "").trim() : undefined,
           };
         }
       }

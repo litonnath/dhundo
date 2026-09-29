@@ -1704,6 +1704,29 @@ export function LocationSheet({ place, onChange, onClose }) {
           </div>
         )}
 
+        {/* What is chosen right now, said plainly: a village picked from the
+            search is not in the list below, so without this the sheet
+            looked as if nothing had been chosen. */}
+        {area.trim() && !guessed && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 9, padding: "11px 13px", marginBottom: 12,
+            borderRadius: 11, background: T.greenSoft, border: "1px solid rgba(18,128,74,0.3)",
+          }}>
+            <span style={{ color: T.green, flexShrink: 0 }}><Icon name="check" size={19} /></span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 11.5, fontWeight: 800, color: T.green,
+                             textTransform: "uppercase", letterSpacing: 0.4 }}>{t("loc_selected")}</span>
+              <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink }}>
+                {area.trim()}
+                {pin && <span style={{ fontWeight: 600, color: T.inkSoft }}> · PIN {pin}</span>}
+                {town && town.toLowerCase() !== area.trim().toLowerCase() && (
+                  <span style={{ fontWeight: 600, color: T.inkSoft }}> · {town}</span>
+                )}
+              </span>
+            </span>
+          </div>
+        )}
+
         <label style={{
           display: "block", fontSize: 12, fontWeight: 700, color: T.inkFaint,
           textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 7,

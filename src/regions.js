@@ -250,22 +250,35 @@ const REJECT_VALUES = new Set(["house", "houses", "building", "bus_stop", "shop"
 // asked second and only when the table came back empty, so in normal use no
 // request leaves your infrastructure at all.
 // ---------------------------------------------------------------------------
+// services_search_places (91) returns the position of each place; the older
+// services_search_regions does not, which left every place picked from the
+// search without one. The older one is only a fallback until 91 is run.
 async function searchDb(state, q, signal) {
+  const call = (fn) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    signal,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ p_state: state || null, p_query: q, p_limit: 25 }),
+  });
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_search_regions`, {
-      method: "POST",
-      signal,
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ p_state: state || null, p_query: q, p_limit: 25 }),
-    });
+    let res = await call("services_search_places");
+    if (!res.ok) res = await call("services_search_regions");
     if (!res.ok) return [];
     const rows = await res.json();
     if (!Array.isArray(rows)) return [];
-    return rows.map((r) => ({
+    // One entry per name and district: the map place and the post office
+    // of the same village are the same choice. The first, the map one, wins.
+    const seen = new Set();
+    return rows.filter((r) => {
+      const k = `${String(r.place || "").toLowerCase()}|${r.district || ""}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).map((r) => ({
       place: r.place,
       // The district is what separates three villages that share a name,
       // which is common enough in Tripura to matter.
@@ -330,6 +343,17 @@ export async function nearestPlaces(lat, lng) {
   }
 }
 
+// A PIN code row with its place name tidied: the postal data names the
+// place after its post office -- "Dharmanagar H.O", "Kadamtala S.O" -- and
+// the office type means nothing to the person reading it.
+function cleanPin(r) {
+  if (!r || !r.pincode) return null;
+  const place = String(r.place || "")
+    .replace(/\s*[([]?\b(?:G\.?\s?P\.?\s?O|H\.?\s?O|S\.?\s?O|B\.?\s?O|E\.?\s?D\.?\s?S\.?\s?O|P\.?\s?O)\b\.?[)\]]?\s*$/i, "")
+    .trim();
+  return { ...r, place };
+}
+
 // The PIN code nearest a position -- how "same PIN code" is worked out for
 // somebody who did not type theirs. { pincode, place, district } or null.
 export async function pinNear(lat, lng) {
@@ -347,7 +371,7 @@ export async function pinNear(lat, lng) {
     if (!res.ok) return null;
     const rows = await res.json();
     const r = Array.isArray(rows) ? rows[0] : rows;
-    return r && r.pincode ? r : null;
+    return cleanPin(r);
   } catch (_) {
     return null;
   }
@@ -374,7 +398,7 @@ export async function pinForPlace({ lat, lng, name, state, district } = {}) {
     if (!res.ok) return null;
     const rows = await res.json();
     const r = Array.isArray(rows) ? rows[0] : rows;
-    return r && r.pincode ? r : null;
+    return cleanPin(r);
   } catch (_) {
     return null;
   }
@@ -397,7 +421,7 @@ export async function pinLookup(pin) {
     if (!res.ok) return null;
     const rows = await res.json();
     const r = Array.isArray(rows) ? rows[0] : rows;
-    return r && r.pincode ? r : null;
+    return cleanPin(r);
   } catch (_) {
     return null;
   }
