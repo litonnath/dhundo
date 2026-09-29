@@ -88,11 +88,23 @@ STATES = {
 
 ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",   # mirror, if the first is busy
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
 ]
 
-PLACE_TYPES = ("city|town|village|hamlet|suburb|neighbourhood|quarter|"
-               "locality|isolated_dwelling|farm")
+# One state is asked for in several SMALL queries rather than one big one.
+# A single "everything in Uttar Pradesh, 15 minutes, 1 GB" request is one the
+# public servers refuse outright -- they answer 504 at once when a query asks
+# for more time or memory than they can schedule, even for a tiny state.
+# Each piece here asks for three minutes and the default memory, which they
+# accept, and a piece that still fails costs only that piece.
+PIECES = [
+    # (label, element types, place values)
+    ("towns and villages", "node", "city|town|village"),
+    ("hamlets",            "node", "hamlet"),
+    ("localities",         "node", "suburb|neighbourhood|quarter|locality|isolated_dwelling|farm"),
+    ("mapped areas",       "way",  "city|town|village|hamlet|suburb|neighbourhood|quarter|locality"),
+]
 
 KIND = {
     "city": "city", "town": "town", "village": "village", "hamlet": "village",
@@ -101,73 +113,105 @@ KIND = {
 }
 
 BATCH = 500
+QUERY_SECONDS = 180
 
 
-def overpass(state_iso):
-    q = f"""
-[out:json][timeout:900][maxsize:1073741824];
-area["ISO3166-2"~"^IN-({state_iso})$"][admin_level=4]->.a;
-(
-  node(area.a)["place"~"^({PLACE_TYPES})$"];
-  way(area.a)["place"~"^({PLACE_TYPES})$"];
-  relation(area.a)["place"~"^({PLACE_TYPES})$"];
-);
-out center tags;
-"""
+def overpass(query):
+    """Ask each server in turn, a few rounds, backing off when they are busy.
+
+    429 and 504 from Overpass mostly mean "busy right now", not "impossible",
+    so waiting and asking again works far more often than giving up.
+    """
     last = None
-    for url in ENDPOINTS:
-        try:
-            req = urllib.request.Request(
-                url, data=q.encode(),
-                headers={"User-Agent": "dhundo-import/1.0 (services.shortlistone.com)"},
-                method="POST")
-            with urllib.request.urlopen(req, timeout=960) as r:
-                return json.loads(r.read())
-        except Exception as e:
-            last = e
-            print(f"    {url.split('/')[2]} failed ({e}); trying the next one", flush=True)
-            time.sleep(3)
-    # RuntimeError, not SystemExit: one busy state should not end the run.
-    raise RuntimeError(f"both Overpass endpoints failed: {last}")
+    for attempt, pause in enumerate((0, 30, 90, 180)):
+        if pause:
+            print(f"      busy; waiting {pause}s before trying again", flush=True)
+            time.sleep(pause)
+        for url in ENDPOINTS:
+            try:
+                req = urllib.request.Request(
+                    url, data=query.encode(),
+                    headers={"User-Agent": "dhundo-import/1.0 (services.shortlistone.com)"},
+                    method="POST")
+                with urllib.request.urlopen(req, timeout=QUERY_SECONDS + 60) as r:
+                    data = json.loads(r.read())
+                # Overpass reports a query it gave up on inside a 200 reply.
+                remark = (data.get("remark") or "").lower()
+                if "runtime error" in remark or "timed out" in remark:
+                    raise RuntimeError(data["remark"][:120])
+                return data
+            except Exception as e:
+                last = e
+                print(f"      {url.split('/')[2]}: {e}", flush=True)
+                time.sleep(5)
+    # RuntimeError, not SystemExit: one failed piece should not end the run.
+    raise RuntimeError(f"every Overpass server failed: {last}")
+
+
+def piece_query(state_iso, types, values):
+    # "out body" for points: "out tags" would drop their coordinates.
+    out = "out body;" if types == "node" else "out center tags;"
+    return f"""
+[out:json][timeout:{QUERY_SECONDS}];
+area["ISO3166-2"~"^IN-({state_iso})$"][admin_level=4]->.a;
+{types}(area.a)["place"~"^({values})$"];
+{out}
+"""
 
 
 def collect(state, iso):
+    """Every place in the state, piece by piece.
+
+    Returns (rows, failed_pieces). Rows from the pieces that worked are kept
+    even if another piece failed -- a rerun fills in the rest, and nothing
+    loaded twice is duplicated.
+    """
     print(f"  querying {state} …", flush=True)
-    data = overpass(iso)
-    rows, seen = [], set()
-    for el in data.get("elements", []):
-        tags = el.get("tags") or {}
-        # The local-language name is kept only if there is no English one --
-        # the rest of the app searches in Latin script.
-        name = tags.get("name:en") or tags.get("name")
-        if not name:
+    rows, seen, failed = [], set(), []
+    for label, types, values in PIECES:
+        try:
+            data = overpass(piece_query(iso, types, values))
+        except Exception as e:
+            print(f"    {label}: failed ({e})", flush=True)
+            failed.append(label)
             continue
-        key = name.strip().lower()
-        if key in seen:
-            continue
-        seen.add(key)
+        n0 = len(rows)
+        for el in data.get("elements", []):
+            tags = el.get("tags") or {}
+            # The local-language name is kept only if there is no English
+            # one -- the rest of the app searches in Latin script.
+            name = tags.get("name:en") or tags.get("name")
+            if not name:
+                continue
+            key = name.strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
 
-        if el.get("type") == "node":
-            lat, lng = el.get("lat"), el.get("lon")
-        else:
-            c = el.get("center") or {}
-            lat, lng = c.get("lat"), c.get("lon")
+            if el.get("type") == "node":
+                lat, lng = el.get("lat"), el.get("lon")
+            else:
+                c = el.get("center") or {}
+                lat, lng = c.get("lat"), c.get("lon")
 
-        rows.append({
-            "state": state,
-            # Overpass does not give the district without a much heavier
-            # query. is_in is unreliable and a second lookup per place would
-            # be thousands of requests against donated infrastructure.
-            "district": tags.get("is_in:district") or None,
-            "block": None,
-            "place": name.strip(),
-            "kind": KIND.get(tags.get("place", ""), "village"),
-            "source": "osm",
-            "lat": lat,
-            "lng": lng,
-        })
+            rows.append({
+                "state": state,
+                # Overpass does not give the district without a much heavier
+                # query. is_in is unreliable and a second lookup per place
+                # would be thousands of requests against donated
+                # infrastructure.
+                "district": tags.get("is_in:district") or None,
+                "block": None,
+                "place": name.strip(),
+                "kind": KIND.get(tags.get("place", ""), "village"),
+                "source": "osm",
+                "lat": lat,
+                "lng": lng,
+            })
+        print(f"    {label}: {len(rows) - n0:,}", flush=True)
+        time.sleep(3)   # between pieces, too: it is donated
     print(f"    {len(rows):,} places", flush=True)
-    return rows
+    return rows, failed
 
 
 def post(url, key, fn, payload):
@@ -229,7 +273,7 @@ def main():
     failed = []
     for state in wanted:
         try:
-            rows = collect(state, STATES[state])
+            rows, missing = collect(state, STATES[state])
         except SystemExit:
             raise
         except Exception as e:
@@ -237,6 +281,8 @@ def main():
             failed.append(state)
             time.sleep(5)
             continue
+        if missing:
+            failed.append(state)
         by_state[state] = len(rows)
 
         for i in range(0, len(rows), BATCH):
@@ -257,7 +303,7 @@ def main():
     if failed:
         # Usually Overpass being busy or timing out on a big state. Nothing
         # already loaded is lost; run just these again later.
-        print("\nThese did not load -- run them again on their own:")
+        print("\nThese did not load completely -- run them again on their own:")
         print("  python3 import_osm_places.py " + " ".join(f'"{f}"' for f in failed))
 
     print(f"\nDone. {added:,} new places, {fixed:,} rows given coordinates.")
