@@ -57,3 +57,31 @@ for path, px, frac, rad, bg in jobs:
     else:
         tile(px, frac, rad, bg).convert("RGB" if bg else "RGBA").save(path)
     print("wrote", path, px)
+
+
+# ---------------------------------------------------------------------------
+# THE APP ICONS THE MANIFEST USES: icon-blue-192/512 and the maskable one.
+# Solid Dhundo blue with the logo in a white circle, and NOTHING transparent.
+# Transparent corners came out black on the Android launch screen (and look
+# black in a phone's image viewer); a blue square on the blue launch screen
+# simply disappears, leaving the round white logo -- the same as the app's
+# own loading screen, so the two screens join up into one.
+# ---------------------------------------------------------------------------
+from PIL import ImageDraw as _D
+
+def blue_icon(px, circle_frac, mark_frac):
+    im = Image.new("RGBA", (px, px), BLUE)
+    S = 4
+    big = Image.new("L", (px * S, px * S), 0)
+    d = int(px * circle_frac * S); o = (px * S - d) // 2
+    _D.Draw(big).ellipse([o, o, o + d - 1, o + d - 1], fill=255)
+    im.paste(Image.new("RGBA", (px, px), WHITE), (0, 0), big.resize((px, px), Image.LANCZOS))
+    m = int(px * mark_frac)
+    im.alpha_composite(MARK.resize((m, m), Image.LANCZOS), ((px - m) // 2, (px - m) // 2))
+    return im.convert("RGB")
+
+for path, px, cf, mf in [("public/icon-blue-192.png", 192, 0.72, 0.50),
+                         ("public/icon-blue-512.png", 512, 0.72, 0.50),
+                         ("public/icon-maskable-blue-512.png", 512, 0.70, 0.48)]:
+    blue_icon(px, cf, mf).save(path)
+    print("wrote", path, px)
