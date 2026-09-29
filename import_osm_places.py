@@ -116,7 +116,7 @@ BATCH = 500
 QUERY_SECONDS = 180
 
 
-def overpass(query):
+def overpass(query, must_find=False):
     """Ask each server in turn, a few rounds, backing off when they are busy.
 
     429 and 504 from Overpass mostly mean "busy right now", not "impossible",
@@ -135,10 +135,15 @@ def overpass(query):
                     method="POST")
                 with urllib.request.urlopen(req, timeout=QUERY_SECONDS + 60) as r:
                     data = json.loads(r.read())
-                # Overpass reports a query it gave up on inside a 200 reply.
-                remark = (data.get("remark") or "").lower()
-                if "runtime error" in remark or "timed out" in remark:
-                    raise RuntimeError(data["remark"][:120])
+                # Overpass reports a query it gave up on inside a 200 reply,
+                # with whatever it had managed so far -- often nothing. Any
+                # remark on a reply means it is not the whole answer.
+                if data.get("remark"):
+                    raise RuntimeError(str(data["remark"])[:120])
+                if must_find and not data.get("elements"):
+                    # Every Indian state has thousands of villages; "none"
+                    # is a mirror with a missing area index, not an answer.
+                    raise RuntimeError("returned nothing")
                 return data
             except Exception as e:
                 last = e
@@ -170,7 +175,8 @@ def collect(state, iso):
     rows, seen, failed = [], set(), []
     for label, types, values in PIECES:
         try:
-            data = overpass(piece_query(iso, types, values))
+            data = overpass(piece_query(iso, types, values),
+                            must_find=(label == "towns and villages"))
         except Exception as e:
             print(f"    {label}: failed ({e})", flush=True)
             failed.append(label)
