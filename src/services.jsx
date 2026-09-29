@@ -161,7 +161,12 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
             await this.markDeleted(row.id, null);
             gone += 1;
           } else {
-            await this.markDeleted(row.id, `HTTP ${res.status}`);
+            // Storage says 400 for most things, including "not found" and
+            // "not allowed"; the body is the only place that tells them apart.
+            let msg = "";
+            try { const b = await res.json(); msg = b.message || b.error || ""; }
+            catch (_) { /* not JSON */ }
+            await this.markDeleted(row.id, `HTTP ${res.status}${msg ? ` ${msg}` : ""}`);
           }
         } catch (e) {
           await this.markDeleted(row.id, String((e && e.message) || "failed"));
@@ -1117,16 +1122,19 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
         onClose();
         return;
       }
-      const why = (r && r.reason) || "";
+      // Not called "why": that is the parameter passed to adminSetStatus
+      // above, and a const of the same name in this block shadowed it --
+      // every call threw "Cannot access 'why' before initialization".
+      const reason = (r && r.reason) || "";
       // 67 answers 'missing:vehicle_number,id_doc' rather than just failing,
       // so the admin is told WHICH thing is absent instead of hunting.
-      if (why.startsWith("missing:")) {
-        const names = why.slice(8).split(",").map((k) =>
+      if (reason.startsWith("missing:")) {
+        const names = reason.slice(8).split(",").map((k) =>
           k === "vehicle_number" ? t("w3_vehicle") : t("adm_id_title")
         );
         setErr(`${t("adm_blocked")} ${names.join(", ")}`);
       } else {
-        setErr(why || t("e_save"));
+        setErr(reason || t("e_save"));
       }
     } catch (e) { setErr(e.message || t("e_save")); }
     finally { setBusy(false); }
