@@ -30,6 +30,7 @@ import {
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
+import { TradePicture } from "./tradepics.jsx";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { useMyLocation, isInstalledApp } from "./device.jsx";
 import MyListing from "./profile.jsx";
@@ -471,8 +472,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
           <>
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
-                come right now; every category; then, only while nobody real
-                is available nearby, two labelled examples. */}
+                come right now; then every category. */}
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
             </h2>
@@ -486,13 +486,15 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
                 }}>
                   <LiveDot /> {t("av_near")}
                 </h2>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {live.slice(0, 5).map((row) => (
                     <ListingCard
                       key={row.id}
                       row={row}
                       rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
                       tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
+                      trade={trades.find((x) => x.slug === row.trade_slug)}
+                  trade={trades.find((x) => x.slug === row.trade_slug)}
                       canCall={!!(user && user.id)}
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
@@ -508,34 +510,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
               {t("all_categories")}
             </h2>
             <CategoryGrid groups={groups} counts={counts} onPick={setGroup} />
-            {/* Nobody real is available nearby yet: show what a listing
-                looks like, labelled as examples on the heading AND on every
-                card, and not callable. They live here in the code, never in
-                the database, and go away by themselves the moment one real
-                person nearby switches on. */}
-            {liveLoaded && live.length === 0 && (
-              <div style={{ marginTop: 30 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 6px" }}>
-                  {t("ex_title")}
-                </h2>
-                <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>
-                  {t("ex_note")}
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {exampleRows((place && place.area) || stateName(state, lang)).slice(0, 2).map((row) => (
-                    <ListingCard
-                      key={row.id}
-                      row={row}
-                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
-                      tradeLabel={row.trade_name}
-                      canCall={false}
-                      onCall={() => {}}
-                      otherLabels={tradeLabels}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
             <TrustBar />
           </>
         ) : (
@@ -568,17 +542,51 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
               )}
             </div>
 
+            {/* The trades in this category as pictures in a row that
+                scrolls sideways -- an auto, a car, a truck -- so the right
+                one is found by looking, not by reading. */}
             {group && inGroup.length > 0 && (
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
-                <Chip active={!trade} onClick={() => setTrade(null)}>{t("all")}</Chip>
-                {inGroup.map((tr) => (
-                  <Chip key={tr.slug} active={trade === tr.slug} onClick={() => setTrade(tr.slug)}>
-                    {tradeName(tr, lang)}
-                    {Number(tr.listing_count) > 0 && (
-                      <span style={{ opacity: 0.6 }}> · {tr.listing_count}</span>
-                    )}
-                  </Chip>
-                ))}
+              <div style={{
+                display: "flex", gap: 9, overflowX: "auto", marginBottom: 18,
+                padding: "2px 2px 6px", scrollbarWidth: "none",
+              }}>
+                {[{ slug: null }, ...inGroup].map((tr) => {
+                  const on = tr.slug ? trade === tr.slug : !trade;
+                  const gs = groupStyle(group);
+                  return (
+                    <button key={tr.slug || "all"} onClick={() => setTrade(tr.slug)} style={{
+                      flex: "0 0 104px", display: "flex", flexDirection: "column", padding: 0,
+                      overflow: "hidden", borderRadius: 13, cursor: "pointer", fontFamily: "inherit",
+                      background: on ? T.brandSoft : T.white,
+                      border: `2px solid ${on ? T.brandDark : T.line}`,
+                    }}>
+                      <span style={{ display: "block", width: "100%", height: 62, background: gs.bg }}>
+                        {tr.slug ? (
+                          <TradePicture trade={tr} fallback={
+                            <span style={{ width: "100%", height: "100%", display: "flex",
+                                           alignItems: "center", justifyContent: "center", color: gs.fg }}>
+                              <Icon name={gs.icon} size={24} />
+                            </span>
+                          } />
+                        ) : (
+                          <span style={{ width: "100%", height: "100%", display: "flex",
+                                         alignItems: "center", justifyContent: "center", color: gs.fg }}>
+                            <Icon name={gs.icon} size={28} />
+                          </span>
+                        )}
+                      </span>
+                      <span style={{
+                        display: "block", padding: "6px 7px 8px", fontSize: 12.5, lineHeight: 1.25,
+                        fontWeight: on ? 800 : 700, color: on ? T.brandDeep : T.ink, textAlign: "left",
+                      }}>
+                        {tr.slug ? tradeName(tr, lang) : t("all")}
+                        {tr.slug && Number(tr.listing_count) > 0 && (
+                          <span style={{ opacity: 0.6 }}> · {tr.listing_count}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -654,6 +662,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
                   row={row}
                   rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
                   tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
+                  trade={trades.find((x) => x.slug === row.trade_slug)}
                   canCall={!!(user && user.id)}
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
@@ -669,31 +678,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
       </div>
     </>
   );
-}
-
-// ----------------------------------------------------------------- examples
-//
-// What a listing looks like, for a first visit to a place where nobody has
-// switched on yet. Every one carries is_example, which puts an "Example" tag
-// beside the name and replaces Call with "not a real person" -- they are a
-// picture of the product, never a claim that these people exist.
-function exampleRows(place) {
-  const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
-  const base = { is_example: true, available_now: true, locality: null, city: place };
-  return [
-    { ...base, id: "example-auto", display_name: "Ramesh", trade_name: "Auto rickshaw",
-      trade_group: "Drivers", trade_kind: "worker", distance_km: 0.8,
-      live_seen_at: ago(2) },
-    { ...base, id: "example-mason", display_name: "Sunil", trade_name: "Mason (mistri)",
-      trade_group: "Construction", trade_kind: "worker", distance_km: 1.4,
-      day_rate_min: 700, day_rate_max: 900, years_experience: 8, live_seen_at: ago(5) },
-    { ...base, id: "example-electrician", display_name: "Bikash", trade_name: "Electrician",
-      trade_group: "Repairs", trade_kind: "worker", distance_km: 2.3,
-      day_rate_min: 600, day_rate_max: 800, years_experience: 5, live_seen_at: ago(1) },
-    { ...base, id: "example-shop", display_name: "Maa Tara Hardware & Cement",
-      trade_name: "Cement shop", trade_group: "Suppliers", trade_kind: "supplier",
-      distance_km: 2.9, live_seen_at: ago(0) },
-  ];
 }
 
 // ---------------------------------------------------------------------- form
@@ -1056,6 +1040,17 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                       }}>
                       <span style={{ color: on ? T.brandDark : "transparent", flexShrink: 0 }}>
                         <Icon name="check" size={19} />
+                      </span>
+                      <span style={{
+                        width: 56, height: 38, borderRadius: 8, overflow: "hidden", flexShrink: 0,
+                        background: groupStyle(tr.group_name).bg,
+                      }}>
+                        <TradePicture trade={tr} fallback={
+                          <span style={{
+                            width: "100%", height: "100%", display: "flex", alignItems: "center",
+                            justifyContent: "center", color: groupStyle(tr.group_name).fg,
+                          }}><Icon name={groupStyle(tr.group_name).icon} size={20} /></span>
+                        } />
                       </span>
                       <span style={{ flex: 1 }}>{tradeName(tr, lang)}</span>
                       {/* Which one is the headline. It is the first thing

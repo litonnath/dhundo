@@ -26,6 +26,7 @@ import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
 import { tradeKeysFor } from "./tradewords.js";
+import { TradePicture, GroupPicture } from "./tradepics.jsx";
 
 export const T = {
   ink: "#0F1419",
@@ -1770,43 +1771,38 @@ export function Hero({ search, setSearch, onVoice, compact = false }) {
 // The previous version used big bordered cards: at 390px only two fitted per
 // row, so eight categories filled the whole screen and the listings below
 // were never seen.
-export function CategoryGrid({ groups, counts, onPick }) {
-  const { t, lang } = useI18n();
+export function CategoryGrid({ groups, onPick }) {
+  const { lang } = useI18n();
   return (
     <div style={{
-      display: "grid", gap: "14px 4px",
-      // Four across on the narrowest phone we care about, and simply more on
-      // a wider screen -- no breakpoints to maintain. The arithmetic is tight
-      // and worth writing down: a 360px screen minus 32px of page padding
-      // leaves 328px, and 4x72 + 3x4 = 300. At the previous 78px and 6px gap
-      // it came to 330 and silently fell back to three.
-      gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
+      // Three across on a phone: big enough that each picture reads.
+      display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
     }}>
       {groups.map((g) => {
         const s = groupStyle(g);
-        const n = counts[g] || 0;
+        const icon = (
+          <span style={{
+            width: "100%", height: "100%", background: s.bg, color: s.fg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}><Icon name={s.icon} size={30} /></span>
+        );
         return (
           <button key={g} onClick={() => onPick(g)} style={{
-            background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
-            minHeight: 44, fontFamily: "inherit",
+            display: "flex", flexDirection: "column", padding: 0, overflow: "hidden",
+            borderRadius: 14, cursor: "pointer", background: T.white,
+            border: `1px solid ${T.line}`, fontFamily: "inherit",
+            boxShadow: "0 1px 4px rgba(15,20,25,0.05)",
           }}>
-            <span style={{
-              width: 54, height: 54, borderRadius: "50%", background: s.bg, color: s.fg,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <Icon name={s.icon} size={26} />
+            <span style={{ display: "block", width: "100%", aspectRatio: "4 / 3", background: s.bg }}>
+              <GroupPicture group={g} fallback={icon} />
             </span>
             <span style={{
-              fontSize: 12, fontWeight: 700, color: T.ink, textAlign: "center",
-              lineHeight: 1.25, hyphens: "none",
+              display: "block", padding: "7px 6px 9px", fontSize: 13, fontWeight: 800,
+              color: T.ink, textAlign: "center", lineHeight: 1.25, width: "100%",
+              boxSizing: "border-box",
             }}>
               {groupLabel(g, lang)}
             </span>
-            {/* The listing count used to print here as a bare numeral --
-                "Construction 6" with nothing to say what 6 was. It is on the
-                trade chips inside the category, where it has a noun next to
-                it. */}
           </button>
         );
       })}
@@ -1843,7 +1839,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels }) {
+                              otherLabels, trade }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1878,30 +1874,54 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
 
   return (
     <div style={{
-      background: T.white, border: `1px solid ${T.line}`, borderRadius: 14,
-      boxShadow: "0 1px 2px rgba(15,20,25,0.04)", overflow: "hidden",
+      background: T.white, border: `1px solid ${T.line}`, borderRadius: 18,
+      boxShadow: "0 4px 16px rgba(15,20,25,0.07)", overflow: "hidden",
     }}>
-      <div style={{ display: "flex", gap: 13, alignItems: "flex-start", padding: 14 }}>
-        {/* Face first, then a work photo, then the initial. The card answers
-            "is this the person who will turn up?", and a portrait answers it
-            in a way a photograph of a wall does not. Round for a face,
-            square for work, so the two are never confused at a glance. */}
-        <div style={{
-          width: 58, height: 58, flexShrink: 0, overflow: "hidden",
-          borderRadius: row.avatar_url ? "50%" : 13,
-          background: row.avatar_url
-            ? `center/cover url(${row.avatar_url})`
-            : (row.photos && row.photos[0] ? `center/cover url(${row.photos[0]})` : s.bg),
-          color: s.fg, display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 21, fontWeight: 800,
-          border: row.avatar_url ? `2px solid ${T.brandSoft}` : "none",
-        }}>
-          {!row.avatar_url && (!row.photos || !row.photos[0]) && initial}
+      <div style={{ display: "flex", gap: 15, alignItems: "flex-start", padding: "16px 16px 12px" }}>
+        {/* Face first, then a work photo, then a picture of the trade --
+            an auto for an auto driver -- with the initial on it. Round for
+            a face, square otherwise, so the two are never confused. */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          {row.avatar_url || (row.photos && row.photos[0]) ? (
+            <div style={{
+              width: 76, height: 76, overflow: "hidden",
+              borderRadius: row.avatar_url ? "50%" : 16,
+              background: `center/cover url(${row.avatar_url || row.photos[0]}) ${s.bg}`,
+              border: row.avatar_url ? `3px solid ${T.brandSoft}` : `1px solid ${T.line}`,
+              boxSizing: "border-box",
+            }} />
+          ) : (
+            <div style={{
+              width: 76, height: 76, overflow: "hidden", borderRadius: 16, background: s.bg,
+              border: `1px solid ${T.line}`, boxSizing: "border-box",
+            }}>
+              <TradePicture trade={trade || { name_en: row.trade_name }} fallback={
+                <span style={{
+                  width: "100%", height: "100%", display: "flex", alignItems: "center",
+                  justifyContent: "center", color: s.fg,
+                }}><Icon name={s.icon} size={30} /></span>
+              } />
+            </div>
+          )}
+          {!row.avatar_url && (
+            <span style={{
+              position: "absolute", right: -6, bottom: -6, width: 28, height: 28,
+              borderRadius: "50%", background: T.brandDark, color: "#fff",
+              border: "2.5px solid #fff", display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 13, fontWeight: 800,
+            }}>{initial}</span>
+          )}
+          {row.available_now && (
+            <span style={{
+              position: "absolute", left: -3, top: -3, width: 16, height: 16, borderRadius: "50%",
+              background: "#1FA85A", border: "2.5px solid #fff",
+            }} />
+          )}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: T.ink }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>
               {row.display_name}
             </span>
             {row.is_example && (
@@ -1943,8 +1963,8 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           )}
 
           <div style={{
-            display: "inline-block", marginTop: 5, fontSize: 12, fontWeight: 700,
-            color: s.fg, background: s.bg, padding: "3px 9px", borderRadius: 6,
+            display: "inline-block", marginTop: 6, fontSize: 13.5, fontWeight: 800,
+            color: s.fg, background: s.bg, padding: "4px 10px", borderRadius: 8,
           }}>{tradeLabel || row.trade_name}</div>
 
           {/* Rate and experience on their own line, at full ink. These are
@@ -2060,7 +2080,8 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
 
       {/* ---------------------------------------------------------- actions */}
       <div style={{
-        display: "flex", gap: 9, alignItems: "center", padding: "10px 14px 14px",
+        display: "flex", gap: 9, alignItems: "center", padding: "12px 16px 16px",
+        borderTop: `1px solid ${T.line}`, marginTop: 2,
       }}>
         {row.is_example ? (
           // An example card is never callable: there is nobody behind it.
@@ -2094,7 +2115,8 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           </span>
         ) : (
           <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}
-               style={{ minHeight: 48, fontSize: 16 }}>
+               style={{ minHeight: 50, fontSize: 16.5, borderRadius: 12, whiteSpace: "nowrap",
+                        padding: "0 22px" }}>
             <Icon name="phone" size={18} />
             {revealing ? "…" : canCall ? t("ft_call") : t("signin_to_call")}
           </Btn>
@@ -2578,22 +2600,32 @@ export function PopularTrades({ trades, onPick, limit = 8 }) {
   if (!top.length) return null;
   return (
     <div style={{
-      display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+      display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
     }}>
       {top.map((tr) => {
         const s = groupStyle(tr.group_name);
+        const icon = (
+          <span style={{
+            width: "100%", height: "100%", background: s.bg, color: s.fg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}><Icon name={s.icon} size={40} /></span>
+        );
         return (
           <button key={tr.slug} onClick={() => onPick(tr)} style={{
-            display: "flex", alignItems: "center", gap: 11, minHeight: 64,
-            padding: "10px 12px", borderRadius: 14, cursor: "pointer", textAlign: "left",
+            display: "flex", flexDirection: "column", padding: 0, overflow: "hidden",
+            borderRadius: 16, cursor: "pointer", textAlign: "left",
             background: T.white, border: `1px solid ${T.line}`, fontFamily: "inherit",
-            boxShadow: "0 1px 2px rgba(15,20,25,0.04)",
+            boxShadow: "0 2px 8px rgba(15,20,25,0.06)",
           }}>
+            {/* A picture first: somebody who reads little still knows an
+                auto when they see one. */}
+            <span style={{ display: "block", width: "100%", aspectRatio: "16 / 10", background: s.bg }}>
+              <TradePicture trade={tr} fallback={icon} />
+            </span>
             <span style={{
-              width: 42, height: 42, borderRadius: 12, background: s.bg, color: s.fg,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}><Icon name={s.icon} size={23} /></span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.2 }}>
+              display: "block", padding: "9px 11px 11px", fontSize: 15, fontWeight: 800,
+              color: T.ink, lineHeight: 1.25,
+            }}>
               {tradeName(tr, lang)}
             </span>
           </button>
