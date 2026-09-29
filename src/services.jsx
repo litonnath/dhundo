@@ -372,11 +372,17 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     // that is how listings are stored; the results are merged.
     const text = typed ? null : search;
     const spellings = text && hasIndic(text) ? variants(text, 4) : [text];
-    const asks = tradeSlugs.flatMap((slug) => spellings.map((sp) => [slug, sp]));
-    Promise.all(asks.map(([slug, sp]) =>
+    // With a position: one search, sorted by distance, the town and every
+    // village around it alike. Without one: the area first, then everybody
+    // else in the state -- a shop in the next village is never hidden just
+    // because its listing names the village and not the town.
+    const areas = hasPos || !locality ? [null] : [locality, null];
+    const asks = tradeSlugs.flatMap((slug) =>
+      spellings.flatMap((sp) => areas.map((area) => [slug, sp, area])));
+    Promise.all(asks.map(([slug, sp, area]) =>
       api.browse({ trade: slug,
                    group: typed ? null : group,
-                   search: sp, locality: hasPos ? null : locality, state,
+                   search: sp, locality: area, state,
                    lat: place && place.lat, lng: place && place.lng })
         .then(many).catch(() => [])))
       .then((sets) => {
