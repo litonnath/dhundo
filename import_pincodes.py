@@ -52,6 +52,7 @@ import io
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 import zipfile
 from collections import defaultdict
@@ -233,6 +234,96 @@ def fix_ladakh(rows):
     return rows
 
 
+# ---------------------------------------------------------------------------
+# POST OFFICES AS PLACES  (--places)
+#
+# The same file names every post office in India -- about 155,000, with
+# coordinates -- and nearly every village and urban locality has one. For
+# the states the gazetteers cover thinly (Tripura, Assam, West Bengal) that
+# is the most complete list of place names available anywhere.
+#
+# The office-type suffix says what kind of place it is:
+#   B.O  branch office  -> almost always a village
+#   S.O  sub office     -> a town or an urban locality
+#   H.O  head office    -> a town (usually a district headquarters)
+# ---------------------------------------------------------------------------
+import re
+
+OFFICE_SUFFIX = re.compile(
+    r"\s*[\(\[]?\b(?:G\.?\s?P\.?\s?O|H\.?\s?O|S\.?\s?O|B\.?\s?O|E\.?\s?D\.?\s?S\.?\s?O|P\.?\s?O)\b\.?[\)\]]?\s*$",
+    re.IGNORECASE)
+
+
+def office_kind(raw):
+    tail = raw.replace(".", "").replace(" ", "").upper()
+    if tail.endswith("BO"):
+        return "village"
+    if tail.endswith("HO") or tail.endswith("GPO"):
+        return "town"
+    return "locality"
+
+
+def clean_office_name(raw):
+    name = OFFICE_SUFFIX.sub("", raw or "").strip(" -,.")
+    return re.sub(r"\s+", " ", name)
+
+
+def office_places(rows):
+    """One place per (state, name), from the raw post-office rows."""
+    out, seen = [], set()
+    for r in rows:
+        raw = r.get("place") or ""
+        name = clean_office_name(raw)
+        if len(name) < 2 or not r.get("state"):
+            continue
+        k = (r["state"], name.lower())
+        if k in seen:
+            continue
+        seen.add(k)
+        try:
+            lat, lng = float(r["lat"]), float(r["lng"])
+        except (TypeError, ValueError):
+            lat = lng = None
+        out.append({
+            "state": r["state"], "district": r.get("district"), "block": None,
+            "place": name, "kind": office_kind(raw), "source": "post",
+            "lat": lat, "lng": lng,
+        })
+    return out
+
+
+def load_office_places(url, key, places):
+    from import_osm_places import post, count_of   # same loaders as the OSM import
+    per_state = defaultdict(lambda: [0, 0, 0])
+    for p in places:
+        per_state[p["state"]][0] += 1
+    added = located = 0
+    for i in range(0, len(places), BATCH):
+        chunk = places[i:i + BATCH]
+        try:
+            res = post(url, key, "services_load_regions", {"p_rows": chunk})
+        except urllib.error.HTTPError as e:
+            # An older CHECK on services_regions.source may not know 'post'.
+            # 'import' is the loader's own default, so it is always allowed.
+            if i != 0 or places[0]["source"] != "post":
+                raise
+            print(f"  source 'post' refused ({e.code}); labelling these 'import' instead")
+            for p in places:
+                p["source"] = "import"
+            res = post(url, key, "services_load_regions", {"p_rows": chunk})
+        added += count_of(res, "inserted")
+        with_coords = [p for p in chunk if p["lat"] is not None]
+        if with_coords:
+            located += count_of(post(url, key, "services_load_region_coords",
+                                     {"p_rows": with_coords}), "updated")
+        print(f"  {min(i + BATCH, len(places)):,} / {len(places):,}", end="\r", flush=True)
+    print(f"\n  Done. {added:,} new places from post offices, "
+          f"{located:,} rows given coordinates.")
+    print("\n  Check it:")
+    print("    select state, count(*) from public.services_regions "
+          "group by state order by 2;")
+
+
 def report(rows):
     """What is actually in hand, before anything is uploaded."""
     per_state = defaultdict(lambda: [0, 0])
@@ -281,6 +372,9 @@ def main():
     ap.add_argument("--csv", help="load from a CSV instead of GeoNames")
     ap.add_argument("--dry-run", action="store_true",
                     help="report coverage and upload nothing")
+    ap.add_argument("--places", action="store_true",
+                    help="load every post office as a PLACE (village or "
+                         "locality) instead of loading PIN codes")
     args = ap.parse_args()
 
     if args.csv:
@@ -288,6 +382,26 @@ def main():
         skipped = {}
     else:
         rows, skipped = rows_from_geonames()
+
+    if args.places:
+        places = office_places(fix_ladakh(rows))
+        per = defaultdict(int)
+        for p in places:
+            per[p["state"]] += 1
+        print(f"\n  {len(rows):,} post offices -> {len(places):,} distinct place names")
+        for st in sorted(per):
+            print(f"    {st:<42} {per[st]:>7,}")
+        if args.dry_run:
+            print("  --dry-run: nothing uploaded.")
+            return 0
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_SERVICE_KEY")
+        if not url or not key:
+            print("\n  Set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
+            return 1
+        load_office_places(url.rstrip("/"), key, places)
+        return 0
+
     offices = len(rows)
     rows = merge_by_pincode(fix_ladakh(rows))
     print(f"  {offices:,} post offices -> {len(rows):,} distinct PIN codes")

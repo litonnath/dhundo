@@ -13,7 +13,8 @@
 #                           marked so the town picker has something in it
 #   2. import_osm_file.py   OpenStreetMap (one downloaded file): the villages
 #                           and paras GeoNames lacks, plus coordinates
-#   3. import_pincodes.py   India Post PIN codes via GeoNames
+#   3. import_pincodes.py   India Post PIN codes via GeoNames, then every
+#                           post office as a place (--places)
 #
 # Every step skips rows already loaded, so running this again is safe --
 # and is the thing to do if it stops partway.
@@ -51,8 +52,11 @@ echo; echo "=== 2/3  Villages and localities from OpenStreetMap ==="
 #   apt-get install -y osmium-tool python3-pyosmium python3-shapely
 python3 import_osm_file.py "$@"
 
-echo; echo "=== 3/3  PIN codes ==="
+echo; echo "=== 3/3  PIN codes, and post offices as places ==="
 python3 import_pincodes.py
+# Every post office as a village or locality: the fullest list of names for
+# states the gazetteers cover thinly (Tripura, Assam, West Bengal).
+python3 import_pincodes.py --places
 
 cat <<'EOF'
 
