@@ -1,0 +1,6 @@
+# Shell and Python scripts run on the Linux server. Windows line endings
+# (which Git on Windows adds on checkout) break bash: "set: pipefail:
+# invalid option name". Keep them LF everywhere.
+*.sh text eol=lf
+*.py text eol=lf
+*.sql text eol=lf
