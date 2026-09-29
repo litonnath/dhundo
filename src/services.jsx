@@ -494,7 +494,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
                       rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
                       tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
                       trade={trades.find((x) => x.slug === row.trade_slug)}
-                  trade={trades.find((x) => x.slug === row.trade_slug)}
                       canCall={!!(user && user.id)}
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
