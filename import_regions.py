@@ -119,6 +119,25 @@ KIND_BY_CODE = {
     "PPLQ": "village", "PPLH": "village",
 }
 
+# GeoNames files most Indian towns as plain PPL, the same code as a hamlet,
+# so the feature code alone would leave the town picker nearly empty outside
+# the district headquarters. Its population column tells them apart: ten
+# thousand people is roughly where India's census starts calling a place a
+# town. Only upgrades -- a PPLA is a city whatever its recorded population.
+TOWN_POPULATION = 10000
+
+
+def kind_of(fcode, population):
+    kind = KIND_BY_CODE.get(fcode, "village")
+    if kind == "village":
+        try:
+            if int(population or 0) >= TOWN_POPULATION:
+                return "town"
+        except ValueError:
+            pass
+    return kind
+
+
 BATCH = 500
 
 
@@ -166,7 +185,7 @@ def load_places(a1, a2):
                     "district": district,
                     "block": None,     # GeoNames has no block level for India
                     "place": name,
-                    "kind": KIND_BY_CODE.get(fcode, "village"),
+                    "kind": kind_of(fcode, f[14]),
                     "source": "geonames",
                 })
     return rows

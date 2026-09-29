@@ -127,7 +127,8 @@ out center tags;
             last = e
             print(f"    {url.split('/')[2]} failed ({e}); trying the next one", flush=True)
             time.sleep(3)
-    raise SystemExit(f"Both Overpass endpoints failed: {last}")
+    # RuntimeError, not SystemExit: one busy state should not end the run.
+    raise RuntimeError(f"both Overpass endpoints failed: {last}")
 
 
 def collect(state, iso):
@@ -225,6 +226,7 @@ def main():
     # should not throw away the states that already worked.
     added = fixed = 0
     by_state = {}
+    failed = []
     for state in wanted:
         try:
             rows = collect(state, STATES[state])
@@ -232,6 +234,7 @@ def main():
             raise
         except Exception as e:
             print(f"    {state} failed: {e}")
+            failed.append(state)
             time.sleep(5)
             continue
         by_state[state] = len(rows)
@@ -251,6 +254,11 @@ def main():
         print("Nothing returned.")
         sys.exit(1)
     print("\nTotal: " + ", ".join(f"{k} {v:,}" for k, v in sorted(by_state.items())))
+    if failed:
+        # Usually Overpass being busy or timing out on a big state. Nothing
+        # already loaded is lost; run just these again later.
+        print("\nThese did not load -- run them again on their own:")
+        print("  python3 import_osm_places.py " + " ".join(f'"{f}"' for f in failed))
 
     print(f"\nDone. {added:,} new places, {fixed:,} rows given coordinates.")
     print("\nCheck it:")
