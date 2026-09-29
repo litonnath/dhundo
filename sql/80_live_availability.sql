@@ -1,6 +1,9 @@
 -- ===========================================================================
 -- 80_live_availability.sql
 --
+-- If the Supabase SQL editor refuses this file, run the same thing in four
+-- smaller pieces instead: sql/80_parts/80_part1.sql to 80_part4.sql, in order.
+--
 -- "AVAILABLE NOW", the Rapido-captain idea for every trade.
 --
 -- A worker taps "I am available now". While Dhundo is open on their phone it
