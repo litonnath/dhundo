@@ -43,9 +43,12 @@ jobs = [
     # the corners BLACK -- and Android shows this icon on the launch screen.
     # "round" marks the ones that keep their transparency.
     ("public/icon-192.png",          192, 0.66, "round", WHITE),
+    ("public/icon-round-192.png",    192, 0.66, "round", WHITE),   # new names: no cache has these
+    ("public/icon-round-512.png",    512, 0.66, "round", WHITE),
     ("public/icon-512.png",          512, 0.66, "round", WHITE),
     ("public/apple-touch-icon.png",  180, 0.80, 0.0,  WHITE),   # iOS masks it itself
     ("public/icon-maskable-512.png", 512, 0.60, 0.0,  WHITE),
+    ("public/icon-maskable-round-512.png", 512, 0.60, 0.0, WHITE),
 ]
 
 for path, px, frac, rad, bg in jobs:
