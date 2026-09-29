@@ -20,7 +20,7 @@
 // ===========================================================================
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords } from "./regions.js";
+import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -1430,6 +1430,9 @@ export function LocationSheet({ place, onChange, onClose }) {
   // does not live there. The fix is not a better GPS reading; the reading
   // was fine. It is to stop presenting the guess as a fact.
   const [guessed, setGuessed] = useState(null);
+  // The places nearest the phone, from the place table, to tap when the
+  // guess is not quite right.
+  const [near, setNear] = useState([]);
   // Metres. Shown so a 30-metre fix and a 2-kilometre one do not look alike.
   const [acc, setAcc] = useState(null);
 
@@ -1451,8 +1454,13 @@ export function LocationSheet({ place, onChange, onClose }) {
     // Snapped to a known name: OpenStreetMap says "Krishna Nagar" where this
     // list says "Krishnanagar", and two spellings of one place is the exact
     // problem the list exists to end.
-    if (got.area) {
-      const named = snapToKnown(got.state || state, got.area);
+    // The map service names the nearest mapped TOWN when a village is only
+    // a dot on the map; the place table knows the village itself.
+    const close = typeof got.lat === "number" ? await nearestPlaces(got.lat, got.lng) : [];
+    setNear(close.filter((r) => r.km <= 5));
+    const fromMap = got.area ? snapToKnown(got.state || state, got.area) : null;
+    const named = bestNearName(close, fromMap);
+    if (named) {
       setArea(named);
       setGuessed(named);
     }
@@ -1559,6 +1567,30 @@ export function LocationSheet({ place, onChange, onClose }) {
                 </span>
               )}
             </div>
+            {near.length > 1 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, marginBottom: 6 }}>
+                  {t("loc_near_places")}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {near.map((r) => {
+                    const on = r.place === area;
+                    return (
+                      <button key={r.place} onClick={() => { setArea(r.place); setGuessed(r.place); }} style={{
+                        padding: "7px 11px", borderRadius: 18, cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 13, fontWeight: on ? 800 : 600, minHeight: 36,
+                        border: `1.5px solid ${on ? T.brandDark : T.line}`,
+                        background: on ? T.white : "rgba(255,255,255,0.7)", color: on ? T.brandDeep : T.ink,
+                      }}>
+                        {r.place} <span style={{ color: T.inkFaint, fontWeight: 600 }}>
+                          · {r.km < 1 ? `${Math.round(r.km * 1000)} m` : `${r.km.toFixed(1)} km`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <button onClick={() => { setArea(""); setGuessed(null); }} style={{
               background: "none", border: "none", cursor: "pointer", color: T.brandDark,
               fontWeight: 800, fontSize: 13.5, minHeight: 40, fontFamily: "inherit",

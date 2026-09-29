@@ -28,7 +28,7 @@ import {
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -1963,11 +1963,16 @@ export default function ServicesPage({
     if (done || !geo.supported) return;
     try { window.localStorage.setItem("dhundo_geo_tried", "1"); } catch (_) {}
     let alive = true;
-    geo.detect().then((got) => {
+    geo.detect().then(async (got) => {
       if (!alive || !got) return;
       if (got.state && !STATES.includes(got.state)) { setOutside(got.state); return; }
+      // The nearest village from the place table, not the town the map
+      // service names when a village is only a dot on its map.
+      const close = await nearestPlaces(got.lat, got.lng);
+      const named = bestNearName(close, got.area);
+      if (!alive) return;
       setPlace((p) => ({
-        area: got.area || p.area,
+        area: named || p.area,
         state: got.state && STATES.includes(got.state) ? got.state : p.state,
         lat: got.lat, lng: got.lng,
       }));

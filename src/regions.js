@@ -294,6 +294,45 @@ export async function placeCoords(state, name) {
   return hit ? { lat: hit.lat, lng: hit.lng } : null;
 }
 
+// The places nearest a phone position, nearest first, one per name. The
+// map service names the nearest mapped TOWN when a village is only a dot on
+// the map ("Panisagar" for somebody in Tilthai); this table has the village.
+export async function nearestPlaces(lat, lng) {
+  if (typeof lat !== "number" || typeof lng !== "number") return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_nearest_places`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ p_lat: lat, p_lng: lng, p_limit: 12 }),
+    });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    const seen = new Set();
+    return (Array.isArray(rows) ? rows : []).filter((r) => {
+      const k = String(r.place || "").toLowerCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 6);
+  } catch (_) {
+    return [];
+  }
+}
+
+// The name to show for a phone position: the nearest village or locality
+// from the place table when one is close (a post office only when very
+// close, its position being rougher), otherwise what the map service said.
+export function bestNearName(near, fallback) {
+  const map = near.find((r) => r.source !== "post" && r.km <= 2.5);
+  if (map) return map.place;
+  const any = near.find((r) => r.km <= 1.2);
+  return any ? any.place : fallback;
+}
+
 export async function searchRemote(state, query, signal) {
   const typed = String(query || "").trim();
   // Typed in an Indian script: search under each likely English spelling
