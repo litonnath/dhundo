@@ -379,12 +379,22 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     const areas = hasPos || !locality ? [null] : [locality, null];
     const asks = tradeSlugs.flatMap((slug) =>
       spellings.flatMap((sp) => areas.map((area) => [slug, sp, area])));
-    Promise.all(asks.map(([slug, sp, area]) =>
+    const ask = ([slug, sp, area], withPos) =>
       api.browse({ trade: slug,
                    group: typed ? null : group,
                    search: sp, locality: area, state,
-                   lat: place && place.lat, lng: place && place.lng })
-        .then(many).catch(() => [])))
+                   lat: withPos ? place.lat : null, lng: withPos ? place.lng : null,
+                   // Said outright rather than left to the database default:
+                   // everyone within 100 km, nearest first.
+                   radiusKm: withPos ? FAR_KM : null })
+        .then(many).catch(() => []);
+    Promise.all(asks.map((a) => ask(a, hasPos)))
+      // Nothing within reach of the position -- a place picked with a rough
+      // position, or a listing not yet placed well -- is no reason to show
+      // nothing: fall back to the whole state, by name.
+      .then((sets) => (hasPos && sets.every((x) => !x.length)
+        ? Promise.all(asks.map((a) => ask(a, false)))
+        : sets))
       .then((sets) => {
         const seen = new Set();
         const rowsOut = [];
