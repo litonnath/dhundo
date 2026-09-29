@@ -52,6 +52,7 @@ import io
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -294,31 +295,49 @@ def office_places(rows):
 
 def load_office_places(url, key, places):
     from import_osm_places import post, count_of   # same loaders as the OSM import
-    per_state = defaultdict(lambda: [0, 0, 0])
-    for p in places:
-        per_state[p["state"]][0] += 1
+
+    skipped = []
+
+    def send(rows, depth=0):
+        """Load rows; on a refusal retry once, then halve until the rows the
+        database objects to are isolated. Those are skipped and reported;
+        everything else loads."""
+        try:
+            return count_of(post(url, key, "services_load_regions", {"p_rows": rows}), "inserted")
+        except urllib.error.HTTPError as e:
+            if depth == 0:
+                print(f"\n  a batch was refused ({e}); retrying", flush=True)
+                time.sleep(5)
+                try:
+                    return count_of(post(url, key, "services_load_regions",
+                                         {"p_rows": rows}), "inserted")
+                except urllib.error.HTTPError:
+                    pass
+            if len(rows) == 1:
+                skipped.append((rows[0]["state"], rows[0]["place"], str(e)[:160]))
+                return 0
+            mid = len(rows) // 2
+            return send(rows[:mid], depth + 1) + send(rows[mid:], depth + 1)
+
     added = located = 0
     for i in range(0, len(places), BATCH):
         chunk = places[i:i + BATCH]
-        try:
-            res = post(url, key, "services_load_regions", {"p_rows": chunk})
-        except urllib.error.HTTPError as e:
-            # An older CHECK on services_regions.source may not know 'post'.
-            # 'import' is the loader's own default, so it is always allowed.
-            if i != 0 or places[0]["source"] != "post":
-                raise
-            print(f"  source 'post' refused ({e.code}); labelling these 'import' instead")
-            for p in places:
-                p["source"] = "import"
-            res = post(url, key, "services_load_regions", {"p_rows": chunk})
-        added += count_of(res, "inserted")
+        added += send(chunk)
         with_coords = [p for p in chunk if p["lat"] is not None]
         if with_coords:
-            located += count_of(post(url, key, "services_load_region_coords",
-                                     {"p_rows": with_coords}), "updated")
+            try:
+                located += count_of(post(url, key, "services_load_region_coords",
+                                         {"p_rows": with_coords}), "updated")
+            except urllib.error.HTTPError as e:
+                print(f"\n  coordinates for one batch not saved ({e})", flush=True)
         print(f"  {min(i + BATCH, len(places)):,} / {len(places):,}", end="\r", flush=True)
+
     print(f"\n  Done. {added:,} new places from post offices, "
           f"{located:,} rows given coordinates.")
+    if skipped:
+        print(f"\n  {len(skipped)} place(s) the database refused -- send these over:")
+        for st, name, why in skipped[:20]:
+            print(f"    {st}: {name!r}  ({why})")
     print("\n  Check it:")
     print("    select state, count(*) from public.services_regions "
           "group by state order by 2;")

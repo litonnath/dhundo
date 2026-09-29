@@ -227,8 +227,18 @@ def post(url, key, fn, payload):
         headers={"Content-Type": "application/json", "apikey": key,
                  "Authorization": f"Bearer {key}"},
         method="POST")
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.loads(r.read() or "null")
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read() or "null")
+    except urllib.error.HTTPError as e:
+        # Keep the database's own explanation: "HTTP Error 500" alone says
+        # nothing about which rule or which row it objected to.
+        try:
+            detail = e.read().decode("utf-8", "replace")[:400]
+        except Exception:
+            detail = ""
+        e.msg = f"{e.msg} -- {detail}" if detail else e.msg
+        raise
 
 
 def count_of(res, field):
