@@ -1281,10 +1281,6 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
   const [idErr, setIdErr] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [confirmAcct, setConfirmAcct] = useState(false);
-  // Blocking is OFF by default. Most deletions are a duplicate, a test row,
-  // or somebody who asked to be removed -- none of which should bar their
-  // number. Banning is the rarer, heavier thing and should be chosen.
-  const [blockToo, setBlockToo] = useState(false);
   // Hiding opens a box rather than acting immediately: the person is going
   // to read whatever is typed here, and "why" is the part that lets them
   // come back rather than just disappear.
@@ -1584,32 +1580,15 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
           title={t("del_acct_title")}
           body={t("del_acct_body")}
           busy={busy}
-          extra={
-            <label style={{
-              display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
-              padding: "11px 12px", borderRadius: 10, marginTop: 14,
-              border: `1px solid ${blockToo ? T.red : T.line}`,
-              background: blockToo ? T.redSoft : T.white,
-            }}>
-              <input type="checkbox" checked={blockToo} style={{ marginTop: 3 }}
-                     onChange={(e) => setBlockToo(e.target.checked)} />
-              <span>
-                <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: T.ink }}>
-                  {t("del_acct_block")}
-                </span>
-                <span style={{ display: "block", fontSize: 12, color: T.inkSoft,
-                               lineHeight: 1.5, marginTop: 3 }}>
-                  {t("del_acct_block_hint")}
-                </span>
-              </span>
-            </label>
-          }
-          onCancel={() => { setConfirmAcct(false); setBlockToo(false); }}
+          onCancel={() => setConfirmAcct(false)}
           onConfirm={async () => {
             setBusy(true); setErr(null);
             try {
+              // Deleting never blocks the number: a removed person can make a
+              // new account. Blocking left people unable to sign up with
+              // no way back except SQL.
               const r = one(await api.adminDeleteAccount(
-                d.account_id, hideWhy || null, blockToo));
+                d.account_id, hideWhy || null, false));
               if (r && r.ok) {
                 api.flushDeletions().catch(() => {});
                 if (onChanged) onChanged();
