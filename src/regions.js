@@ -270,6 +270,10 @@ async function searchDb(state, q, signal) {
       // The district is what separates three villages that share a name,
       // which is common enough in Tripura to matter.
       group: [r.block, r.district].filter(Boolean).join(", "),
+      // Where it is, when the table knows: picking the place then sorts
+      // results by distance even without the phone's GPS.
+      lat: typeof r.lat === "number" ? r.lat : null,
+      lng: typeof r.lng === "number" ? r.lng : null,
     }));
   } catch (_) {
     return [];
@@ -314,6 +318,7 @@ export async function searchRemote(state, query, signal) {
   const out = [];
   (body.features || []).forEach((feat) => {
     const p = feat.properties || {};
+    const xy = (feat.geometry && feat.geometry.coordinates) || [];
     if (p.countrycode && p.countrycode !== "IN") return;
     // Restricted to the state being browsed: offering a Ramnagar in Uttar
     // Pradesh to somebody picking a place in Bihar would file a listing
@@ -357,6 +362,8 @@ export async function searchRemote(state, query, signal) {
                .filter((x) => x && norm(x) !== norm(name))
                .slice(0, 2)
                .join(", ") || p.state || "",
+      lat: typeof xy[1] === "number" ? xy[1] : null,
+      lng: typeof xy[0] === "number" ? xy[0] : null,
     });
   });
   return out.slice(0, 12);

@@ -1002,7 +1002,7 @@ export function AreaPicker({ state, value, onPick, autoFocus }) {
               color: T.inkFaint, textTransform: "uppercase", background: T.paper,
             }}>{t("area_more")}</div>
             {remote.map((r) => (
-              <button key={"r-" + r.place + r.group} onClick={() => onPick(r.place)} style={{
+              <button key={"r-" + r.place + r.group} onClick={() => onPick(r.place, r)} style={{
                 display: "flex", alignItems: "center", gap: 9, width: "100%",
                 padding: "12px 14px", minHeight: 48, cursor: "pointer", textAlign: "left",
                 border: "none", borderBottom: `1px solid ${T.line}`,
@@ -1553,7 +1553,21 @@ export function LocationSheet({ place, onChange, onClose }) {
           <AreaPicker
             state={state}
             value={area}
-            onPick={(p) => { setArea(p); setCleared(null); setGuessed(null); }}
+            // A tap on a place IS the choice: save it and close, the way
+            // picking a destination works in every ride app. It used to
+            // only mark the row, with the list still open and "Done" below
+            // the fold, so the tap looked as if it had done nothing. The
+            // place's own position comes along when it has one, so results
+            // sort by distance even for somebody who never shares GPS.
+            onPick={(p, meta) => {
+              const hasXY = meta && typeof meta.lat === "number" && typeof meta.lng === "number";
+              onChange({
+                area: p, state,
+                lat: hasXY ? meta.lat : (fix && fix.lat),
+                lng: hasXY ? meta.lng : (fix && fix.lng),
+              });
+              onClose();
+            }}
           />
         </div>
 
