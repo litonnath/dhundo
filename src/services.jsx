@@ -741,7 +741,7 @@ const bigInput = {
   ...input, minHeight: 54, fontSize: 16.5, padding: "14px 15px", borderRadius: 12,
 };
 
-function ListingForm({ api, trades, user, isAdmin, onDone, place, setPlace }) {
+function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
 
@@ -924,12 +924,21 @@ function ListingForm({ api, trades, user, isAdmin, onDone, place, setPlace }) {
   return (
     <div style={card}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        {step > 1 && (
-          <button onClick={() => { setStep(step - 1); setErr(null); }} style={{
-            display: "inline-flex", alignItems: "center", gap: 4, background: "none",
-            border: "none", cursor: "pointer", color: T.brandDark, fontWeight: 700,
-            fontSize: 14, padding: 0, minHeight: 40, fontFamily: "inherit",
-          }}><Icon name="back" size={17} />{t("w_back")}</button>
+        {/* Back on every step, always in the same place: to the previous
+            step, from a group back to the groups, and from the first
+            screen out of "List yourself" altogether. */}
+        {(step > 1 || group || onBack) && (
+          <button onClick={() => {
+            setErr(null);
+            if (step > 1) setStep(step - 1);
+            else if (group) setGroup(null);
+            else if (onBack) onBack();
+          }} style={{
+            display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer",
+            background: T.white, border: `1px solid ${T.line}`, borderRadius: 22,
+            color: T.brandDark, fontWeight: 800, fontSize: 14.5, padding: "0 14px 0 10px",
+            minHeight: 42, fontFamily: "inherit",
+          }}><Icon name="back" size={18} />{t("w_back")}</button>
         )}
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 700 }}>
@@ -2088,6 +2097,7 @@ export default function ServicesPage({
               ) : (
                 <ListingForm api={api} trades={trades} user={user} isAdmin={isAdmin}
                              place={place} setPlace={setPlace}
+                             onBack={() => setTab(isAdmin ? "browse" : "work")}
                              onDone={() => setReloadKey((k) => k + 1)} />
               )}
             </>
