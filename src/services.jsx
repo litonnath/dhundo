@@ -31,6 +31,7 @@ import {
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
+import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
 import { useMyLocation, isInstalledApp } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
@@ -127,6 +128,31 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_state: o.state || null, p_trade: o.trade || null, p_group: o.group || null,
         p_radius_km: o.radiusKm || NEAR_KM, p_limit: o.limit || 20,
       }),
+    // ------------------------------------------------------ Buy & Sell (84)
+    itemsBrowse: (o = {}) =>
+      rpc("services_items_browse", {
+        p_lat: typeof o.lat === "number" ? o.lat : null,
+        p_lng: typeof o.lng === "number" ? o.lng : null,
+        p_state: o.state || null, p_category: o.category || null, p_q: o.q || null,
+        p_min: o.min ?? null, p_max: o.max ?? null, p_radius_km: o.radiusKm || null,
+        p_sort: o.sort || "near", p_limit: o.limit || 30, p_offset: o.offset || 0,
+      }, true),
+    itemGet: (id) => rpc("services_item_get", { p_id: id }, true),
+    itemSave: (p) =>
+      rpc("services_item_save", {
+        p_id: p.id || null, p_title: p.title, p_description: p.description || null,
+        p_category: p.category, p_price: p.price, p_negotiable: p.negotiable,
+        p_condition: p.condition, p_brand: p.brand || null, p_model_year: p.model_year,
+        p_km_driven: p.km_driven, p_photos: p.photos, p_state: p.state, p_city: p.city,
+        p_locality: p.locality, p_lat: p.lat, p_lng: p.lng, p_whatsapp: p.whatsapp,
+      }, true),
+    itemSetStatus: (id, action) => rpc("services_item_set_status", { p_id: id, p_action: action }, true),
+    myItems: () => rpc("services_my_items", {}, true),
+    itemReveal: (id) => rpc("services_item_reveal", { p_id: id }, true),
+    itemReport: (id, reason, note) =>
+      rpc("services_item_report", { p_id: id, p_reason: reason, p_note: note || null }, true),
+    adminItems: (filter) => rpc("services_admin_items", { p_filter: filter || "reported", p_limit: 100 }, true),
+    adminItemAction: (id, action) => rpc("services_admin_item_action", { p_id: id, p_action: action }, true),
     selfRegister: (p) => rpc("services_self_register", p, true),
     adminUpsert: (p) => rpc("services_admin_upsert", p, true),
     adminList: (status, limit = 200, state = null) =>
@@ -1827,6 +1853,15 @@ export default function ServicesPage({
   };
   const [installOpen, setInstallOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
+  // Buy & Sell: the ad open on top of whatever tab, and the ad being edited.
+  // A shared link (?item=<id>) opens that ad straight away.
+  const [itemOpen, setItemOpen] = useState(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get("item");
+      return id && /^[0-9a-f-]{36}$/i.test(id) ? { id } : null;
+    } catch (_) { return null; }
+  });
+  const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   // null until it has loaded, which is what keeps the header chip from
   // flashing ₹0 first. Paise, as an integer, all the way to rupees().
@@ -2041,6 +2076,32 @@ export default function ServicesPage({
         />
       )}
 
+      {tab === "market" && (
+        <MarketPage api={api} place={place} state={state}
+                    onOpenItem={(it) => setItemOpen({ id: it.id, km: it.distance_km })}
+                    onSell={() => setTab("sell")} />
+      )}
+
+      {tab === "sell" && (
+        <SellPage api={api} user={signedIn ? user : null} place={place} onSignIn={onSignIn}
+                  onPickLocation={() => setLocOpen(true)}
+                  onOpenItem={(it) => setItemOpen({ id: it.id })}
+                  editId={editItem} setEditId={setEditItem} />
+      )}
+
+      {itemOpen && (
+        <ItemDetail api={api} id={itemOpen.id} distanceKm={itemOpen.km ?? null}
+                    user={signedIn ? user : null} onSignIn={onSignIn}
+                    onClose={() => {
+                      setItemOpen(null);
+                      try {
+                        const u = new URL(window.location.href);
+                        if (u.searchParams.has("item")) { u.searchParams.delete("item"); window.history.replaceState(null, "", u); }
+                      } catch (_) {}
+                    }}
+                    onEdit={(id) => { setItemOpen(null); setEditItem(id); setTab("sell"); }} />
+      )}
+
       {tab === "work" && (
         <WorkerHome
           avail={avail} signedIn={signedIn} hasListing={hasListing}
@@ -2058,7 +2119,8 @@ export default function ServicesPage({
         </div>
       )}
 
-      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && (
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" &&
+       tab !== "market" && tab !== "sell" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "26px 16px 60px" }}>
           {tab === "add" && (
             <>
@@ -2094,6 +2156,7 @@ export default function ServicesPage({
             <>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
               <AdminList api={api} trades={trades} reloadKey={reloadKey} />
+              <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />
             </>
           )}
         </div>
@@ -2111,6 +2174,7 @@ export default function ServicesPage({
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
           onOpenProfile={() => setTab("profile")}
+          onOpenAds={() => setTab("sell")}
           showCredits={inApp}
         />
       )}

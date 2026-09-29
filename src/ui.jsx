@@ -72,6 +72,12 @@ export function Icon({ name, size = 24, style }) {
     phone: <><path {...P} d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4 5.2 2 2 0 0 1 6 3z" /></>,
     check: <><circle {...P} cx="12" cy="12" r="8.5" /><path {...P} d="M8.5 12.2l2.4 2.4 4.6-5" /></>,
     back: <><path {...P} d="M15 5l-7 7 7 7" /></>,
+    tag: <><path {...P} d="M3 12V4h8l10 10-8 8z" /><circle {...P} cx="7.5" cy="8.5" r="1.5" /></>,
+    camera: <><path {...P} d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle {...P} cx="12" cy="13" r="3.5" /></>,
+    flag: <><path {...P} d="M5 21V4" /><path {...P} d="M5 4h11l-2 4 2 4H5" /></>,
+    eye: <><path {...P} d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" /><circle {...P} cx="12" cy="12" r="2.8" /></>,
+    clock: <><circle {...P} cx="12" cy="12" r="8.5" /><path {...P} d="M12 7.5V12l3 2" /></>,
+    plus: <><path {...P} d="M12 5v14M5 12h14" /></>,
     close: <><path {...P} d="M6 6l12 12M18 6L6 18" /></>,
     globe: <><circle {...P} cx="12" cy="12" r="8.5" /><path {...P} d="M3.5 12h17" /><path {...P} d="M12 3.5c2.2 2.4 3.3 5.4 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.4-3.3-8.5S9.8 5.9 12 3.5z" /></>,
     download: <><path {...P} d="M12 4v10" /><path {...P} d="M8.2 10.5L12 14.3l3.8-3.8" /><path {...P} d="M5 18.5h14" /></>,
@@ -1668,6 +1674,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
   const workTabs = ["work", "mine"];
   const current =
     tab === "account" || tab === "profile" ? "account"
+    : tab === "market" || tab === "sell" ? "market"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
     : "find";
   const item = (key, icon, label, go, dot) => {
@@ -1705,6 +1712,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
     }}>
       <div style={{ maxWidth: 560, margin: "0 auto", display: "flex" }}>
         {item("find", "search", t("mode_find"), () => setTab("browse"))}
+        {item("market", "tag", t("mk_tab"), () => setTab("market"))}
         {item("work", "construction", t("mode_work"), () => setTab("work"), online)}
         {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
       </div>
@@ -2362,7 +2370,7 @@ export function waLink(phone) {
 // be spread over two header rows.
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
-  hasListing = false, onOpenListing, onList, onOpenProfile, showCredits = false,
+  hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, showCredits = false,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra, sub) => (
@@ -2435,6 +2443,7 @@ export function AccountPage({
         {account && (hasListing
           ? row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))
           : row("construction", t("nav_list"), onList, null, t("acc_list_sub")))}
+        {account && onOpenAds && row("tag", t("mk_my_ads"), onOpenAds, null, t("mk_my_ads_sub"))}
         {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
           <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
         {row("download", t("install_app"), onInstall)}
