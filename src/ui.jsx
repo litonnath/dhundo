@@ -20,7 +20,7 @@
 // ===========================================================================
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinNear, pinLookup } from "./regions.js";
+import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinNear, pinLookup, pinForPlace } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -1231,6 +1231,7 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [remote, setRemote] = useState([]);
+  const [picked, setPicked] = useState(false);
   const typed = String(value || "").trim();
 
   React.useEffect(() => {
@@ -1247,9 +1248,11 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
   const local = typed.length >= 1 ? searchPlaces(state, typed).slice(0, 5) : [];
   const seen = new Set(local.map((r) => r.place.toLowerCase()));
   const extra = remote.filter((r) => !seen.has(r.place.toLowerCase()));
-  // Nothing to offer once what is typed already matches the only suggestion.
+  // An exact match stays in the list: tapping it is what confirms WHICH
+  // place it is (and brings its district and PIN code). Hidden only once it
+  // has been picked.
   const suggestions = [...local.map((r) => r.place), ...extra.map((r) => r.place)]
-    .filter((x) => x.toLowerCase() !== typed.toLowerCase());
+    .filter((x) => !(picked && x.toLowerCase() === typed.toLowerCase()));
 
   return (
     <div style={{ position: "relative" }}>
@@ -1261,7 +1264,7 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
         <input
           value={value || ""}
           autoFocus={autoFocus}
-          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          onChange={(e) => { onChange(e.target.value); setOpen(true); setPicked(false); }}
           onFocus={() => setOpen(true)}
           // A blur that fires before the tap lands would close the list out
           // from under the finger.
@@ -1294,7 +1297,14 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
           {suggestions.map((pl) => (
             <button key={pl}
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(pl); setOpen(false); }}
+              // The picked place comes along with the name: its position and
+              // district, so the caller can fill in the PIN code.
+              onClick={() => {
+                const r = extra.find((x) => x.place === pl);
+                onChange(pl, r ? { lat: r.lat, lng: r.lng, district: r.district, picked: true } : { picked: true });
+                setPicked(true);
+                setOpen(false);
+              }}
               style={{
                 display: "flex", alignItems: "center", gap: 9, width: "100%",
                 padding: "12px 13px", minHeight: 48, cursor: "pointer", textAlign: "left",
@@ -1303,6 +1313,12 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
               }}>
               <span style={{ color: T.inkFaint, flexShrink: 0 }}><Icon name="pin" size={16} /></span>
               {pl}
+              {(() => {
+                const r = extra.find((x) => x.place === pl);
+                return r && r.group ? (
+                  <span style={{ color: T.inkFaint, fontSize: 13 }}>· {r.group}</span>
+                ) : null;
+              })()}
             </button>
           ))}
         </div>
@@ -1512,7 +1528,10 @@ export function LocationSheet({ place, onChange, onClose }) {
     if (!xy && fix && typed6.length === 6) xy = fix;
     let p6 = typed6.length === 6 ? typed6 : null;
     let tw = town;
-    if (!p6) { const r = await pinFor(xy); p6 = r && r.pincode; tw = (r && r.place) || ""; }
+    if (!p6) {
+      const r = await pinForPlace({ ...(xy || {}), name: a, state }).catch(() => null);
+      p6 = r && r.pincode; tw = (r && r.place) || "";
+    }
     onChange({ area: a, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
                pin: p6 || undefined, city: tw || undefined });
     onClose();
@@ -1709,7 +1728,10 @@ export function LocationSheet({ place, onChange, onClose }) {
               // under the heading it was listed in, so results still sort by
               // distance and the PIN code is the one for THIS place.
               if (!xy) xy = await placeCoords(state, p, meta && meta.group).catch(() => null);
-              const r = await pinFor(xy);
+              // By position, else by name and district: a village with no
+              // position of its own still gets its PIN code.
+              const r = await pinForPlace({ ...(xy || {}), name: p, state,
+                                            district: meta && meta.district }).catch(() => null);
               onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
                          pin: (r && r.pincode) || undefined, city: (r && r.place) || undefined });
               onClose();
@@ -2685,7 +2707,17 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
             {label(t("p_pincode"),
               <input style={field} inputMode="numeric" maxLength={6} value={f.pincode}
                      autoComplete="postal-code"
-                     onChange={(e) => set("pincode", e.target.value.replace(/\D/g, ""))} />)}
+                     onChange={async (e) => {
+                       const d = e.target.value.replace(/\D/g, "").slice(0, 6);
+                       set("pincode", d);
+                       // A full PIN code fills in the town and state when empty.
+                       if (d.length === 6) {
+                         const r = await pinLookup(d);
+                         if (r) setF((p) => ({ ...p,
+                           city: p.city || r.place || "",
+                           state: p.state || (STATES.includes(r.state) ? r.state : "") }));
+                       }
+                     }} />)}
           </div>
         </div>
         {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}

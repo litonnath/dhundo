@@ -270,6 +270,7 @@ async function searchDb(state, q, signal) {
       // The district is what separates three villages that share a name,
       // which is common enough in Tripura to matter.
       group: [r.block, r.district].filter(Boolean).join(", "),
+      district: r.district || null,
       // Where it is, when the table knows: picking the place then sorts
       // results by distance even without the phone's GPS.
       lat: typeof r.lat === "number" ? r.lat : null,
@@ -342,6 +343,33 @@ export async function pinNear(lat, lng) {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ p_lat: lat, p_lng: lng }),
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const r = Array.isArray(rows) ? rows[0] : rows;
+    return r && r.pincode ? r : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// The PIN code for a chosen place, however it can be found: from its
+// position, else from its name (and district) -- so picking a village never
+// leaves the PIN empty just because the village has no position of its own.
+// { pincode, place } or null.
+export async function pinForPlace({ lat, lng, name, state, district } = {}) {
+  const byPos = await pinNear(lat, lng);
+  if (byPos) return byPos;
+  if (!name) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_pin_by_name`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ p_state: state || null, p_place: name, p_district: district || null }),
     });
     if (!res.ok) return null;
     const rows = await res.json();

@@ -40,6 +40,7 @@ import {
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import MapPicker from "./mappicker.jsx";
 import { useMyLocation } from "./device.jsx";
+import { pinForPlace } from "./regions.js";
 
 const PHOTO_BUCKET = "services-photos";
 const ID_BUCKET = "services-ids";
@@ -200,6 +201,15 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
     setSavedKey(null);
   };
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
+  // The PIN code of a picked area or town. The area is closer than the town,
+  // so it replaces a PIN the town filled in; a town only fills an empty one.
+  const autoPin = async (o, fromTown = false) => {
+    const r = await pinForPlace(o).catch(() => null);
+    if (!r || !r.pincode) return;
+    setF((p) => (fromTown && p.pincode && !p.pin_auto ? p
+      : { ...p, pincode: r.pincode, pin_auto: true }));
+    setDirty((d) => ({ ...d, contact: true }));
+  };
 
   // -------------------------------------------------------------- saving
   // One place, so every section behaves identically and a new section
@@ -318,7 +328,15 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
     try {
       const r = await api.setMyLocation(lat, lng);
       const one = Array.isArray(r) ? r[0] : r;
-      if (one && one.ok) { setMsg(t("p_gps_set")); load(); }
+      if (one && one.ok) {
+        setMsg(t("p_gps_set"));
+        // An exact position settles the PIN code too, when none is set.
+        if (!/^\d{6}$/.test(String(f.pincode || "").trim())) {
+          const pr = await pinForPlace({ lat, lng }).catch(() => null);
+          if (pr && pr.pincode) await save("address", { p_pincode: pr.pincode });
+        }
+        load();
+      }
       else setErr(t("e_save"));
     } catch (e) { setErr(e.message || t("e_save")); }
   };
@@ -747,6 +765,8 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               // 0, not null: null means "leave alone" everywhere else in
               // this function, so clearing the city needs its own signal.
               p_city_id: f.city_id || 0,
+              // The PIN code that came with the picked area or town.
+              ...(f.pin_auto && /^\d{6}$/.test(f.pincode) ? { p_pincode: f.pincode } : {}),
             });
           }}
           note={phoneChanged ? (
@@ -781,6 +801,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
                 setF((p) => ({ ...p, city_id: c.id, city_name: c.place,
                                district: c.district || "" }));
                 setDirty((d) => ({ ...d, contact: true }));
+                autoPin({ lat: c.lat, lng: c.lng, name: c.place, state: f.state, district: c.district || null }, true);
               }}
             />
             {f.district && (
@@ -792,7 +813,14 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
 
           <Row label={t("w2_area")}>
             <AreaInput state={f.state} value={f.locality}
-                       onChange={(p) => set("contact", "locality", p)} />
+                       onChange={(p, meta) => {
+                         set("contact", "locality", p);
+                         // A place picked from the list brings its PIN code.
+                         if (meta && meta.picked) {
+                           autoPin({ lat: meta.lat, lng: meta.lng, name: p, state: f.state,
+                                     district: meta.district || f.district || null });
+                         }
+                       }} />
 
             {/* A SEPARATE QUESTION, and now labelled as one. These write
                 coordinates, which is what distance is calculated from; they
@@ -885,7 +913,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           <Row label={t("p_pincode")}>
             <input style={{ ...field, maxWidth: 180 }} value={f.pincode} inputMode="numeric"
                    maxLength={6} placeholder="799001"
-                   onChange={(e) => set("address", "pincode", e.target.value)} />
+                   onChange={(e) => { set("address", "pincode", e.target.value); setF((p) => ({ ...p, pin_auto: false })); }} />
           </Row>
 
           <label style={{

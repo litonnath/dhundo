@@ -28,7 +28,7 @@ import {
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinNear } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -944,6 +944,14 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   const [done, setDone] = useState(null);
 
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  // Fill the PIN code from a picked town or area, unless the person typed
+  // one themselves.
+  const autoPin = async (o) => {
+    const r = await pinForPlace(o).catch(() => null);
+    if (r && r.pincode) {
+      setF((p) => (!p.pincode || p.pin_auto ? { ...p, pincode: r.pincode, pin_auto: true } : p));
+    }
+  };
 
   const togglePick = (slug) => {
     setErr(null);
@@ -1298,6 +1306,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
               onPick={(c) => {
                 setF((p) => ({ ...p, city_id: c.id, city_name: c.place,
                                district: c.district || "" }));
+                // The town gives a PIN code until the area gives a closer one.
+                autoPin({ lat: c.lat, lng: c.lng, name: c.place, state: place.state,
+                          district: c.district || null });
               }}
             />
             {f.district && (
@@ -1321,17 +1332,26 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
 
           <BigField label={t("w2_area")}>
             <AreaInput state={place.state} value={place.area}
-                       onChange={(v) => setPlace({ ...place, area: v })} />
+                       onChange={(v, meta) => {
+                         setPlace({ ...place, area: v });
+                         // A place picked from the list fills in its PIN code.
+                         if (meta && meta.picked) {
+                           autoPin({ lat: meta.lat, lng: meta.lng, name: v, state: place.state,
+                                     district: meta.district || f.district || null });
+                         }
+                       }} />
           </BigField>
 
           {/* Here, not on the optional step: customers see everybody in their
               own PIN code first, so this is what puts a listing in front of
-              its neighbours. */}
+              its neighbours. Filled in from the area or town picked above;
+              what the person types themselves is never overwritten. */}
           <BigField label={t("p_pincode")} hint={t("w2_pin_hint")}>
             <input style={{ ...bigInput, maxWidth: 200, fontWeight: 800, letterSpacing: 1 }}
                    value={f.pincode} inputMode="numeric" maxLength={6}
-                   placeholder={place.pin || "799001"}
-                   onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} />
+                   placeholder="799001"
+                   onChange={(e) => setF((p) => ({ ...p, pin_auto: false,
+                     pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))} />
           </BigField>
 
           <Btn full onClick={() => {
@@ -2085,15 +2105,16 @@ export default function ServicesPage({
 
   // A position with no PIN code: the nearest PIN, so "same PIN code first"
   // works for everybody, not only those who typed theirs.
+  // By position when there is one, else by the area name.
   useEffect(() => {
-    if (place.pin || typeof place.lat !== "number") return;
+    if (place.pin || (typeof place.lat !== "number" && !place.area)) return;
     let alive = true;
-    pinNear(place.lat, place.lng).then((r) => {
-      if (alive && r) setPlace((p) => (p.lat === place.lat && !p.pin
+    pinForPlace({ lat: place.lat, lng: place.lng, name: place.area, state: place.state }).then((r) => {
+      if (alive && r) setPlace((p) => (p.area === place.area && p.lat === place.lat && !p.pin
         ? { ...p, pin: r.pincode, city: p.city || r.place || undefined } : p));
     }).catch(() => {});
     return () => { alive = false; };
-  }, [place.lat, place.lng, place.pin]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [place.lat, place.lng, place.pin, place.area]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const geo = useMyLocation();
   useEffect(() => {
