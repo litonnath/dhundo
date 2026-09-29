@@ -105,9 +105,55 @@ function CatChips({ value, onChange, t }) {
     );
   };
   return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "2px 0 8px", scrollbarWidth: "none" }}>
+    <ScrollRow>
       {chip(null, null, t("all"))}
       {ITEM_CATEGORIES.map((c) => chip(c.key, c.emoji, t("mk_cat_" + c.key)))}
+    </ScrollRow>
+  );
+}
+
+// A row that scrolls sideways, with a round arrow at each end for a
+// computer, where there is no swipe. An arrow shows only while there is
+// more to see that way, and moves the row by most of its width.
+function ScrollRow({ children }) {
+  const ref = useRef(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  const measure = () => {
+    const el = ref.current;
+    if (!el) return;
+    setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+  };
+  useEffect(() => {
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  const go = (dir) => {
+    const el = ref.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
+  };
+  const arrow = (dir) => (
+    <button onClick={() => go(dir)} aria-label={dir < 0 ? "Scroll left" : "Scroll right"} style={{
+      position: "absolute", top: "50%", [dir < 0 ? "left" : "right"]: -4, zIndex: 2,
+      transform: "translateY(calc(-50% - 3px))", width: 38, height: 38, borderRadius: "50%",
+      border: `1px solid ${T.line}`, background: T.white, color: T.brandDark, cursor: "pointer",
+      boxShadow: "0 2px 10px rgba(15,20,25,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <Icon name="back" size={18} style={dir > 0 ? { transform: "rotate(180deg)" } : undefined} />
+    </button>
+  );
+  return (
+    <div style={{ position: "relative" }}>
+      {edge.left && arrow(-1)}
+      <div ref={ref} onScroll={measure} style={{
+        display: "flex", gap: 8, overflowX: "auto", padding: "2px 0 8px", scrollbarWidth: "none",
+        // a soft fade at an end that has more, so the row reads as "keeps going"
+        maskImage: `linear-gradient(90deg, ${edge.left ? "transparent 0, #000 40px" : "#000 0"}, ${edge.right ? "#000 calc(100% - 40px), transparent 100%" : "#000 100%"})`,
+        WebkitMaskImage: `linear-gradient(90deg, ${edge.left ? "transparent 0, #000 40px" : "#000 0"}, ${edge.right ? "#000 calc(100% - 40px), transparent 100%" : "#000 100%"})`,
+      }}>
+        {children}
+      </div>
+      {edge.right && arrow(1)}
     </div>
   );
 }
