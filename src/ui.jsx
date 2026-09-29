@@ -1507,6 +1507,9 @@ export function LocationSheet({ place, onChange, onClose }) {
     let xy = fix && (fixFor === null || fixFor === "" || fixFor === a) ? fix : null;
     if (!xy && a) xy = await placeCoords(state, a).catch(() => null);
     const typed6 = pin.replace(/\D/g, "");
+    // A village picked from around a typed PIN code that has no position of
+    // its own is still in that PIN: its position is good enough.
+    if (!xy && fix && typed6.length === 6) xy = fix;
     let p6 = typed6.length === 6 ? typed6 : null;
     let tw = town;
     if (!p6) { const r = await pinFor(xy); p6 = r && r.pincode; tw = (r && r.place) || ""; }
@@ -1521,9 +1524,19 @@ export function LocationSheet({ place, onChange, onClose }) {
     if (d.length !== 6) return;
     const r = await pinLookup(d);
     if (!r) return;
+    // The PIN code decides the place: its state, its town, its position --
+    // replacing whatever area was there before, which belongs to another PIN.
+    setOutside(null); setCleared(null);
+    if (r.state && STATES.includes(r.state) && r.state !== state) setState(r.state);
     setTown(r.place || "");
-    if (typeof r.lat === "number") { setFix({ lat: r.lat, lng: r.lng }); setFixFor(area.trim() || r.place || ""); }
-    if (!area.trim() && r.place) { setArea(r.place); setGuessed(r.place); }
+    if (r.place) { setArea(r.place); setGuessed(r.place); }
+    if (typeof r.lat === "number") {
+      setFix({ lat: r.lat, lng: r.lng });
+      setFixFor(r.place || "");
+      // The villages in and around that PIN, to tap your own.
+      const close = await nearestPlaces(r.lat, r.lng).catch(() => []);
+      setNear(close.filter((x) => x.km <= 8));
+    }
   };
 
   return (
@@ -1621,7 +1634,7 @@ export function LocationSheet({ place, onChange, onClose }) {
                 </span>
               )}
             </div>
-            {near.length > 1 && (
+            {near.length > 0 && !(near.length === 1 && near[0].place === area) && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, marginBottom: 6 }}>
                   {t("loc_near_places")}
