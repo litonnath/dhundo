@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  acc_title: "ನಿಮ್ಮ ಖಾತೆ",
+  acc_list_sub: "ಹತ್ತಿರದ ಗ್ರಾಹಕರು ನಿಮ್ಮನ್ನು ಹುಡುಕಿ ಕರೆ ಮಾಡಲು Dhundo ನಲ್ಲಿ ನಿಮ್ಮ ಕೆಲಸದ ಪ್ರೊಫೈಲ್ ಸೇರಿಸಿ.",
+  acc_mine_sub: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ನೋಡಿ ಮತ್ತು ಬದಲಿಸಿ",
   slogan: "ಏನು ಬೇಕೋ, ಹತ್ತಿರದಲ್ಲೇ ಹುಡುಕಿ.",
   owned_by: "ShortlistOne ಒಡೆತನದಲ್ಲಿದೆ — AI ಸಂದರ್ಶನ ಮತ್ತು AI ನೇಮಕಾತಿ.",
   nav_account: "ಖಾತೆ",
@@ -298,7 +301,7 @@ export default {
   brand: "Dhundo",
   city: "AGARTALA",
   nav_find: "ಹುಡುಕಿ",
-  nav_list: "ನೋಂದಾಯಿಸಿ",
+  nav_list: "ಪ್ರೊಫೈಲ್ ರಚಿಸಿ",
   nav_add: "ಸೇರಿಸಿ",
   nav_manage: "ನಿರ್ವಹಣೆ",
   nav_signin: "ಸೈನ್ ಇನ್",

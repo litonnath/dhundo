@@ -65,6 +65,9 @@ const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
+    acc_title: "Your account",
+    acc_list_sub: "Add your work profile on Dhundo so customers nearby can find and call you.",
+    acc_mine_sub: "See and edit your profile",
     slogan: "Jo chahiye, paas mein dhoondo.",
     owned_by: "Owned by ShortlistOne — AI interviews and AI hiring.",
     nav_account: "Account",
@@ -76,7 +79,7 @@ const STRINGS = {
     mode_find: "Find help",
     mode_work: "Work",
     wk_title: "Get work near you",
-    wk_pitch: "List yourself or your shop once. Then switch on \"Available now\" whenever you can take work, and customers nearby see you first and call you directly. No commission.",
+    wk_pitch: "Create a profile for yourself or your shop once. Then switch on \"Available now\" whenever you can take work, and customers nearby see you first and call you directly. No commission.",
     av_on: "You're available",
     av_off: "You're offline",
     av_on_body: "Customers nearby see you first until {t}. Only your distance is shown — never your exact location.",
@@ -362,7 +365,7 @@ const STRINGS = {
     city: "AGARTALA",
 
     nav_find: "Find",
-    nav_list: "List yourself",
+    nav_list: "Create profile",
     nav_add: "Add",
     nav_manage: "Manage",
     nav_signin: "Sign in",
@@ -478,6 +481,9 @@ const STRINGS = {
   },
 
   bn: {
+    acc_title: "আপনার অ্যাকাউন্ট",
+    acc_list_sub: "Dhundo-তে আপনার কাজের প্রোফাইল তৈরি করুন, যাতে কাছের গ্রাহকরা আপনাকে খুঁজে ফোন করতে পারেন।",
+    acc_mine_sub: "আপনার প্রোফাইল দেখুন ও বদলান",
     slogan: "যা চাই, কাছেই খুঁজুন।",
     owned_by: "ShortlistOne-এর মালিকানাধীন — AI ইন্টারভিউ ও AI হায়ারিং।",
     nav_account: "অ্যাকাউন্ট",
@@ -775,7 +781,7 @@ const STRINGS = {
     city: "আগরতলা",
 
     nav_find: "খুঁজুন",
-    nav_list: "নাম লেখান",
+    nav_list: "প্রোফাইল তৈরি করুন",
     nav_add: "যোগ করুন",
     nav_manage: "পরিচালনা",
     nav_signin: "সাইন ইন",
@@ -890,6 +896,9 @@ const STRINGS = {
     m_views: "বার নম্বর দেখা হয়েছে",
   },
   hi: {
+    acc_title: "आपका खाता",
+    acc_list_sub: "Dhundo पर अपनी काम की प्रोफ़ाइल बनाएँ, ताकि पास के ग्राहक आपको ढूंढकर फ़ोन कर सकें।",
+    acc_mine_sub: "अपनी प्रोफ़ाइल देखें और बदलें",
     slogan: "जो चाहिए, पास में ढूंढो।",
     owned_by: "ShortlistOne की सेवा — AI इंटरव्यू और AI हायरिंग।",
     nav_account: "खाता",
@@ -1187,7 +1196,7 @@ const STRINGS = {
     city: "अगरतला",
 
     nav_find: "खोजें",
-    nav_list: "अपना नाम दें",
+    nav_list: "प्रोफ़ाइल बनाएँ",
     nav_add: "जोड़ें",
     nav_manage: "प्रबंधन",
     nav_signin: "साइन इन",

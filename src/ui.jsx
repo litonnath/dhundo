@@ -2306,7 +2306,7 @@ export function AccountPage({
   hasListing = false, onOpenListing, onList, showCredits = false,
 }) {
   const { t } = useI18n();
-  const row = (icon, label, onClick, extra) => (
+  const row = (icon, label, onClick, extra, sub) => (
     <button onClick={onClick} style={{
       width: "100%", display: "flex", alignItems: "center", gap: 14, minHeight: 60,
       padding: "12px 16px", background: T.white, border: `1px solid ${T.line}`,
@@ -2317,7 +2317,13 @@ export function AccountPage({
         width: 40, height: 40, borderRadius: 12, background: T.brandSoft, color: T.brandDark,
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}><Icon name={icon} size={21} /></span>
-      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ flex: 1 }}>
+        {label}
+        {sub && (
+          <span style={{ display: "block", fontSize: 13, fontWeight: 500, color: T.inkSoft,
+                         lineHeight: 1.45, marginTop: 2 }}>{sub}</span>
+        )}
+      </span>
       {extra}
       <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
     </button>
@@ -2345,10 +2351,14 @@ export function AccountPage({
             width: 52, height: 52, borderRadius: "50%", background: T.brandDark, color: "#fff",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 21, fontWeight: 800,
-          }}>{((account.full_name || "?").trim().charAt(0) || "?").toUpperCase()}</span>
+          }}>{account.full_name
+                ? account.full_name.trim().charAt(0).toUpperCase()
+                : <Icon name="user" size={24} />}</span>
           <span>
+            {/* The name when there is one; otherwise a plain heading, so
+                the phone number is not printed twice. */}
             <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>
-              {account.full_name || prettyPhone(account.phone)}
+              {account.full_name || t("acc_title")}
             </span>
             <span style={{ display: "block", fontSize: 14, color: T.inkSoft }}>
               {prettyPhone(account.phone)}
@@ -2359,8 +2369,8 @@ export function AccountPage({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {account && (hasListing
-          ? row("edit", t("nav_mine"), onOpenListing)
-          : row("construction", t("nav_list"), onList))}
+          ? row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))
+          : row("construction", t("nav_list"), onList, null, t("acc_list_sub")))}
         {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
           <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
         {row("download", t("install_app"), onInstall)}

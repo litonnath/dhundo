@@ -364,7 +364,7 @@ function App() {
   const user = session
     ? {
         id: session.user.id,
-        full_name: session.user.full_name || prettyPhone(session.user.phone),
+        full_name: session.user.full_name || "",
         phone: prettyPhone(session.user.phone),
       }
     : null;

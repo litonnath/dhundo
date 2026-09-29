@@ -2,6 +2,9 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  acc_title: "നിങ്ങളുടെ അക്കൗണ്ട്",
+  acc_list_sub: "അടുത്തുള്ള ഉപഭോക്താക്കൾക്ക് നിങ്ങളെ കണ്ടെത്തി വിളിക്കാൻ Dhundo-യിൽ നിങ്ങളുടെ ജോലി പ്രൊഫൈൽ ചേർക്കൂ.",
+  acc_mine_sub: "നിങ്ങളുടെ പ്രൊഫൈൽ കാണുക, മാറ്റുക",
   slogan: "എന്ത് വേണമെങ്കിലും, അടുത്ത് തന്നെ തിരയൂ.",
   owned_by: "ShortlistOne-ന്റെ ഉടമസ്ഥതയിൽ — AI ഇന്റർവ്യൂ, AI നിയമനം.",
   nav_account: "അക്കൗണ്ട്",
@@ -298,7 +301,7 @@ export default {
   brand: "Dhundo",
   city: "AGARTALA",
   nav_find: "കണ്ടെത്തുക",
-  nav_list: "പേര് ചേർക്കുക",
+  nav_list: "പ്രൊഫൈൽ ഉണ്ടാക്കുക",
   nav_add: "ചേർക്കുക",
   nav_manage: "നിയന്ത്രിക്കുക",
   nav_signin: "സൈൻ ഇൻ",

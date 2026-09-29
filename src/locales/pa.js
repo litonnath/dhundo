@@ -2,6 +2,9 @@
 // i18n.jsx. Written to be plain and spoken. Worth a read by a native speaker
 // before promoting it; each line is a one-line fix.
 export default {
+  acc_title: "ਤੁਹਾਡਾ ਖਾਤਾ",
+  acc_list_sub: "Dhundo ਉੱਤੇ ਆਪਣੀ ਕੰਮ ਦੀ ਪ੍ਰੋਫ਼ਾਈਲ ਜੋੜੋ, ਤਾਂ ਕਿ ਨੇੜੇ ਦੇ ਗਾਹਕ ਤੁਹਾਨੂੰ ਲੱਭ ਕੇ ਫ਼ੋਨ ਕਰ ਸਕਣ।",
+  acc_mine_sub: "ਆਪਣੀ ਪ੍ਰੋਫ਼ਾਈਲ ਦੇਖੋ ਅਤੇ ਬਦਲੋ",
   slogan: "ਜੋ ਚਾਹੀਦਾ, ਨੇੜੇ ਹੀ ਲੱਭੋ।",
   owned_by: "ShortlistOne ਦੀ ਮਲਕੀਅਤ — AI ਇੰਟਰਵਿਊ ਅਤੇ AI ਭਰਤੀ।",
   nav_account: "ਖਾਤਾ",
@@ -298,7 +301,7 @@ export default {
   brand: "Dhundo",
   city: "AGARTALA",
   nav_find: "ਲੱਭੋ",
-  nav_list: "ਨਾਂ ਲਿਖਵਾਓ",
+  nav_list: "ਪ੍ਰੋਫ਼ਾਈਲ ਬਣਾਓ",
   nav_add: "ਜੋੜੋ",
   nav_manage: "ਪ੍ਰਬੰਧ",
   nav_signin: "ਸਾਈਨ ਇਨ",
