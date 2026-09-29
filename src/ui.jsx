@@ -25,6 +25,7 @@ import { useMyLocation, useInstallPrompt } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
+import { tradeKeysFor } from "./tradewords.js";
 
 export const T = {
   ink: "#0F1419",
@@ -2196,9 +2197,19 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
         gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
       }}>
         <div>
-          <DhundoLogo size={30} />
-          <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "10px 0 0", maxWidth: 260 }}>
-            {t("tagline")}<br />{t("trust_2_s")}
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <DhundoLogo size={34} showWord={false} />
+            <span style={{
+              fontSize: 22, fontWeight: 900, letterSpacing: 2, color: T.brandDark,
+            }}>DHUNDO</span>
+          </div>
+          {/* The brand line, in the language the app is showing. */}
+          <p style={{
+            fontSize: 16, fontWeight: 700, fontStyle: "italic", color: T.ink,
+            lineHeight: 1.45, margin: "10px 0 4px", maxWidth: 300,
+          }}>“{t("slogan")}”</p>
+          <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: 0, maxWidth: 280 }}>
+            {t("trust_2_s")}
           </p>
         </div>
 
@@ -2236,7 +2247,20 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
         fontSize: 11.5, lineHeight: 1.6, color: T.inkFaint,
         display: "flex", flexWrap: "wrap", gap: "4px 14px", justifyContent: "space-between",
       }}>
-        <span>© {year} Dhundo</span>
+        <span>
+          © {year} Dhundo ·{" "}
+          {/* "owned by ShortlistOne", with the name linked, in any language:
+              the sentence is translated and ShortlistOne kept as written. */}
+          {t("owned_by").split("ShortlistOne").map((part, i, all) => (
+            <React.Fragment key={i}>
+              {part}
+              {i < all.length - 1 && (
+                <a href="https://shortlistone.com" target="_blank" rel="noopener noreferrer"
+                   style={{ color: T.brandDark, fontWeight: 700 }}>ShortlistOne</a>
+              )}
+            </React.Fragment>
+          ))}
+        </span>
         <span>
           Place data ©{" "}
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer"
@@ -2265,7 +2289,7 @@ export function waLink(phone) {
 // be spread over two header rows.
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
-  hasListing = false, onOpenListing, onList,
+  hasListing = false, onOpenListing, onList, showCredits = false,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra) => (
@@ -2328,6 +2352,19 @@ export function AccountPage({
         {row("download", t("install_app"), onInstall)}
         {account && row("back", t("nav_signout"), onSignOut)}
       </div>
+
+      {/* In the app, where there is no footer: the ownership line and the
+          credit the OpenStreetMap and GeoNames licences require. */}
+      {showCredits && (
+        <div style={{ marginTop: 26, fontSize: 12, lineHeight: 1.6, color: T.inkFaint, textAlign: "center" }}>
+          <div style={{ fontWeight: 900, letterSpacing: 2, color: T.brandDark, fontSize: 14 }}>DHUNDO</div>
+          <div style={{ fontStyle: "italic", color: T.inkSoft, margin: "2px 0 8px" }}>“{t("slogan")}”</div>
+          <div>{t("owned_by")}</div>
+          <div style={{ marginTop: 6 }}>
+            Place data © OpenStreetMap contributors (ODbL) and GeoNames (CC BY 4.0)
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2469,5 +2506,17 @@ export function matchTrade(text, trades) {
       if (!best && (q.includes(first) && first.length >= 3)) best = tr;
     }
   }
-  return best;
+  if (best) return best;
+  // Then the everyday words, in all twelve languages (tradewords.js):
+  // "nalwala", "பிளம்பர்", "సుతార్". Matched to a trade by the start of a
+  // word in its English name, so "paint" finds "Painter" but "rod" does not
+  // find "Hardware products".
+  const keys = tradeKeysFor(q);
+  if (!keys) return null;
+  for (const k of keys) {
+    const re = new RegExp("(^|[^a-z])" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const tr = trades.find((t) => re.test(String(t.name_en || "").toLowerCase()));
+    if (tr) return tr;
+  }
+  return null;
 }

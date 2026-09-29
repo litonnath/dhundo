@@ -2,6 +2,8 @@
 // Written to be plain and spoken, like the Hindi and Bengali. Worth a read by
 // a native speaker before promoting it; each line is a one-line fix.
 export default {
+  slogan: "जे हवे, ते जवळच शोधा.",
+  owned_by: "ShortlistOne च्या मालकीची सेवा — AI मुलाखती आणि AI भरती.",
   nav_account: "खाते",
   voice_listen: "बोलून शोधा",
   ex_title: "Dhundo कसे काम करते ते पाहा",

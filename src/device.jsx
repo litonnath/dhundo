@@ -261,3 +261,22 @@ export function registerServiceWorker() {
     });
   });
 }
+
+// Running as the installed app -- the Android APK (a Trusted Web Activity,
+// which opens the site with an android-app:// referrer) or the site added
+// to the home screen (display-mode: standalone) -- rather than in a browser
+// tab. Read once and kept for the session: the referrer is only there on
+// the first page load.
+export function isInstalledApp() {
+  try {
+    if (window.sessionStorage.getItem("dhundo_in_app") === "1") return true;
+    const inApp =
+      String(document.referrer || "").startsWith("android-app://") ||
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      window.navigator.standalone === true;
+    if (inApp) window.sessionStorage.setItem("dhundo_in_app", "1");
+    return inApp;
+  } catch (_) {
+    return false;
+  }
+}

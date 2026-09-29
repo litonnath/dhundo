@@ -2,6 +2,8 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  slogan: "যি লাগে, ওচৰতে বিচাৰক।",
+  owned_by: "ShortlistOne ৰ মালিকানাধীন — AI সাক্ষাৎকাৰ আৰু AI নিযুক্তি।",
   nav_account: "একাউণ্ট",
   voice_listen: "কৈ বিচাৰক",
   ex_title: "চাওক Dhundo কেনেকৈ কাম কৰে",

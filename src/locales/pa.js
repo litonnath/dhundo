@@ -2,6 +2,8 @@
 // i18n.jsx. Written to be plain and spoken. Worth a read by a native speaker
 // before promoting it; each line is a one-line fix.
 export default {
+  slogan: "ਜੋ ਚਾਹੀਦਾ, ਨੇੜੇ ਹੀ ਲੱਭੋ।",
+  owned_by: "ShortlistOne ਦੀ ਮਲਕੀਅਤ — AI ਇੰਟਰਵਿਊ ਅਤੇ AI ਭਰਤੀ।",
   nav_account: "ਖਾਤਾ",
   voice_listen: "ਬੋਲ ਕੇ ਲੱਭੋ",
   ex_title: "ਦੇਖੋ Dhundo ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ",

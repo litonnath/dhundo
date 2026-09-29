@@ -65,6 +65,8 @@ const KNOWN = new Set(LANGS.map((l) => l.code));
 
 const STRINGS = {
   en: {
+    slogan: "Jo chahiye, paas mein dhoondo.",
+    owned_by: "Owned by ShortlistOne — AI interviews and AI hiring.",
     nav_account: "Account",
     voice_listen: "Speak to search",
     ex_title: "See how Dhundo works",
@@ -476,6 +478,8 @@ const STRINGS = {
   },
 
   bn: {
+    slogan: "যা চাই, কাছেই খুঁজুন।",
+    owned_by: "ShortlistOne-এর মালিকানাধীন — AI ইন্টারভিউ ও AI হায়ারিং।",
     nav_account: "অ্যাকাউন্ট",
     voice_listen: "বলে খুঁজুন",
     ex_title: "দেখুন Dhundo কীভাবে কাজ করে",
@@ -886,6 +890,8 @@ const STRINGS = {
     m_views: "বার নম্বর দেখা হয়েছে",
   },
   hi: {
+    slogan: "जो चाहिए, पास में ढूंढो।",
+    owned_by: "ShortlistOne की सेवा — AI इंटरव्यू और AI हायरिंग।",
     nav_account: "खाता",
     voice_listen: "बोलकर खोजें",
     ex_title: "देखें Dhundo कैसे काम करता है",

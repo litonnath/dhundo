@@ -29,8 +29,9 @@ import {
   BottomNav, AccountPage, LanguageGate, PopularTrades, matchTrade,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
+import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
-import { useMyLocation } from "./device.jsx";
+import { useMyLocation, isInstalledApp } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
@@ -303,20 +304,41 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
   // list for a category they had not picked yet.
   const showGrid = !group && !trade && !search.trim();
 
+  // Typed in any language: a word that names a trade ("প্লাম্বার",
+  // "nalwala") searches that trade, since the listings themselves are
+  // stored in English and a text search for it would find nothing.
+  const typedTrade = useMemo(
+    () => (!trade && search.trim() ? matchTrade(search, trades) : null),
+    [search, trade, trades]);
+
   const load = useCallback(() => {
     if (showGrid) { setList([]); setTotal(0); return; }
     setLoading(true);
     setError(null);
-    api.browse({ trade, group, search, locality, state,
-                 lat: place && place.lat, lng: place && place.lng })
-      .then((r) => {
-        const rowsOut = many(r);
+    // A name or place typed in any Indian script is searched under each
+    // likely English spelling ("সুকান্ত" -> sukant, sukanta), because
+    // that is how listings are stored; the results are merged.
+    const text = typedTrade ? null : search;
+    const spellings = text && hasIndic(text) ? variants(text, 4) : [text];
+    Promise.all(spellings.map((sp) =>
+      api.browse({ trade: trade || (typedTrade && typedTrade.slug),
+                   group: typedTrade ? null : group,
+                   search: sp, locality, state,
+                   lat: place && place.lat, lng: place && place.lng })
+        .then(many).catch(() => [])))
+      .then((sets) => {
+        const seen = new Set();
+        const rowsOut = [];
+        sets.forEach((set) => set.forEach((row) => {
+          if (!seen.has(row.id)) { seen.add(row.id); rowsOut.push(row); }
+        }));
         setList(rowsOut);
-        setTotal(rowsOut.length ? Number(rowsOut[0].total_count) : 0);
+        setTotal(spellings.length > 1 ? rowsOut.length
+                 : rowsOut.length ? Number(rowsOut[0].total_count) : 0);
       })
       .catch((e) => setError(e.message || t("e_load")))
       .finally(() => setLoading(false));
-  }, [api, trade, group, search, locality, state, showGrid,
+  }, [api, trade, group, search, typedTrade, locality, state, showGrid,
       place && place.lat, place && place.lng]);
 
   // ----------------------------------------------------- available now (80)
@@ -332,7 +354,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
     const fetchLive = () =>
       api.availableWorkers({
         lat: place && place.lat, lng: place && place.lng, state,
-        trade: showGrid ? null : trade, group: showGrid ? null : group,
+        trade: showGrid ? null : (trade || (typedTrade && typedTrade.slug)),
+        group: showGrid || typedTrade ? null : group,
         limit: showGrid ? 8 : 20,
       })
         .then((r) => {
@@ -340,10 +363,13 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
           let rows = many(r);
           // A typed search narrows the live list the same way it narrows
           // the ordinary one, by name, trade or area.
-          const q = search.trim().toLowerCase();
-          if (q) rows = rows.filter((x) =>
-            [x.display_name, x.trade_name, x.locality, x.city]
-              .some((v) => String(v || "").toLowerCase().includes(q)));
+          const q = typedTrade ? "" : search.trim();
+          if (q) {
+            const qs = variants(q, 8).map((v) => v.toLowerCase());
+            rows = rows.filter((x) =>
+              [x.display_name, x.trade_name, x.locality, x.city]
+                .some((v) => qs.some((w) => String(v || "").toLowerCase().includes(w))));
+          }
           setLive(rows);
           setLiveLoaded(true);
         })
@@ -351,7 +377,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace }
     fetchLive();
     const id = setInterval(fetchLive, 60000);
     return () => { alive = false; clearInterval(id); };
-  }, [api, state, trade, group, showGrid, search, place && place.lat, place && place.lng]);
+  }, [api, state, trade, group, showGrid, search, typedTrade, place && place.lat, place && place.lng]);
 
   // Available first, then everybody else once; the live copy of a card wins
   // because its distance is from where the worker is now.
@@ -1804,6 +1830,7 @@ export default function ServicesPage({
   }), [base, supabaseUrl, user]);
   const { t, lang } = useI18n();
   const [tab, setTab] = useState("browse");
+  const inApp = useMemo(() => isInstalledApp(), []);
 
   // First visit: a full-screen language choice, once. Anybody who already
   // picked a language (or was here before this screen existed) skips it.
@@ -2100,11 +2127,16 @@ export default function ServicesPage({
           hasListing={hasListing}
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
+          showCredits={inApp}
         />
       )}
 
-      <SiteFooter setTab={setTab} hasListing={hasListing && !isAdmin}
-                  onInstall={() => setInstallOpen(true)} />
+      {/* The footer is for the website. In the app the bottom bar does its
+          job, and the data credit the licences require is on Account. */}
+      {!inApp && (
+        <SiteFooter setTab={setTab} hasListing={hasListing && !isAdmin}
+                    onInstall={() => setInstallOpen(true)} />
+      )}
 
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} />

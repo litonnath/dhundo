@@ -2,6 +2,8 @@
 // Written to be plain and spoken. Worth a read by a native speaker before
 // promoting it; each line is a one-line fix.
 export default {
+  slogan: "ಏನು ಬೇಕೋ, ಹತ್ತಿರದಲ್ಲೇ ಹುಡುಕಿ.",
+  owned_by: "ShortlistOne ಒಡೆತನದಲ್ಲಿದೆ — AI ಸಂದರ್ಶನ ಮತ್ತು AI ನೇಮಕಾತಿ.",
   nav_account: "ಖಾತೆ",
   voice_listen: "ಮಾತನಾಡಿ ಹುಡುಕಿ",
   ex_title: "Dhundo ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ನೋಡಿ",

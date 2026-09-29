@@ -146,14 +146,17 @@ const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").tr
 
 export function searchPlaces(state, query) {
   const all = placesIn(state);
-  const q = norm(query);
-  if (!q) return all;
+  // Every likely English spelling of what was typed, so "কৃষ্ণনগর" finds
+  // Krishnanagar in this English list. norm() alone would strip the
+  // Bengali letters and match everything.
+  const qs = (hasIndic(query) ? variants(query, 8) : [query]).map(norm).filter(Boolean);
+  if (!qs.length) return all;
   const starts = [];
   const contains = [];
   all.forEach((row) => {
     const p = norm(row.place);
-    if (p.startsWith(q)) starts.push(row);
-    else if (p.includes(q) || norm(row.group).includes(q)) contains.push(row);
+    if (qs.some((q) => p.startsWith(q))) starts.push(row);
+    else if (qs.some((q) => p.includes(q) || norm(row.group).includes(q))) contains.push(row);
   });
   // Prefix matches first: typing "kri" should put Krishnanagar at the top
   // rather than somewhere below a place that merely contains those letters.
@@ -210,6 +213,7 @@ export function snapToKnown(state, detected) {
 // ===========================================================================
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import { STATE_CENTERS, normalizeState } from "./states.js";
+import { hasIndic, variants } from "./translit.js";
 
 const PHOTON = "https://photon.komoot.io/api/";
 
@@ -273,10 +277,19 @@ async function searchDb(state, q, signal) {
 }
 
 export async function searchRemote(state, query, signal) {
-  const q = String(query || "").trim();
+  const typed = String(query || "").trim();
+  // Typed in an Indian script: search under each likely English spelling
+  // until one finds places -- the place list is stored in English letters.
+  const spellings = hasIndic(typed) ? variants(typed, 5) : [typed];
+  let q = spellings[0];
   if (q.length < 3) return [];
 
-  const mine = await searchDb(state, q, signal);
+  let mine = [];
+  for (const sp of spellings) {
+    if (sp.length < 3) continue;
+    mine = await searchDb(state, sp, signal);
+    if (mine.length) { q = sp; break; }
+  }
   // Filter out anything already shown in the built-in list above, so the
   // same place is never offered twice.
   const fromDb = mine.filter((r) => !isKnownPlace(state, r.place));
