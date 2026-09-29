@@ -3,7 +3,7 @@
 --
 -- "AVAILABLE NOW", the Rapido-captain idea for every trade.
 --
--- A worker taps "I'm available now". While Dhundo is open on their phone it
+-- A worker taps "I am available now". While Dhundo is open on their phone it
 -- sends their position about once a minute. Customers see them first, with
 -- a green "Available now" badge and the distance from where they are NOW --
 -- which matters most for anyone who moves around (autos, drivers, delivery)
@@ -25,7 +25,7 @@
 -- HOW THE CARDS ARE BUILT
 -- services_browse_workers (63, not in this repository) decides who may be
 -- shown and what a card contains. Rather than duplicate it, each available
--- worker's card is fetched THROUGH it, so every rule it applies -- published,
+-- card of each worker is fetched THROUGH it, so every rule it applies -- published,
 -- not paused, which fields are public -- applies here unchanged. Only the
 -- distance is replaced with the live one.
 -- ===========================================================================
@@ -63,11 +63,11 @@ as $$
 $$;
 
 -- ===========================================================================
--- THE WORKER'S SIDE
+-- THE WORKER SIDE
 --
 -- p_on = true,  p_hours given  -> go online for that many hours (1-12)
 -- p_on = true,  p_hours null   -> a heartbeat: new position, same end time.
---                                 Refused with 'offline' once the switch
+--                                 Refused (reason offline) once the switch
 --                                 has run out, so the phone learns it.
 -- p_on = false                 -> go offline now.
 -- ===========================================================================
@@ -106,7 +106,7 @@ begin
   end if;
 
   -- Roughly India, generously: a position outside this is a bad fix or a
-  -- spoofed one, and would put the worker on nobody's list anyway.
+  -- spoofed one, and would put the worker on no list anyway.
   if p_lat is null or p_lng is null
      or p_lat not between 5 and 38 or p_lng not between 67 and 99 then
     return query select false, 'bad_location'::text, null::timestamptz, v_visible; return;
@@ -160,10 +160,10 @@ revoke all on function public.services_my_availability() from public, anon, auth
 grant execute on function public.services_my_availability() to authenticated;
 
 -- ===========================================================================
--- THE CUSTOMER'S SIDE
+-- THE CUSTOMER SIDE
 --
 -- Workers who are available now, nearest first by where they are NOW.
--- With the viewer's coordinates: within p_radius_km of them. Without: the
+-- With coordinates for the viewer: within p_radius_km of them. Without: the
 -- whole state, most recently seen first.
 --
 -- Returns the same card JSON as services_browse_workers, with distance_km
@@ -217,8 +217,8 @@ begin
     exit when v_n >= greatest(1, least(coalesce(p_limit, 20), 50));
     continue when r.km is not null and r.km > v_rad;
 
-    -- The card, through the ordinary search, centred on the worker's own
-    -- listed location so they are certainly within its page. Literals
+    -- The card, through the ordinary search, centred on the listed location
+    -- of the worker so they are certainly within its page. Literals
     -- (%L) rather than typed variables, so this matches whatever parameter
     -- types 63 declared.
     execute format(
@@ -236,8 +236,8 @@ begin
 
     v_n := v_n + 1;
     -- total_count describes the search page the card came from, not this
-    -- list. Without the viewer's position there is no distance to give:
-    -- the search's own figure would be from the worker's home to itself.
+    -- list. Without a position for the viewer there is no distance to give:
+    -- the figure from the search would be from the home of the worker to itself.
     return next (v_card - 'total_count') || jsonb_build_object(
       'distance_km',   case when r.km is null then null
                             else to_jsonb(round(r.km::numeric, 1)) end,
