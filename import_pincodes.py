@@ -386,6 +386,71 @@ def post_batch(url, key, rows):
         return json.loads(r.read() or "null")
 
 
+# ---------------------------------------------------------------------------
+# POST OFFICES WITH THEIR PIN CODES  (--offices)
+#
+# One row per post office: its name as written ("Tilthai Nutanbazar B.O"),
+# the name cleaned of the office type, its PIN, district and state. This is
+# the exact part of the postal data -- which office belongs to which PIN --
+# where the PIN centre positions are only rough.
+# ---------------------------------------------------------------------------
+def load_post_offices(rows, dry_run):
+    offices, seen = [], set()
+    for r in fix_ladakh(rows):
+        raw = (r.get("place") or "").strip()
+        name = clean_office_name(raw)
+        if len(name) < 2 or not r.get("state"):
+            continue
+        k = (r["state"], raw, r["pincode"])
+        if k in seen:
+            continue
+        seen.add(k)
+        offices.append({"pincode": r["pincode"], "office": raw, "name": name,
+                        "district": r.get("district") or "", "state": r["state"]})
+    per = defaultdict(int)
+    for o in offices:
+        per[o["state"]] += 1
+    print(f"\n  {len(offices):,} post offices with their PIN codes")
+    for st in sorted(per):
+        print(f"    {st:<42} {per[st]:>7,}")
+    if dry_run:
+        print("  --dry-run: nothing uploaded.")
+        return 0
+
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        print("\n  Set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
+        return 1
+    url = url.rstrip("/")
+
+    loaded = 0
+    for i in range(0, len(offices), BATCH):
+        chunk = offices[i:i + BATCH]
+        body = json.dumps({"p_rows": chunk}).encode()
+        req = urllib.request.Request(
+            f"{url}/rest/v1/rpc/services_load_post_offices", data=body, method="POST",
+            headers={"apikey": key, "Authorization": f"Bearer {key}",
+                     "Content-Type": "application/json"})
+        for attempt in range(4):
+            try:
+                with urllib.request.urlopen(req, timeout=120) as res:
+                    out = json.loads(res.read() or b"[]")
+                    loaded += (out[0] or {}).get("loaded", 0) if isinstance(out, list) and out else 0
+                break
+            except urllib.error.HTTPError as e:
+                if e.code < 500 or attempt == 3:
+                    print(f"\n  batch {i // BATCH + 1} refused: {e.code} {e.read()[:300]!r}")
+                    return 1
+            except urllib.error.URLError:
+                if attempt == 3:
+                    raise
+            time.sleep(2 ** attempt)
+        print(f"  {min(i + BATCH, len(offices)):,} / {len(offices):,}", end="\r", flush=True)
+    print(f"\n  Done. {loaded:,} post offices loaded.")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", help="load from a CSV instead of GeoNames")
@@ -394,6 +459,9 @@ def main():
     ap.add_argument("--places", action="store_true",
                     help="load every post office as a PLACE (village or "
                          "locality) instead of loading PIN codes")
+    ap.add_argument("--offices", action="store_true",
+                    help="load every post office WITH ITS PIN CODE (needs "
+                         "sql/92), so a village finds its own PIN by name")
     args = ap.parse_args()
 
     if args.csv:
@@ -401,6 +469,9 @@ def main():
         skipped = {}
     else:
         rows, skipped = rows_from_geonames()
+
+    if args.offices:
+        return load_post_offices(rows, args.dry_run)
 
     if args.places:
         places = office_places(fix_ladakh(rows))

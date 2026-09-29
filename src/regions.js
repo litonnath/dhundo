@@ -354,6 +354,25 @@ function cleanPin(r) {
   return { ...r, place };
 }
 
+async function rpcPin(fn, body) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return cleanPin(Array.isArray(rows) ? rows[0] : rows);
+  } catch (_) {
+    return null;
+  }
+}
+
 // The PIN code nearest a position -- how "same PIN code" is worked out for
 // somebody who did not type theirs. { pincode, place, district } or null.
 export async function pinNear(lat, lng) {
@@ -382,9 +401,19 @@ export async function pinNear(lat, lng) {
 // leaves the PIN empty just because the village has no position of its own.
 // { pincode, place } or null.
 export async function pinForPlace({ lat, lng, name, state, district } = {}) {
+  // 1. The post office of that name: exact India Post data -- "Tilthai
+  //    Nutanbazar B.O" is 799260. The PIN-centre positions are rough, so a
+  //    position alone once gave Tilthai the PIN of Dharmanagar.
+  if (name) {
+    const byOffice = await rpcPin("services_pin_by_office",
+      { p_state: state || null, p_place: name, p_district: district || null });
+    if (byOffice) return byOffice;
+  }
+  // 2. The PIN centre nearest the position.
   const byPos = await pinNear(lat, lng);
   if (byPos) return byPos;
   if (!name) return null;
+  // 3. By the name, through the PIN list and the map.
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_pin_by_name`, {
       method: "POST",

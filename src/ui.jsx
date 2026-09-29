@@ -20,7 +20,7 @@
 // ===========================================================================
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinNear, pinLookup, pinForPlace } from "./regions.js";
+import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinLookup, pinForPlace } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -1456,11 +1456,6 @@ export function LocationSheet({ place, onChange, onClose }) {
   // The town the PIN code belongs to (the head post office), so a listing
   // in the same town can say so instead of showing a distance.
   const [town, setTown] = useState((place && place.city) || "");
-  // The PIN nearest a position: { pincode, place } or null.
-  const pinFor = async (xy) => {
-    if (!xy || typeof xy.lat !== "number") return null;
-    return pinNear(xy.lat, xy.lng).catch(() => null);
-  };
   // Which name the current position belongs to. A GPS position is where the
   // PHONE is; picking another area afterwards must not keep it -- that is
   // how picking Ramnagar kept the PIN code of Tilthai.
@@ -1489,11 +1484,13 @@ export function LocationSheet({ place, onChange, onClose }) {
     // The map service names the nearest mapped TOWN when a village is only
     // a dot on the map; the place table knows the village itself.
     const close = typeof got.lat === "number" ? await nearestPlaces(got.lat, got.lng) : [];
-    const gotPin = await pinFor(got);
-    if (gotPin) { setPin(gotPin.pincode); setTown(gotPin.place || ""); }
     setNear(close.filter((r) => r.km <= 5));
     const fromMap = got.area ? snapToKnown(got.state || state, got.area) : null;
     const named = bestNearName(close, fromMap);
+    // The PIN of the village's own post office first, then by position.
+    const gotPin = await pinForPlace({ lat: got.lat, lng: got.lng, name: named,
+                                       state: got.state || state }).catch(() => null);
+    if (gotPin) { setPin(gotPin.pincode); setTown(gotPin.place || ""); }
     if (named) {
       setArea(named);
       setGuessed(named);
@@ -1662,7 +1659,12 @@ export function LocationSheet({ place, onChange, onClose }) {
                   {near.map((r) => {
                     const on = r.place === area;
                     return (
-                      <button key={r.place} onClick={() => { setArea(r.place); setGuessed(r.place); }} style={{
+                      <button key={r.place} onClick={async () => {
+                        setArea(r.place); setGuessed(r.place);
+                        // That village's own PIN code, from its post office.
+                        const pr = await pinForPlace({ name: r.place, state, district: r.district }).catch(() => null);
+                        if (pr) { setPin(pr.pincode); setTown(pr.place || ""); }
+                      }} style={{
                         padding: "7px 11px", borderRadius: 18, cursor: "pointer", fontFamily: "inherit",
                         fontSize: 13, fontWeight: on ? 800 : 600, minHeight: 36,
                         border: `1.5px solid ${on ? T.brandDark : T.line}`,
