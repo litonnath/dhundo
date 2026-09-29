@@ -42,4 +42,6 @@ $fn$;
 grant execute on function public.services_items_browse(double precision, double precision, text,
   text, text, int, int, double precision, text, int, int) to anon, authenticated;
 
+
+notify pgrst, 'reload schema';
 select 'part 4 done' as "84_part4";

@@ -56,4 +56,6 @@ grant execute on function public.services_item_get(uuid) to anon, authenticated;
 revoke all on function public.services_item_reveal(uuid) from public, anon;
 grant execute on function public.services_item_reveal(uuid) to authenticated;
 
+
+notify pgrst, 'reload schema';
 select 'part 5 done' as "84_part5";

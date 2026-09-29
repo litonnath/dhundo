@@ -48,4 +48,6 @@ grant execute on function public.services_item_set_status(uuid, text) to authent
 revoke all on function public.services_my_items() from public, anon;
 grant execute on function public.services_my_items() to authenticated;
 
+
+notify pgrst, 'reload schema';
 select 'part 3 done' as "84_part3";

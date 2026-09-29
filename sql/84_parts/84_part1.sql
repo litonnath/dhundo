@@ -59,7 +59,6 @@ alter table public.services_item_reveals enable row level security;
 revoke all on public.services_items, public.services_item_reports, public.services_item_reveals
   from public, anon, authenticated;
 
--- A refusal, in one short call.
 create or replace function public.services_item_no(p_reason text)
 returns jsonb language sql immutable as $fn$
   select jsonb_build_object('ok', false, 'reason', p_reason) $fn$;
@@ -87,6 +86,8 @@ create trigger services_items_photos_gone
   after delete on public.services_items
   for each row execute function public.services_items_queue_photos();
 
+
+notify pgrst, 'reload schema';
 select 'part 1 done: tables ' ||
   (select count(*) from pg_class where relname in
      ('services_items','services_item_reports','services_item_reveals'))::text

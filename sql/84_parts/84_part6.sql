@@ -75,11 +75,13 @@ grant execute on function public.services_admin_items(text, int) to authenticate
 revoke all on function public.services_admin_item_action(uuid, text) from public, anon;
 grant execute on function public.services_admin_item_action(uuid, text) to authenticated;
 
+
+notify pgrst, 'reload schema';
 select jsonb_pretty(jsonb_build_object(
   'tables', (select count(*) from pg_class where relname in
               ('services_items', 'services_item_reports', 'services_item_reveals')),
   'functions', (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
                   and (proname like 'services\_item%' or proname like 'services\_admin\_item%'
                        or proname = 'services_my_items')),
-  'expected', 'tables 3; functions 11'
+  'expected', 'tables 3; functions 12'
 )) as "84_verify";
