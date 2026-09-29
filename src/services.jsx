@@ -26,7 +26,7 @@ import {
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
-  BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade,
+  BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
 import { snapToKnown } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
@@ -347,9 +347,21 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // Typed in any language: a word that names a trade ("প্লাম্বার",
   // "nalwala") searches that trade, since the listings themselves are
   // stored in English and a text search for it would find nothing.
-  const typedTrade = useMemo(
-    () => (!trade && search.trim() ? matchTrade(search, trades) : null),
+  // A word can mean more than one trade -- "paint" is the painter AND the
+  // paint shop -- and then all of them are searched and shown together.
+  const typedTrades = useMemo(
+    () => (!trade && search.trim() ? matchTrades(search, trades) : []),
     [search, trade, trades]);
+  const typed = typedTrades.length > 0;
+  // The trades to ask for: the one picked, or every one the words mean.
+  const tradeSlugs = trade ? [trade] : typed ? typedTrades.map((x) => x.slug) : [null];
+  const slugKey = tradeSlugs.join(",");
+  // When the customer's position is known, results are sorted by real
+  // distance, so the area name must not ALSO filter them: with it, somebody
+  // in Dharmanagar never saw a shop listed under Tilthai, 8 km away.
+  const hasPos = typeof (place && place.lat) === "number";
+  const byDistance = (a, b) =>
+    (a.distance_km == null ? 1e9 : Number(a.distance_km)) - (b.distance_km == null ? 1e9 : Number(b.distance_km));
 
   const load = useCallback(() => {
     if (showGrid) { setList([]); setTotal(0); return; }
@@ -358,12 +370,13 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     // A name or place typed in any Indian script is searched under each
     // likely English spelling ("সুকান্ত" -> sukant, sukanta), because
     // that is how listings are stored; the results are merged.
-    const text = typedTrade ? null : search;
+    const text = typed ? null : search;
     const spellings = text && hasIndic(text) ? variants(text, 4) : [text];
-    Promise.all(spellings.map((sp) =>
-      api.browse({ trade: trade || (typedTrade && typedTrade.slug),
-                   group: typedTrade ? null : group,
-                   search: sp, locality, state,
+    const asks = tradeSlugs.flatMap((slug) => spellings.map((sp) => [slug, sp]));
+    Promise.all(asks.map(([slug, sp]) =>
+      api.browse({ trade: slug,
+                   group: typed ? null : group,
+                   search: sp, locality: hasPos ? null : locality, state,
                    lat: place && place.lat, lng: place && place.lng })
         .then(many).catch(() => [])))
       .then((sets) => {
@@ -372,14 +385,15 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
         sets.forEach((set) => set.forEach((row) => {
           if (!seen.has(row.id)) { seen.add(row.id); rowsOut.push(row); }
         }));
+        if (asks.length > 1 && hasPos) rowsOut.sort(byDistance);
         setList(rowsOut);
-        setTotal(spellings.length > 1 ? rowsOut.length
+        setTotal(asks.length > 1 ? rowsOut.length
                  : rowsOut.length ? Number(rowsOut[0].total_count) : 0);
       })
       .catch((e) => setError(e.message || t("e_load")))
       .finally(() => setLoading(false));
-  }, [api, trade, group, search, typedTrade, locality, state, showGrid,
-      place && place.lat, place && place.lng]);
+  }, [api, trade, group, search, slugKey, typed, locality, state, showGrid, hasPos,
+      place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------------------------------- available now (80)
   // Who can take work right now, nearest by where they are NOW. Fetched
@@ -395,20 +409,24 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const [onlyLive, setOnlyLive] = useState(false);
   useEffect(() => {
     let alive = true;
+    const slugs = showGrid ? [null] : tradeSlugs;
     const fetchLive = () =>
-      api.availableWorkers({
+      Promise.all(slugs.map((slug) => api.availableWorkers({
         lat: place && place.lat, lng: place && place.lng, state,
-        trade: showGrid ? null : (trade || (typedTrade && typedTrade.slug)),
-        group: showGrid || typedTrade ? null : group,
+        trade: slug,
+        group: showGrid || typed ? null : group,
         limit: showGrid ? 8 : 20,
         radiusKm: FAR_KM,
-      })
-        .then((r) => {
+      }).then(many)))
+        .then((sets) => {
           if (!alive) return;
-          let rows = many(r);
+          const seen = new Set();
+          let rows = [];
+          sets.forEach((set) => set.forEach((x) => { if (!seen.has(x.id)) { seen.add(x.id); rows.push(x); } }));
+          if (slugs.length > 1) rows.sort(byDistance);
           // A typed search narrows the live list the same way it narrows
           // the ordinary one, by name, trade or area.
-          const q = typedTrade ? "" : search.trim();
+          const q = typed ? "" : search.trim();
           if (q) {
             const qs = variants(q, 8).map((v) => v.toLowerCase());
             rows = rows.filter((x) =>
@@ -428,7 +446,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     fetchLive();
     const id = setInterval(fetchLive, 60000);
     return () => { alive = false; clearInterval(id); };
-  }, [api, state, trade, group, showGrid, search, typedTrade, place && place.lat, place && place.lng]);
+  }, [api, state, trade, group, showGrid, search, slugKey, typed, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Available first, then everybody else once; the live copy of a card wins
   // because its distance is from where the worker is now.

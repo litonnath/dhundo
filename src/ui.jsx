@@ -2731,29 +2731,39 @@ export function VoiceButton({ onHeard }) {
 // languages the trade names exist in. "प्लंबर", "plumber" and "প্লাম্বার"
 // all land on the same trade instead of a text search that finds nothing.
 export function matchTrade(text, trades) {
+  const all = matchTrades(text, trades);
+  return all.length === 1 ? all[0] : null;
+}
+
+// Every trade the words could mean, best first. One when it is clear;
+// two or more when a word fits several ("paint": painter and paint shop),
+// and the search then shows all of them together.
+export function matchTrades(text, trades) {
   const q = String(text || "").trim().toLowerCase();
-  if (q.length < 2) return null;
+  if (q.length < 2) return [];
   let best = null;
   for (const tr of trades) {
     for (const name of [tr.name_en, tr.name_hi, tr.name_bn]) {
       const n = String(name || "").toLowerCase();
       if (!n) continue;
-      if (n === q) return tr;
+      if (n === q) return [tr];
       const first = n.split(/[\s(,/]+/)[0];
       if (!best && (q.includes(first) && first.length >= 3)) best = tr;
     }
   }
-  if (best) return best;
+  if (best) return [best];
   // Then the everyday words, in all twelve languages (tradewords.js):
   // "nalwala", "பிளம்பர்", "సుతార్". Matched to a trade by the start of a
   // word in its English name, so "paint" finds "Painter" but "rod" does not
   // find "Hardware products".
   const keys = tradeKeysFor(q);
-  if (!keys) return null;
+  if (!keys) return [];
+  const out = [];
   for (const k of keys) {
     const re = new RegExp("(^|[^a-z])" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    const tr = trades.find((t) => re.test(String(t.name_en || "").toLowerCase()));
-    if (tr) return tr;
+    trades.forEach((t) => {
+      if (re.test(String(t.name_en || "").toLowerCase()) && !out.includes(t)) out.push(t);
+    });
   }
-  return null;
+  return out.slice(0, 4);
 }

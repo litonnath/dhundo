@@ -35,6 +35,12 @@ export const TRADE_WORDS = [
     "carpenter", "badhai", "barhai", "kath mistri", "sutar",
     "बढ़ई", "कारपेंटर", "सुतार", "কাঠমিস্ত্রি", "ছুতোর", "কাঠমিস্ত্ৰী",
     "వడ్రంగి", "தச்சர்", "સુથાર", "ಬಡಗಿ", "ആശാരി", "ବଢ଼େଇ", "ਤਰਖਾਣ"] },
+  // The SHOP, before the painter: "rang ki dukan" also contains "rang".
+  { keys: ["paints"], words: [
+    "paint shop", "paints shop", "paint dukan", "paint ki dukan", "rang ki dukan", "colour shop",
+    "पेंट की दुकान", "रंग की दुकान", "पेंट दुकान", "রঙের দোকান", "পেইন্টের দোকান", "ৰঙৰ দোকান",
+    "रंगाचे दुकान", "పెయింట్ షాప్", "பெயிண்ட் கடை", "રંગની દુકાન", "ಪೇಂಟ್ ಅಂಗಡಿ", "പെയിന്റ് കട",
+    "ରଙ୍ଗ ଦୋକାନ", "ਪੇਂਟ ਦੀ ਦੁਕਾਨ"] },
   { keys: ["paint"], words: [
     "painter", "rang", "rangai", "rangari",
     "पेंटर", "रंगाई", "रंगारी", "রং মিস্ত্রি", "পেইন্টার", "পেইণ্টাৰ",
@@ -86,19 +92,33 @@ export const TRADE_WORDS = [
 
 const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 
-// The English name keys for whatever was typed or said, or null.
+// A word said inside a sentence. English words must match as whole words:
+// "paint" contains "int" (a brick, in Hindi) but is not about bricks.
+const inside = (q, n) =>
+  /^[a-z0-9 -]+$/.test(n) ? ` ${q} `.includes(` ${n} `) : q.includes(n);
+
+// The English name keys for whatever was typed or said, or null. Every
+// entry that matches as well as the best one counts, so a word that fits two
+// trades -- "paint": the painter and the paint shop -- gives the keys of both
+// and the search shows both. A closer match wins outright: "paint shop" is
+// only the shop, "painter" only the painter.
 export function tradeKeysFor(text) {
   const q = norm(text);
   if (q.length < 2) return null;
+  let best = 0;
+  let keys = [];
   for (const entry of TRADE_WORDS) {
+    let score = 0;
     for (const w of entry.words) {
       const n = norm(w);
-      // Exact, contained in what was said ("I need a plumber"), or the start
-      // of a word still being typed ("plum", "मिस्त्").
-      if (q === n || (n.length >= 3 && q.includes(n)) || (q.length >= 3 && n.startsWith(q))) {
-        return entry.keys;
-      }
+      // 3: exactly what was said. 2: said inside a sentence ("I need a
+      // plumber"). 1: the start of a word still being typed ("plum").
+      const sc = q === n ? 3 : n.length >= 3 && inside(q, n) ? 2 : q.length >= 3 && n.startsWith(q) ? 1 : 0;
+      if (sc > score) score = sc;
     }
+    if (!score) continue;
+    if (score > best) { best = score; keys = [...entry.keys]; }
+    else if (score === best) keys.push(...entry.keys);
   }
-  return null;
+  return keys.length ? keys : null;
 }
