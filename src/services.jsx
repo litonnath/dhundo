@@ -26,7 +26,7 @@ import {
   ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
   AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
-  BottomNav, AccountPage, ProfilePage, InstallBanner, LanguageGate, PopularTrades, matchTrade, matchTrades,
+  BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
 import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
@@ -615,6 +615,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
             <InstallBanner onOpen={onInstall} />
+            {!(user && user.id) && <SignupHelp />}
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
             </h2>

@@ -362,6 +362,57 @@ export function InstallButton({ onOpen }) {
 // On the front screen: one clear bar to get the app. Not inside the app
 // itself, not once it is installed, and not on an iPhone, which cannot
 // install the APK.
+// "CAN'T SIGN UP? WHATSAPP US."
+//
+// A phone number and a six-digit PIN is simple for most people and a wall
+// for some: a first smartphone, a mistri who has never filled a form, an
+// elderly customer. For them the way in is a person, so the sign-up help
+// number is shown before sign-up, with the message already written in their
+// language. Hidden when CONTACT.whatsapp is empty.
+export function SignupHelp({ style }) {
+  const { t } = useI18n();
+  if (!CONTACT.whatsapp) return null;
+  const num = CONTACT.whatsapp.replace(/\D/g, "");
+  const shown = num.length === 12 && num.startsWith("91")
+    ? `+91 ${num.slice(2, 7)} ${num.slice(7)}` : `+${num}`;
+  const href = `https://wa.me/${num}?text=${encodeURIComponent(t("sh_msg"))}`;
+  return (
+    <div style={{
+      display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 14px",
+      borderRadius: 14, background: "#EAF8EF", border: "1px solid rgba(37,211,102,0.45)",
+      marginBottom: 16, textAlign: "left", ...style,
+    }}>
+      <span aria-hidden="true" style={{
+        width: 40, height: 40, borderRadius: "50%", background: "#25D366", color: "#fff",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.8-1.1-4.6-4-4.8-4.2-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.1z"/>
+        </svg>
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#0F1419", lineHeight: 1.35 }}>
+          {t("sh_title")}
+        </span>
+        <span style={{ display: "block", fontSize: 13.5, color: "#3D4A55", lineHeight: 1.55, margin: "4px 0 6px" }}>
+          {t("sh_body")}
+        </span>
+        <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#0F1419",
+                       letterSpacing: 0.3, margin: "0 0 10px", whiteSpace: "nowrap" }}>
+          {shown}
+        </span>
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{
+          display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366",
+          color: "#fff", padding: "10px 18px", borderRadius: 22, fontWeight: 800,
+          fontSize: 14.5, textDecoration: "none", minHeight: 44, boxSizing: "border-box",
+        }}>
+          {t("sh_btn")}
+        </a>
+      </span>
+    </div>
+  );
+}
+
 export function InstallBanner({ onOpen }) {
   const { isIos, installed } = useInstallPrompt();
   const { t } = useI18n();
@@ -2570,6 +2621,7 @@ export function AccountPage({
           <Btn full onClick={onSignIn} style={{ fontSize: 17, minHeight: 54 }}>
             <Icon name="user" size={19} /> {t("nav_signin")}
           </Btn>
+          <SignupHelp style={{ margin: "14px 0 0" }} />
         </div>
       ) : (
         <div style={{

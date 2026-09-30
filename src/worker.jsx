@@ -19,7 +19,7 @@
 // Customers are shown a distance, never the position (sql/80).
 // ===========================================================================
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Icon, Btn, Notice } from "./ui.jsx";
+import { T, Icon, Btn, Notice, SignupHelp } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
@@ -188,6 +188,7 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
         {signedIn
           ? <Btn full onClick={onList}>{t("nav_list")}</Btn>
           : <Btn full onClick={onSignIn}>{t("nav_signin")}</Btn>}
+        {!signedIn && <SignupHelp style={{ margin: "14px 0 0" }} />}
       </div>
     );
   }

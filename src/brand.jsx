@@ -61,7 +61,7 @@ export function DhundoGlyph({ size = 24 }) {
 //   email:    "help@example.com"
 export const CONTACT = {
   phone: "",
-  whatsapp: "",
+  whatsapp: "919560677568",
   email: "",
 };
 

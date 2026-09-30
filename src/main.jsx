@@ -33,7 +33,7 @@ import ServicesPage from "./services.jsx";
 import { I18nProvider, useI18n } from "./i18n.jsx";
 import { registerServiceWorker } from "./device.jsx";
 import { DhundoLogo } from "./brand.jsx";
-import { CloseButton, useDismissable } from "./ui.jsx";
+import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import {
   signUpWithPhone, signInWithPhone, refreshAccount, signOutEverywhere,
@@ -205,6 +205,10 @@ function AuthPanel({ onDone, onClose }) {
             }}>{lbl}</button>
           ))}
         </div>
+
+        {/* Before the form, not after it: somebody stuck on the form is
+            not going to scroll past it to find help. */}
+        <SignupHelp />
 
         {err && (
           <div style={{
