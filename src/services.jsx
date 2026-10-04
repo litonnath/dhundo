@@ -40,6 +40,7 @@ import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { TileArt } from "./scenes.jsx";
+import { RideScreen, RideRequests } from "./ride.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
@@ -313,6 +314,16 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     jobAccept: (id) => rpc("services_job_accept", { p_job: id }, true),
     jobUpdate: (id, action) => rpc("services_job_update", { p_job: id, p_action: action }, true),
     myJobs: () => rpc("services_my_jobs", {}, true),
+    rideRequest: (pick, drop, vehicle, fare) => rpc("services_ride_request", {
+      p_pick_text: pick.text, p_pick_lat: pick.lat, p_pick_lng: pick.lng,
+      p_drop_text: drop.text, p_drop_lat: typeof drop.lat === "number" ? drop.lat : null,
+      p_drop_lng: typeof drop.lng === "number" ? drop.lng : null,
+      p_vehicle: vehicle, p_fare_rupees: fare,
+    }, true),
+    ridesNearby: () => rpc("services_rides_nearby", {}, true),
+    rideAccept: (id) => rpc("services_ride_accept", { p_ride: id }, true),
+    myRide: () => rpc("services_my_ride", {}, true),
+    rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
     bookingRequest: (worker, period, start, note) =>
       rpc("services_booking_request", { p_worker: worker, p_period: period, p_start: start, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
@@ -785,14 +796,13 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     if (k === "market") { onMarket && onMarket(); return; }
     if (k === "partner") { onPartner && onPartner(); return; }
     setSection(k);
-    if (k === "ride") setGroup("Drivers");
-    else if (k === "shop") setGroup("Suppliers");
+    if (k === "shop") setGroup("Suppliers");
     else if (k === "eat") setGroup("Eat & Stay");
   };
   const goHome = () => { setSection(null); setGroup(null); setTrade(null); setAllIn(false); setSearch(""); };
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
-  if (showGrid && section !== "worker") {
+  if (showGrid && section !== "worker" && section !== "ride") {
     return <CustomerLauncher onPick={pickTile} onOffer={onOffer} side={side} setSide={setSide} />;
   }
   const SECTION = {
@@ -802,6 +812,21 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     eat: ["home_eat", "food", "#A16207", "#FDF3DC"],
   }[section] || ["home_worker", "construction", "#C2410C", "#FFF1E6"];
   const showTiles = !!group && !trade && !allIn && !search.trim() && inGroup.length > 0;
+  if (section === "ride" && !group && !trade) {
+    return (
+      <>
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 0" }}>
+          <button onClick={goHome} style={{
+            display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`,
+            borderRadius: 20, padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+            fontSize: 14, fontWeight: 700, color: T.brandDark,
+          }}><Icon name="back" size={16} /> {t("launch_back")}</button>
+        </div>
+        <RideScreen api={api} signedIn={!!(user && user.id)} place={place} onSignIn={onSignIn}
+                    onBrowse={() => setGroup("Drivers")} />
+      </>
+    );
+  }
   const workerGroups = groups.filter((g) => !["Drivers", "Suppliers", "Eat & Stay"].includes(g));
 
   return (
@@ -2841,7 +2866,7 @@ export default function ServicesPage({
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
             if (!signedIn || !hasListing || isAdmin) return null;
-            if (tr.group_name === "Drivers") return <RiderJobs api={api} online={avail.online} />;
+            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} /><RiderJobs api={api} online={avail.online} /></>;
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
               return <ShopJobs api={api} hasListing={hasListing} />;
             return null;

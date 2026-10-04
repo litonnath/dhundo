@@ -2331,7 +2331,6 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
         <nav aria-label={t("ft_links")}>
           <p style={heading}>{t("ft_links")}</p>
           <button style={link} onClick={go("browse")}>{t("nav_home")}</button>
-          <button style={link} onClick={go("market")}>{t("mk_tab")}</button>
           <button style={link} onClick={go(hasListing ? "mine" : "add")}>
             {hasListing ? t("nav_mine") : t("nav_list")}
           </button>
