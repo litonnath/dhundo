@@ -123,3 +123,20 @@ seconds (OpenStreetMap asks for about one request a second).
   first, cold search; it applies to every request the app makes.
 * The app retries one failed search once, asks the older slower search only when
   the new one is not installed, and warms the index when the location sheet opens.
+
+## Directions and the exact pin
+
+* After "Move the pin", the card is labelled "Your pin", says how far the pin is
+  from the middle of the village, names the nearest shop, school or landmark
+  within 250 m, and links to the spot on a map. The header shows that place, not
+  only the village.
+* **Directions** (`sql/98_directions.sql`): a signed-in customer who has opened a
+  shop's number also gets a Directions button (Google Maps, no key) to the shop's
+  pin. It appears only when the owner turned on "Show my full address" (the switch
+  for a shop people come to) AND the position is exact (phone GPS or a placed pin,
+  not a village middle). Otherwise the database returns nothing, and a worker who
+  works from home keeps their spot private. 60 requests an hour per person.
+* The route starts from the customer's own pin when they placed one exactly,
+  otherwise from where the phone is.
+* If a listing is saved but its exact pin is not (for example `sql/94` was not
+  run), the success screen says so instead of failing silently.

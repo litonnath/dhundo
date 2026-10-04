@@ -837,6 +837,11 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               {t("p_addr_private_note")}
             </div>
           )}
+          {f.address_public && (
+            <div style={{ fontSize: 12.5, color: T.inkSoft, marginBottom: 12, lineHeight: 1.5 }}>
+              {t("p_addr_dir_note")}
+            </div>
+          )}
         </Section>
       </div>
 

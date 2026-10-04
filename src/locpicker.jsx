@@ -26,8 +26,33 @@ import { useMyLocation, locErrorKey } from "./device.jsx";
 import MapPicker from "./mappicker.jsx";
 import {
   searchAnywhere, reverseLookup, placeCoords, nearestPlaces, bestNearName,
-  snapToKnown, pinForPlace, warmPlaceSearch,
+  snapToKnown, pinForPlace, warmPlaceSearch, geoJson,
 } from "./regions.js";
+
+const metresBetween = (aLat, aLng, bLat, bLng) => {
+  const R = 6371000, rad = Math.PI / 180;
+  const h = Math.sin(((bLat - aLat) * rad) / 2) ** 2 +
+    Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(((bLng - aLng) * rad) / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+const fmtKm = (km) => (km < 1 ? `${Math.max(10, Math.round(km * 100) * 10)} m` : `${km.toFixed(1)} km`);
+
+// The nearest named thing within 250 m of a point -- a shop, a school, a
+// temple -- so an exact pin can be described by what it is next to. The
+// village itself is not one: that is already the area.
+async function nearestLandmark(lat, lng) {
+  try {
+    const j = await geoJson("photon", `reverse?lat=${lat}&lon=${lng}&limit=6&lang=en`);
+    for (const f of (j && j.features) || []) {
+      const p = (f && f.properties) || {};
+      const xy = (f && f.geometry && f.geometry.coordinates) || [];
+      const name = String(p.name || "").trim();
+      if (!name || p.osm_key === "place" || p.osm_key === "boundary" || typeof xy[1] !== "number") continue;
+      if (metresBetween(lat, lng, xy[1], xy[0]) <= 250) return name;
+    }
+  } catch (_) { /* a landmark is a nicety */ }
+  return null;
+}
 
 // Everything known about a point: the address, the state, the village, the
 // PIN. Used for the phone's position, for a pin moved on the map, and for the
@@ -48,10 +73,17 @@ export async function describePoint({ lat, lng, state, address, area, accuracy }
   const pinR = await pinForPlace({
     lat, lng, name: named, state: st, postcode: addr && addr.postcode,
   }).catch(() => null);
+  // How far the spot is from the middle of the village it is named after:
+  // the proof that it is where it was placed, not the village centre.
+  const centre = close.find((r) => r.place === named);
+  const landmark = await nearestLandmark(lat, lng);
+  const base = (addr && addr.line) || named;
   return {
-    title: (addr && addr.line) || named,
+    title: base,
     area: named, state: st, lat, lng,
-    line: (addr && addr.line) || named,
+    line: landmark ? `Near ${landmark}, ${base}` : base,
+    landmark,
+    centreKm: centre && typeof centre.km === "number" ? centre.km : null,
     pin: (pinR && pinR.pincode) || "", town: (pinR && pinR.place) || "",
     accuracy: typeof accuracy === "number" ? Math.round(accuracy) : null,
     exact: true,
@@ -268,7 +300,9 @@ export function LocationSheet({ place, onChange, onClose }) {
               <span style={{ color: T.green, flexShrink: 0, marginTop: 1 }}><Icon name="check" size={19} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 11.5, fontWeight: 800, color: T.green,
-                               textTransform: "uppercase", letterSpacing: 0.4 }}>{t("loc_selected")}</span>
+                               textTransform: "uppercase", letterSpacing: 0.4 }}>
+                  {chosen.source === "picked" && chosen.exact ? t("loc_pin_set") : t("loc_selected")}
+                </span>
                 <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.4 }}>
                   {chosen.line || chosen.area}
                 </span>
@@ -282,6 +316,18 @@ export function LocationSheet({ place, onChange, onClose }) {
             </div>
             {!chosen.exact && (
               <div style={{ fontSize: 12.5, color: "#8A4A00", marginTop: 8, lineHeight: 1.5 }}>{t("loc_rough")}</div>
+            )}
+            {chosen.exact && typeof chosen.centreKm === "number" && chosen.area && (
+              <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 8, lineHeight: 1.5 }}>
+                {t("loc_pin_off").replace("{d}", fmtKm(chosen.centreKm)).replace("{a}", chosen.area)}
+              </div>
+            )}
+            {chosen.exact && typeof chosen.lat === "number" && (
+              <a href={`https://www.openstreetmap.org/?mlat=${chosen.lat}&mlon=${chosen.lng}#map=18/${chosen.lat}/${chosen.lng}`}
+                 target="_blank" rel="noopener noreferrer" style={{
+                display: "inline-block", marginTop: 6, color: T.brandDark, fontWeight: 700,
+                fontSize: 12.5, textDecoration: "underline",
+              }}>{t("loc_view_map")}</a>
             )}
             <button onClick={() => setMapOpen(true)} style={{
               marginTop: 8, background: "none", border: "none", padding: "6px 0", cursor: "pointer",

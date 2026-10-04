@@ -1487,7 +1487,7 @@ export function LocationPill({ place, onOpen, compact }) {
           display: "block", fontSize: 14, fontWeight: 800, color: T.ink,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>
-          {area || t("loc_set")}
+          {(place && place.address) || area || t("loc_set")}
         </span>
         <span style={{
           display: "block", fontSize: 11, color: T.inkFaint, fontWeight: 600,
@@ -1770,7 +1770,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel }) {
+                              otherLabels, trade, nearLabel, directions, origin }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -2051,6 +2051,20 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               </svg>
               WhatsApp
             </a>
+            {/* DIRECTIONS, for a shop that chose to show where it is. From the
+                customer's own pin when they have placed one exactly, otherwise
+                from wherever the phone is: the maps app asks for it. */}
+            {directions && (
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${directions.lat},${directions.lng}&travelmode=driving${
+                     origin && origin.exact && typeof origin.lat === "number" ? `&origin=${origin.lat},${origin.lng}` : ""}`}
+                 target="_blank" rel="noopener noreferrer" style={{
+                display: "inline-flex", alignItems: "center", gap: 7, background: T.brandDark,
+                color: "#fff", padding: "12px 14px", borderRadius: 10, fontWeight: 700,
+                fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
+              }}>
+                <Icon name="pin" size={18} /> {t("dir_btn")}
+              </a>
+            )}
           </span>
         ) : (
           <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}

@@ -110,6 +110,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     // No viewer id: 59 reads it from the signed token. Passing one was how
     // a caller could spend somebody else's hourly reveal budget.
     reveal: (workerId) => rpc("services_reveal_contact", { p_worker_id: workerId }, true),
+    // Where a shop is, for Directions -- only when its owner chose to show
+    // the address and pinned the exact spot. See sql/98.
+    directions: (workerId) => rpc("services_worker_directions", { p_worker_id: workerId }, true),
 
     // ------------------------------------------------- available now (80)
     // The worker's switch. p_hours given = go online for that long; null =
@@ -360,7 +363,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     if (d.state && !STATES.includes(d.state)) { onPickLocation && onPickLocation(); return; }
     setPlace({ area: d.area || (place && place.area) || "", state: d.state || place.state,
                lat: d.lat, lng: d.lng, pin: d.pin || undefined, city: d.town || undefined,
-               address: d.line || undefined });
+               address: d.line || undefined, exact: true });
   };
   // The area and the state are set in the header and owned by the page, so
   // there is one answer to "where am I looking?" rather than two.
@@ -372,6 +375,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const [error, setError] = useState(null);
   const [revealing, setRevealing] = useState(null);
   const [revealed, setRevealed] = useState({});
+  // Shops whose owner shares the exact spot, fetched once the number is opened.
+  const [dirs, setDirs] = useState({});
   const [note, setNote] = useState(null);
   const timer = useRef(null);
 
@@ -586,6 +591,10 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
       const r = one(await api.reveal(row.id));
       if (r && r.ok) {
         setRevealed((p) => ({ ...p, [row.id]: r.phone }));
+        api.directions(row.id).then((d) => {
+          const x = one(d);
+          if (x && x.ok && typeof x.lat === "number") setDirs((p) => ({ ...p, [row.id]: { lat: x.lat, lng: x.lng } }));
+        }).catch(() => {});
         // One tap should be a call. The number stays on the card too, with
         // WhatsApp beside it, for anybody who would rather message.
         try { window.location.href = `tel:${String(r.phone).replace(/\s/g, "")}`; } catch (_) {}
@@ -679,6 +688,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       canCall={!!(user && user.id)}
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
+                      directions={dirs[row.id]} origin={place}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -837,6 +847,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   canCall={!!(user && user.id)}
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
+                  directions={dirs[row.id]} origin={place}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}
@@ -973,6 +984,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [done, setDone] = useState(null);
+  // The listing saved but its exact pin did not: said on the success screen.
+  const [posFailed, setPosFailed] = useState(false);
   // Where THIS listing is. Its own, not the place somebody is browsing from:
   // choosing a shop's location here must not move the home screen, and the
   // home screen's location must not become a shop's by accident.
@@ -1068,7 +1081,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
       // road chosen from the search) is saved as the listing's position, so
       // distance is from the door and not from the middle of the village.
       if (r && r.ok && !isAdmin && lp && lp.exact && typeof lp.lat === "number") {
-        try { await api.setMyPosition(lp.lat, lp.lng, lp.source); } catch (_) {}
+        try { await api.setMyPosition(lp.lat, lp.lng, lp.source); } catch (_) { setPosFailed(true); }
       }
 
       if (r && r.ok) {
@@ -1096,7 +1109,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   };
 
   const reset = () => {
-    setDone(null); setStep(1); setGroup(null); setErr(null); setPicked([]);
+    setDone(null); setPosFailed(false); setStep(1); setGroup(null); setErr(null); setPicked([]);
     setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
                    years_experience: "", day_rate_min: "", day_rate_max: "" }));
   };
@@ -1121,6 +1134,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             ? (done === "updated" ? t("ok_updated") : t("ok_added"))
             : t("ok_submitted")}
         </p>
+        {posFailed && <div style={{ margin: "0 0 16px" }}><Notice tone="bad">{t("loc_pos_failed")}</Notice></div>}
         <Btn full onClick={reset}>{t("ok_another")}</Btn>
       </div>
     );
@@ -2069,6 +2083,7 @@ export default function ServicesPage({
             lng: typeof p.lng === "number" ? p.lng : undefined,
             pin: /^\d{6}$/.test(String(p.pin || "")) ? String(p.pin) : undefined,
             address: typeof p.address === "string" && p.address ? p.address : undefined,
+            exact: p.exact === true ? true : undefined,
             // Saved before post office suffixes were dropped: "Dharmanagar H.O".
             city: typeof p.city === "string" && p.city
               ? p.city.replace(/\s+(?:H\.?\s?O|S\.?\s?O|B\.?\s?O|G\.?\s?P\.?\s?O)\.?$/i, "").trim() : undefined,
@@ -2156,7 +2171,7 @@ export default function ServicesPage({
         area: d.area || p.area,
         state: d.state && STATES.includes(d.state) ? d.state : p.state,
         lat: d.lat, lng: d.lng, pin: d.pin || undefined, city: d.town || undefined,
-        address: d.line || undefined,
+        address: d.line || undefined, exact: true,
       }));
     });
     return () => { alive = false; };
