@@ -39,6 +39,7 @@ import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i1
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
+import { StartGate, OfferTypeGate } from "./start.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -1086,13 +1087,13 @@ const bigInput = {
   ...input, minHeight: 54, fontSize: 16.5, padding: "14px 15px", borderRadius: 12,
 };
 
-function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace }) {
+function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace, startGroup = null }) {
   const consent = useConsent();
   const { t, lang } = useI18n();
   const geo = useMyLocation();
 
   const [step, setStep] = useState(1);
-  const [group, setGroup] = useState(null);
+  const [group, setGroup] = useState(startGroup);
   // A list, not a single value. A mistri who also tiles was previously
   // choosing which half of his work to advertise at the moment he signed
   // up -- and most people never come back to fix that. The FIRST pick is
@@ -2340,6 +2341,19 @@ export default function ServicesPage({
   const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  // FIRST SCREENS: after the language, "I need" or "I offer"; for "I offer",
+  // what is offered. Shown once on a new phone, and never to somebody who is
+  // already signed in.
+  const [start, setStart] = useState(() => {
+    try { return window.localStorage.getItem("dhundo_started") ? null : "role"; } catch (_) { return null; }
+  });
+  const [offerType, setOfferType] = useState(() => {
+    try { return window.localStorage.getItem("dhundo_offer_type") || null; } catch (_) { return null; }
+  });
+  const finishStart = () => {
+    try { window.localStorage.setItem("dhundo_started", "1"); } catch (_) {}
+    setStart(null);
+  };
   const [phoneOk, setPhoneOk] = useState(null);
   useEffect(() => {
     if (!user || !user.id) { setPhoneOk(null); return undefined; }
@@ -2648,6 +2662,22 @@ export default function ServicesPage({
       paddingBottom: "calc(72px + env(safe-area-inset-bottom))",
     }}>
       {langGate && <LanguageGate onDone={closeLangGate} />}
+      {!langGate && !signedIn && start === "role" && (
+        <StartGate
+          onNeed={() => { finishStart(); switchMode("need"); onSignIn && onSignIn(); }}
+          onOffer={() => setStart("offer")} />
+      )}
+      {!langGate && !signedIn && start === "offer" && (
+        <OfferTypeGate
+          onBack={() => setStart("role")}
+          onPick={(type) => {
+            try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
+            setOfferType(type);
+            finishStart();
+            if (type === "sell") { setTab("sell"); } else { setTab("add"); }
+            onSignIn && onSignIn();
+          }} />
+      )}
       <Header
         tab={tab}
         setTab={setTab}
@@ -2776,6 +2806,7 @@ export default function ServicesPage({
                 </>
               ) : (
                 <ListingForm api={api} trades={trades} user={user} isAdmin={isAdmin}
+                             startGroup={{ ride: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
                              place={place} setPlace={setPlace}
                              onBack={() => setTab(isAdmin ? "browse" : "work")}
                              onDone={() => setReloadKey((k) => k + 1)} />
