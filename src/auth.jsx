@@ -272,3 +272,54 @@ export async function signOutEverywhere(cfg, session) {
     // GoTrue's side.
   }
 }
+
+
+// ---------------------------------------------------------------------------
+// TWO-STEP SIGN-IN with an authenticator app (TOTP), for admins. Standard
+// Supabase MFA: enrol a factor once, then after the PIN a 6-digit code makes
+// the session "aal2", which the database requires of admins once
+// admin_needs_mfa is on (sql/111).
+// ---------------------------------------------------------------------------
+const mfaHeaders = (cfg, token) => ({
+  apikey: cfg.anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json",
+});
+
+// The id of the person's verified authenticator factor, or null.
+export async function mfaVerifiedFactor(cfg, token) {
+  try {
+    const res = await fetch(`${cfg.url}/auth/v1/user`, { headers: mfaHeaders(cfg, token) });
+    if (!res.ok) return null;
+    const u = await res.json();
+    const f = (u.factors || []).find((x) => x.factor_type === "totp" && x.status === "verified");
+    return f ? f.id : null;
+  } catch (_) { return null; }
+}
+
+export async function mfaEnroll(cfg, token) {
+  const res = await fetch(`${cfg.url}/auth/v1/factors`, {
+    method: "POST", headers: mfaHeaders(cfg, token),
+    body: JSON.stringify({ factor_type: "totp", friendly_name: `Dhundo ${Date.now()}`, issuer: "Dhundo" }),
+  });
+  const j = await res.json().catch(() => null);
+  if (!res.ok || !j || !j.id) throw new Error("MFA_ENROLL_FAILED");
+  return { id: j.id, qr: j.totp && j.totp.qr_code, secret: j.totp && j.totp.secret };
+}
+
+// Challenge then verify. Returns the new tokens (an aal2 session), or throws.
+export async function mfaChallengeVerify(cfg, token, factorId, code) {
+  const ch = await fetch(`${cfg.url}/auth/v1/factors/${factorId}/challenge`, {
+    method: "POST", headers: mfaHeaders(cfg, token), body: "{}",
+  });
+  const cj = await ch.json().catch(() => null);
+  if (!ch.ok || !cj || !cj.id) throw new Error("MFA_CHALLENGE_FAILED");
+  const v = await fetch(`${cfg.url}/auth/v1/factors/${factorId}/verify`, {
+    method: "POST", headers: mfaHeaders(cfg, token),
+    body: JSON.stringify({ challenge_id: cj.id, code: String(code || "").trim() }),
+  });
+  const vj = await v.json().catch(() => null);
+  if (!v.ok || !vj || !vj.access_token) throw new Error("MFA_BAD_CODE");
+  return {
+    access_token: vj.access_token, refresh_token: vj.refresh_token,
+    expires_at: Date.now() + Number(vj.expires_in || 3600) * 1000,
+  };
+}

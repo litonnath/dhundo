@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { mfaVerifiedFactor, mfaEnroll, mfaChallengeVerify } from "./auth.jsx";
 
 export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
   const { t } = useI18n();
@@ -75,6 +76,82 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// ADMIN: turn on the authenticator-app code for this admin account. Shown at
+// the top of Manage. Once every admin has done this, switch the requirement
+// on in the database (sql/111) and an admin session without the code is
+// refused by every admin function.
+// ---------------------------------------------------------------------------
+export function AdminMfaCard({ api, onSession }) {
+  const [state, setState] = useState("loading");
+  const [enrol, setEnrol] = useState(null);
+  const [code, setCode] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const token = api.accessToken ? await api.accessToken() : null;
+      if (!token) { if (alive) setState("none"); return; }
+      const f = await mfaVerifiedFactor(api.cfg, token);
+      if (alive) setState(f ? "on" : "off");
+    })();
+    return () => { alive = false; };
+  }, [api]);
+
+  const start = async () => {
+    setBusy(true); setErr("");
+    try { setEnrol(await mfaEnroll(api.cfg, await api.accessToken())); }
+    catch (_) { setErr("Could not start. Is MFA switched on in Supabase (Authentication, Multi-Factor)?"); }
+    setBusy(false);
+  };
+  const confirm = async () => {
+    setBusy(true); setErr("");
+    try {
+      const tk = await mfaChallengeVerify(api.cfg, await api.accessToken(), enrol.id, code);
+      onSession && onSession(tk);
+      setEnrol(null); setState("on");
+    } catch (_) { setErr("That code is not right. Wait for the next one and try again."); }
+    setBusy(false);
+  };
+
+  if (state === "loading" || state === "none") return null;
+  const box = { background: T.white, border: `1px solid ${state === "on" ? T.line : T.red}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 };
+  return (
+    <div style={box}>
+      <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 4 }}>
+        Admin two-step sign-in {state === "on" ? "- on" : "- not set up"}
+      </div>
+      {state === "on" ? (
+        <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55 }}>
+          You sign in with your PIN and then a 6-digit code from your authenticator app.
+        </div>
+      ) : !enrol ? (
+        <>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, marginBottom: 8 }}>
+            Admins can open every ID photo and phone number, so a PIN alone is not enough. Set up an authenticator app (Google Authenticator, Microsoft Authenticator, Authy) in a minute.
+          </div>
+          <Btn onClick={start} disabled={busy}>{busy ? "…" : "Set up"}</Btn>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, marginBottom: 8 }}>
+            In the app choose Add account, scan this picture (or type the key), then enter the 6-digit code it shows.
+          </div>
+          {enrol.qr && <img src={enrol.qr} alt="" width={180} height={180} style={{ display: "block", margin: "0 auto 8px" }} />}
+          {enrol.secret && <div style={{ fontFamily: "monospace", fontSize: 13, textAlign: "center", wordBreak: "break-all", marginBottom: 10 }}>{enrol.secret}</div>}
+          <input style={{ ...input, letterSpacing: 6, fontSize: 20, textAlign: "center", marginBottom: 8 }} inputMode="numeric"
+                 maxLength={6} value={code} onChange={(e) => { setErr(""); setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }} />
+          <Btn full disabled={busy || code.length < 6} onClick={confirm}>{busy ? "…" : "Turn on"}</Btn>
+        </>
+      )}
+      {err && <div style={{ color: T.red, fontSize: 13, fontWeight: 700, marginTop: 8 }}>{err}</div>}
     </div>
   );
 }

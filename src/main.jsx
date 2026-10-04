@@ -40,7 +40,7 @@ import { useConsent } from "./consent-core.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import {
   signUpWithPhone, signInWithPhone, refreshAccount, signOutEverywhere,
-  isValidPhone, prettyPhone,
+  isValidPhone, prettyPhone, mfaVerifiedFactor, mfaChallengeVerify,
 } from "./auth.jsx";
 import { cleanCode, codeLooksRight, pendingCode, rememberCode } from "./referral.js";
 
@@ -161,6 +161,10 @@ function AuthPanel({ onDone, onClose }) {
   const [agree, setAgree] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState(false);
+  // Set when this person has an authenticator app set up (admins): the PIN
+  // was right, and the 6-digit code is the second step.
+  const [mfa, setMfa] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   const signup = mode === "signup";
   const codeBad = code.length > 0 && !codeLooksRight(code);
@@ -196,6 +200,10 @@ function AuthPanel({ onDone, onClose }) {
         : await signInWithPhone(CFG, { phone, password });
       if (!signup) writeLock({});
       if (signup) { try { window.localStorage.setItem("dhundo_verify_prompt", "1"); } catch (_) {} }
+      if (!signup) {
+        const factor = await mfaVerifiedFactor(CFG, s.access_token);
+        if (factor) { setMfa({ s, factor }); setMfaCode(""); return; }
+      }
       onDone(s);
     } catch (e) {
       const wait = !signup && e.message === "BAD_CREDENTIALS" ? noteFail() : 0;
@@ -203,6 +211,17 @@ function AuthPanel({ onDone, onClose }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const submitMfa = async () => {
+    if (!mfa || mfaCode.trim().length < 6) return;
+    setBusy(true); setErr(null);
+    try {
+      const tk = await mfaChallengeVerify(CFG, mfa.s.access_token, mfa.factor, mfaCode);
+      onDone({ ...mfa.s, ...tk });
+    } catch (_) {
+      setErr(t("mfa_bad"));
+    } finally { setBusy(false); }
   };
 
   const field = {
@@ -215,6 +234,31 @@ function AuthPanel({ onDone, onClose }) {
     margin: "0 0 5px", letterSpacing: 0.2,
   };
   const hint = { fontSize: 11.5, color: "rgba(15,20,25,0.42)", margin: "5px 2px 0", lineHeight: 1.45 };
+
+  if (mfa) {
+    return (
+      <div role="dialog" aria-modal="true" style={{
+        position: "fixed", inset: 0, zIndex: 340, background: "rgba(15,20,25,0.58)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      }}>
+        <div style={{ background: "#fff", borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 440, padding: "22px 20px 26px" }}>
+          <div style={{ fontSize: 19, fontWeight: 800, color: INK, marginBottom: 6 }}>{t("mfa_title")}</div>
+          <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "0 0 14px" }}>{t("mfa_body")}</p>
+          <input style={{ ...field, letterSpacing: 6, fontSize: 22, textAlign: "center", marginBottom: 12 }}
+                 inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} autoFocus
+                 onChange={(e) => { setErr(null); setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }}
+                 onKeyDown={(e) => { if (e.key === "Enter" && !busy) submitMfa(); }} />
+          {err && <p style={{ color: "#C43D2E", fontSize: 13.5, fontWeight: 700, margin: "0 0 10px" }}>{err}</p>}
+          <button onClick={submitMfa} disabled={busy || mfaCode.length < 6} style={{
+            width: "100%", padding: "13px", borderRadius: 11, border: "none", minHeight: 50, color: "#fff",
+            background: `linear-gradient(135deg, ${MATCH}, ${DEEP})`, fontWeight: 800, fontSize: 15.5,
+            cursor: "pointer", fontFamily: "inherit", opacity: busy || mfaCode.length < 6 ? 0.6 : 1,
+          }}>{busy ? "…" : t("mfa_continue")}</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -473,6 +517,11 @@ function App() {
         isAdmin={!!(session && session.user.is_admin)}
         onSignIn={() => setShowAuth(true)}
         onSignOut={signOut}
+        onSessionTokens={(tk) => {
+          if (!session) return;
+          const next = { ...session, ...tk };
+          writeSession(next); setSession(next);
+        }}
         onProfileSaved={(p) => {
           if (!session || !p) return;
           const next = { ...session, user: { ...session.user, full_name: p.full_name || null } };

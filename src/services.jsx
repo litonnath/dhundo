@@ -38,7 +38,7 @@ import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
-import { PhoneVerifySheet } from "./verify.jsx";
+import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -304,6 +304,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     logAdminAccess: (id, what) => rpc("services_log_admin_access", { p_worker_id: id, p_what: what }, true).catch(() => null),
     // CHECKING THE PHONE (sql/109). GoTrue sends the SMS (phone_change) and
     // checks the code; the database then sees phone_confirmed_at.
+    cfg: { url: supabaseUrl, anonKey },
+    accessToken: async () => (getAccessToken ? getAccessToken() : null),
     phoneVerified: () => rpc("services_phone_verified", {}, true),
     claimRewards: () => rpc("services_claim_rewards", {}, true),
     sendPhoneCode: async (phone) => {
@@ -2249,7 +2251,7 @@ function AdminList({ api, trades, reloadKey }) {
 // ---------------------------------------------------------------------- page
 export default function ServicesPage({
   supabaseUrl, anonKey, user = null, getAccessToken = null,
-  isAdmin = false, onSignIn, onSignOut, onProfileSaved,
+  isAdmin = false, onSignIn, onSignOut, onProfileSaved, onSessionTokens,
 }) {
   const base = useMemo(
     () => makeApi({ supabaseUrl, anonKey, getAccessToken }),
@@ -2719,6 +2721,7 @@ export default function ServicesPage({
           {tab === "manage" && isAdmin && (
             <>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
+              <AdminMfaCard api={api} onSession={onSessionTokens} />
               <AdminList api={api} trades={trades} reloadKey={reloadKey} />
               <AdminWithdrawals api={api} />
               <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />

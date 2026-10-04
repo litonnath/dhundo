@@ -71,3 +71,14 @@ Test in a private window after adding; if the map or a font stops loading, the b
 | 6 | security-headers.sh | On the server: `cd ~/services-app && sudo bash security-headers.sh`. It starts in report-only mode; use the site, check the browser console, then `sudo CSP_ENFORCE=1 bash security-headers.sh` |
 | 7 | sql/110_part5: the Google allowance also has a daily cap (a twentieth of the month) | Run part 5. Also set daily quotas in Google Cloud |
 | 8 | sql/110_part4: anonymous timeout lowered from 10 to 6 seconds | Run part 4 |
+
+## Admin two-step sign-in (item 3)
+1. Supabase: Authentication, Multi-Factor, TOTP enabled (done).
+2. Run sql/111_parts/111_part1.sql then 111_part2.sql. Needs 110_part1 first.
+3. Deploy. Each admin signs in, opens Manage, and presses Set up in the card at the top: scan the picture with an
+   authenticator app, type the 6-digit code, Turn on. Do this for EVERY admin account.
+4. From the next sign-in, an admin is asked for the code after the PIN.
+5. Only when every admin has done 3, switch the requirement on (one line in the SQL editor):
+       update services_settings set value = 'on' where name = 'admin_needs_mfa';
+   From then on every admin function and every admin storage rule refuses a session without the code.
+   To undo in an emergency: update services_settings set value = 'off' where name = 'admin_needs_mfa';
