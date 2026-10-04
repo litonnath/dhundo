@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { TileArt } from "./scenes.jsx";
 
 // Centred both ways: on a wide screen the choices sit in the middle, not in a
 // corner, and on a phone they still start at the top when they do not fit.
@@ -72,7 +73,21 @@ export function OfferTypeGate({ onPick, onBack }) {
         }}><Icon name="back" size={18} /> {t("w_back")}</button>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: "4px 0 20px", lineHeight: 1.25, textAlign: "center" }}>{t("offer_title")}</h1>
         {types.map(([key, icon, bg, fg, title, sub]) => (
-          <BigChoice key={key} icon={icon} bg={bg} fg={fg} title={title} sub={sub} onClick={() => onPick(key)} />
+          <button key={key} onClick={() => onPick(key)} style={{
+            width: "100%", display: "block", padding: 0, marginBottom: 12, overflow: "hidden", textAlign: "left",
+            borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            <TileArt k={key} style={{ aspectRatio: "21 / 8" }} />
+            <span style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px 12px" }}>
+              <span style={{ width: 32, height: 32, borderRadius: 9, background: bg, color: fg, flexShrink: 0,
+                             display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={18} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: T.ink }}>{title}</span>
+                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>{sub}</span>
+              </span>
+              <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+            </span>
+          </button>
         ))}
       </div>
     </div>
@@ -92,7 +107,7 @@ const TILES = [
   ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub"],
 ];
 
-export function CustomerLauncher({ onPick, onOffer }) {
+export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
   const { t } = useI18n();
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
@@ -100,39 +115,46 @@ export function CustomerLauncher({ onPick, onOffer }) {
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
+  if (!side) {
+    return (
+      <div style={{ padding: "30px 16px 120px", boxSizing: "border-box" }}>
+        <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("start_title")}</h1>
+          <BigChoice icon="search" bg="#E8F1FF" fg="#1D4ED8" title={t("mode_need")} sub={t("start_need_sub")} onClick={() => setSide("need")} />
+          <BigChoice icon="construction" bg="#FFF1E6" fg="#B45309" title={t("mode_offer")} sub={t("start_offer_sub")} onClick={onOffer} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ padding: "26px 16px 120px", boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
+        <button onClick={() => setSide(null)} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
+          color: T.brandDark, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 40, marginBottom: 6,
+        }}><Icon name="back" size={16} /> {t("launch_back")}</button>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>
           {t("launch_title")}
         </h1>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
           {TILES.map(([key, icon, fg, bg, label, sub]) => (
             <button key={key} onClick={() => onPick(key)} style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", gap: 10,
-              padding: "16px 14px 15px", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
-              cursor: "pointer", fontFamily: "inherit", minHeight: 142,
+              display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left",
+              padding: 0, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
+              cursor: "pointer", fontFamily: "inherit",
             }}>
-              <span style={{
-                width: 46, height: 46, borderRadius: 12, color: fg, background: bg, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}><Icon name={icon} size={24} /></span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
-              <span style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>{t(sub)}</span>
+              <TileArt k={key} />
+              <span style={{ display: "block", padding: "11px 13px 13px" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, color: fg, background: bg, flexShrink: 0,
+                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={16} /></span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
+                </span>
+                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 6 }}>{t(sub)}</span>
+              </span>
             </button>
           ))}
         </div>
-        {onOffer && (
-          <button onClick={onOffer} style={{
-            display: "flex", alignItems: "center", gap: 12, width: "100%", marginTop: 18, padding: "14px 16px",
-            borderRadius: 14, border: `1px dashed ${T.brandDark}`, background: T.brandSoft, color: T.brandDark,
-            cursor: "pointer", fontFamily: "inherit", textAlign: "left", fontSize: 15, fontWeight: 700,
-          }}>
-            <Icon name="edit" size={20} />
-            <span style={{ flex: 1 }}>{t("launch_offer")}</span>
-            <Icon name="chev" size={18} style={{ transform: "rotate(-90deg)" }} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -140,10 +162,11 @@ export function CustomerLauncher({ onPick, onOffer }) {
 
 // WHAT DO YOU NEED, for the app somebody chose: only that app's own
 // sub-categories, as plain rows with a line icon. No illustrations.
-export function SubCategories({ title, icon, fg, bg, items, onPick, onAll, allLabel }) {
+export function SubCategories({ title, icon, fg, bg, items, onPick, onAll, allLabel, art }) {
   const { t } = useI18n();
   return (
     <div>
+      {art && <TileArt k={art} style={{ borderRadius: 14, aspectRatio: "21 / 8", marginBottom: 14 }} />}
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>
       <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>

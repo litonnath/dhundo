@@ -39,6 +39,7 @@ import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i1
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
+import { TileArt } from "./scenes.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
@@ -437,6 +438,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const [group, setGroup] = useState(null);
   // Which front tile this person entered: null shows the six tiles.
   const [section, setSection] = useState(null);
+  // The very first choice: I need / I offer. Stays on "need" while browsing tiles.
+  const [side, setSide] = useState(null);
   const [trade, setTrade] = useState(null);
   // "Show everyone in this category" instead of picking a sub-category.
   const [allIn, setAllIn] = useState(false);
@@ -790,7 +793,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker") {
-    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} />;
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} side={side} setSide={setSide} />;
   }
   const SECTION = {
     worker: ["home_worker", "construction", "#C2410C", "#FFF1E6"],
@@ -824,6 +827,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
+            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "21 / 8", marginBottom: 14 }} />
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />
@@ -897,7 +901,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             </div>}
 
             {showTiles && (
-              <SubCategories
+              <SubCategories art={section}
                 title={groupLabel(group, lang)} icon={groupStyle(group).icon} fg={groupStyle(group).fg} bg={groupStyle(group).bg}
                 items={inGroup.map((tr) => ({ key: tr.slug, label: tradeName(tr, lang) }))}
                 onPick={(slug) => setTrade(slug)}
@@ -2369,6 +2373,7 @@ export default function ServicesPage({
   };
   const [installOpen, setInstallOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [offerPick, setOfferPick] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   // Buy & Sell: the ad open on top of whatever tab, and the ad being edited.
   // A shared link (?item=<id>) opens that ad straight away.
@@ -2714,6 +2719,17 @@ export default function ServicesPage({
           onNeed={() => { finishStart(); switchMode("need"); onSignIn && onSignIn(); }}
           onOffer={() => setStart("offer")} />
       )}
+      {!langGate && offerPick && (
+        <OfferTypeGate
+          onBack={() => setOfferPick(false)}
+          onPick={(type) => {
+            try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
+            setOfferType(type);
+            setOfferPick(false);
+            if (type === "sell") { setTab("sell"); } else { setTab("add"); }
+            if (!signedIn) onSignIn && onSignIn();
+          }} />
+      )}
       {!langGate && !signedIn && start === "offer" && (
         <OfferTypeGate
           onBack={() => setStart("role")}
@@ -2789,7 +2805,7 @@ export default function ServicesPage({
           onPickLocation={() => setLocOpen(true)}
           onMarket={() => setTab("market")}
           onPartner={() => setPartnerOpen(true)}
-          onOffer={() => switchMode("offer")}
+          onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
       )}
