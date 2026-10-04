@@ -1802,7 +1802,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel, directions, origin, posExact }) {
+                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1842,8 +1842,17 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
       : null;
   // A listing whose position is only the middle of its PIN code or village
   // gets an honest "about" and "area" on its distance.
-  const distanceText = distance && posExact === false && !row.available_now
-    ? `\u2248 ${distance} \u00b7 ${t("dist_area")}` : distance;
+  // New listings in Tripura were filed under the default city Agartala when
+  // no town was chosen, so "Panisagar, Agartala" appeared for a Panisagar PIN.
+  // Agartala PIN codes start 7990; a different PIN with that default city is
+  // the default, not the place, and is left off.
+  const cityShown = row.city === "Agartala" && row.pincode && !/^7990/.test(String(row.pincode)) ? "" : row.city;
+  const roadText = typeof roadKm === "number"
+    ? `${roadKm < 10 ? roadKm.toFixed(1) : Math.round(roadKm)} km \u00b7 ${t("dist_road")}` : null;
+  const distanceText = roadText
+    ? (posExact === false ? `\u2248 ${roadText} \u00b7 ${t("dist_area")}` : roadText)
+    : distance && posExact === false && !row.available_now
+      ? `\u2248 ${distance} \u00b7 ${t("dist_area")}` : distance;
 
   const liveMins = row.available_now && row.live_seen_at
     ? Math.max(0, Math.round((Date.now() - new Date(row.live_seen_at)) / 60000))
@@ -1984,7 +1993,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <Icon name="pin" size={14} style={{ color: T.inkFaint }} />
-              {row.locality ? `${row.locality}, ${row.city}` : row.city}
+              {[row.locality, cityShown].filter(Boolean).join(", ")}
             </span>
             {/* Same town or same PIN code: said in words, not as a number
                 of km. Positions inside a town are often rough, and "18 km"
@@ -1993,8 +2002,9 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               <>
                 {dot}
                 <span style={{ fontWeight: 800, color: T.green }}>{nearLabel}</span>
+                {roadText && (<>{dot}<span style={{ fontWeight: 700, color: T.brandDark }}>{roadText}</span></>)}
               </>
-            ) : distance && (
+            ) : (distance || roadText) && (
               <>
                 {dot}
                 <span style={{ fontWeight: 700, color: T.brandDark }}>{distanceText}</span>
@@ -2433,13 +2443,15 @@ export function AccountPage({
 // The person, not their work. Name, email, address -- for the account.
 // Customers never see it; what they see is the listing. The phone is the
 // sign-in number, shown but not editable here.
-export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved }) {
+export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved, PlaceFieldComp = null }) {
   const { t } = useI18n();
   const consent = useConsent();
   const [f, setF] = useState({
     full_name: (account && account.full_name) || "", email: "", address: "",
     city: "", state: "", pincode: "",
   });
+  // The person own position: where they are, for searching. Not a listing.
+  const [home, setHome] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -2454,6 +2466,7 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         email: p.email || "", address: p.address || "", city: p.city || "",
         state: p.state || "", pincode: p.pincode || "",
       });
+      if (typeof p.home_lat === "number") setHome({ lat: p.home_lat, lng: p.home_lng, exact: p.home_exact === true });
     }).catch(() => {}).finally(() => live && setLoaded(true));
     return () => { live = false; };
     // Once, on opening. Saving the name renews the session and with it
@@ -2468,7 +2481,12 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
     setBusy(true); setMsg(null);
     try {
       const r = await api.updateMyProfile(f);
+      if (r && r.ok && api.setHome && (home || PlaceFieldComp)) {
+        try { await api.setHome(home ? home.lat : null, home ? home.lng : null, home ? home.exact : false); } catch (_) {}
+      }
       if (r && r.ok) {
+        // A saved profile position becomes the starting point for searches.
+        try { window.localStorage.removeItem("dhundo_place_manual"); } catch (_) {}
         setMsg({ tone: "good", text: t("p_saved") });
         onSaved && onSaved(r.profile);
       } else {
@@ -2521,6 +2539,27 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         {label(t("prof_email"),
           <input style={field} type="email" inputMode="email" autoComplete="email" value={f.email}
                  onChange={(e) => set("email", e.target.value)} />)}
+        {PlaceFieldComp ? (
+          <div style={{ marginBottom: 14 }}>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{t("prof_myloc")}</span>
+            <span style={{ display: "block", fontSize: 12.5, color: T.inkFaint, marginBottom: 8, lineHeight: 1.5 }}>
+              {t("prof_myloc_note")}
+            </span>
+            <PlaceFieldComp
+              value={(f.city || f.state || home) ? {
+                area: f.city, state: f.state, pin: f.pincode, address: f.address,
+                lat: home ? home.lat : undefined, lng: home ? home.lng : undefined,
+                exact: home ? home.exact : undefined,
+              } : null}
+              onChange={(p) => {
+                setMsg(null);
+                setF((x) => ({ ...x, city: p.area || "", state: p.state || x.state,
+                  pincode: p.pin || "", address: p.address || "" }));
+                setHome(typeof p.lat === "number" ? { lat: p.lat, lng: p.lng, exact: !!p.exact } : null);
+              }}
+            />
+          </div>
+        ) : (<>
         {label(t("prof_address"),
           <textarea style={{ ...field, minHeight: 76, resize: "vertical" }} value={f.address}
                     autoComplete="street-address" maxLength={300}
@@ -2551,6 +2590,7 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
                      }} />)}
           </div>
         </div>
+</>)}
         {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         <Btn full onClick={save} disabled={busy || !loaded} style={{ fontSize: 17, minHeight: 54 }}>
           {busy ? "…" : t("p_save")}

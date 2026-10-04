@@ -1019,3 +1019,42 @@ export async function googleSearch(query, lat, lng) {
     return [];
   }
 }
+
+
+// ROAD DISTANCE from the customer to listings, by Google Routes, through the
+// road-distance function (supabase/functions/road-distance). Cached for ten
+// minutes per start point and listing so scrolling or re-searching does not
+// spend the monthly allowance again. Returns {km:{id:number}, exact:{id:bool}}
+// or null when it is not set up, the allowance is used, or anything fails;
+// the cards then keep showing the straight-line distance.
+const roadCache = new Map();
+export async function roadDistances(origin, ids) {
+  if (!origin || typeof origin.lat !== "number" || !ids || !ids.length) return null;
+  const tag = `${origin.lat.toFixed(3)},${origin.lng.toFixed(3)}`;
+  const km = {}, exact = {};
+  const need = [];
+  const now = Date.now();
+  ids.forEach((id) => {
+    const hit = roadCache.get(`${tag}|${id}`);
+    if (hit && now - hit.at < 10 * 60 * 1000) { if (hit.km != null) { km[id] = hit.km; exact[id] = hit.exact; } }
+    else need.push(id);
+  });
+  if (need.length) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/road-distance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ origin: { lat: origin.lat, lng: origin.lng }, ids: need.slice(0, 25) }),
+      });
+      const j = res.ok ? await res.json() : null;
+      if (j && j.ok) {
+        need.slice(0, 25).forEach((id) => {
+          const v = j.km && typeof j.km[id] === "number" ? j.km[id] : null;
+          roadCache.set(`${tag}|${id}`, { at: now, km: v, exact: !!(j.exact && j.exact[id]) });
+          if (v != null) { km[id] = v; exact[id] = !!(j.exact && j.exact[id]); }
+        });
+      }
+    } catch (_) { /* straight-line stays */ }
+  }
+  return Object.keys(km).length ? { km, exact } : null;
+}

@@ -15,3 +15,18 @@ draws the free map (Esri satellite / OpenStreetMap) and the OpenStreetMap
 shop labels instead. Google counts Map Tiles per tile request (about 30-100 per map open),
 so 6000 opens stays inside the 700,000 free requests. Check the usage page
 after a month and raise the cap if there is room.
+
+## Road distance on the cards (Routes API)
+
+Cards show the driving distance, for example "6.4 km · by road". It is computed on the server so other
+peoples positions never reach the phone.
+
+1. Google Cloud: enable **Routes API**. Create a SECOND API key for it. This one is called from the
+   server, so it cannot be restricted by website; restrict it by API (Routes API only) and keep it secret.
+2. Run `sql/107_profile_location.sql` (it adds a monthly allowance, 1500 calls; change it with
+   `update services_gmap_caps set cap = 3000 where kind = 'routes';`).
+3. Deploy the function (Supabase CLI, once per change):
+   `supabase secrets set GOOGLE_ROUTES_KEY=AIza...` then
+   `supabase functions deploy road-distance`
+4. Past the allowance, or if anything fails, cards keep the straight-line distance.
+Check usage: `select * from services_gmap_usage where month like 'routes-%';`

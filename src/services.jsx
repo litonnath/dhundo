@@ -28,7 +28,7 @@ import {
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -292,6 +292,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
+    setHome: (lat, lng, exact) =>
+      rpc("services_set_home", { p_lat: lat ?? null, p_lng: lng ?? null, p_exact: !!exact }, true),
     exactPositions: (ids) =>
       rpc("services_exact_positions", { p_ids: ids }, false),
     myData: () => rpc("services_my_data", {}, true),
@@ -583,6 +585,24 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   }, [live, list, pinRows, api]);
   const posExactOf = (row) => (exactSet === null ? undefined : exactSet.has(row.id));
 
+  // Real road distance (Google Routes, through the road-distance function)
+  // for the first listings on screen, once the person has a position.
+  const [road, setRoad] = useState({});
+  const askedRoad = useRef("");
+  useEffect(() => {
+    if (!place || typeof place.lat !== "number") return;
+    const ids = [...live, ...pinRows, ...list].map((r) => r.id).filter(Boolean);
+    const first = [...new Set(ids)].slice(0, 25);
+    const sig = `${place.lat.toFixed(3)},${place.lng.toFixed(3)}|${first.join(",")}`;
+    if (!first.length || askedRoad.current === sig) return;
+    askedRoad.current = sig;
+    let alive = true;
+    roadDistances({ lat: place.lat, lng: place.lng }, first).then((r) => {
+      if (alive && r) setRoad((p) => ({ ...p, ...r.km }));
+    });
+    return () => { alive = false; };
+  }, [live, list, pinRows, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Same PIN code or same town: said in words instead of a distance. Inside
   // one town the positions are often rough, and "18 km" from Panisagar to
   // Panisagar is wrong. Someone available NOW keeps their live distance --
@@ -716,7 +736,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
                       directions={dirs[row.id]} origin={place}
-                      posExact={posExactOf(row)}
+                      posExact={posExactOf(row)} roadKm={road[row.id]}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -876,7 +896,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
                   directions={dirs[row.id]} origin={place}
-                  posExact={posExactOf(row)}
+                  posExact={posExactOf(row)} roadKm={road[row.id]}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}
@@ -2224,6 +2244,26 @@ export default function ServicesPage({
     try { window.localStorage.setItem("dhundo_place", JSON.stringify(place)); } catch (_) {}
   }, [place]);
 
+  // The location saved in Edit profile is the person own, and is where a
+  // signed-in search starts from, unless they have picked another place from
+  // the header on this device. It is separate from where a listing works.
+  useEffect(() => {
+    if (!user || !user.id) return undefined;
+    let alive = true;
+    api.myProfile().then((p) => {
+      if (!alive || !p || typeof p.home_lat !== "number" || typeof p.home_lng !== "number") return;
+      let manual = false;
+      try { manual = window.localStorage.getItem("dhundo_place_manual") === "1"; } catch (_) {}
+      if (manual || !STATES.includes(p.state)) return;
+      setPlace({
+        area: p.city || "", state: p.state, lat: p.home_lat, lng: p.home_lng,
+        pin: /^\d{6}$/.test(String(p.pincode || "")) ? String(p.pincode) : undefined,
+        address: p.address || undefined, exact: p.home_exact === true ? true : undefined,
+      });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [user && user.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // An area saved before places carried a position (or typed by hand): look
   // its position up once, so the search sorts by distance instead of
   // matching the area name exactly.
@@ -2419,7 +2459,10 @@ export default function ServicesPage({
       {locOpen && (
         <LocationSheet
           place={place}
-          onChange={(p) => { setPlace(p); setOutside(null); }}
+          onChange={(p) => {
+            try { window.localStorage.setItem("dhundo_place_manual", "1"); } catch (_) {}
+            setPlace(p); setOutside(null);
+          }}
           onClose={() => setLocOpen(false)}
         />
       )}
@@ -2543,7 +2586,7 @@ export default function ServicesPage({
       )}
 
       {tab === "profile" && signedIn && (
-        <ProfilePage api={api} account={user} hasListing={hasListing}
+        <ProfilePage api={api} account={user} hasListing={hasListing} PlaceFieldComp={PlaceField}
                      onBack={() => setTab("account")}
                      onList={() => setTab(hasListing ? "mine" : "add")}
                      onSaved={(p) => onProfileSaved && onProfileSaved(p)} />
