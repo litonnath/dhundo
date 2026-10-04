@@ -1001,12 +1001,20 @@ export async function googleSearch(query, lat, lng) {
     });
     if (!r.ok) return [];
     const j = await r.json();
-    return ((j && j.places) || []).map((p) => ({
-      title: (p.displayName && p.displayName.text) || "",
-      line: p.formattedAddress || "",
-      lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
-      kind: "poi", source: "google",
-    })).filter((x) => x.title && typeof x.lat === "number");
+    return ((j && j.places) || []).map((p) => {
+      const addr = p.formattedAddress || "";
+      const stName = Object.keys(STATE_CENTERS).find((n) => addr.includes(n)) || null;
+      const parts = addr.split(",").map((x) => x.trim()).filter(Boolean);
+      const title = (p.displayName && p.displayName.text) || "";
+      return {
+        title,
+        subtitle: addr, line: addr,
+        area: parts.find((x) => x.toLowerCase() !== title.toLowerCase() && !/\d{6}/.test(x) && x !== "India") || title,
+        state: stName, postcode: validPin((addr.match(/\b\d{6}\b/) || [])[0]),
+        lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
+        kind: "poi", source: "google",
+      };
+    }).filter((x) => x.title && typeof x.lat === "number");
   } catch (_) {
     return [];
   }

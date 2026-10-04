@@ -26,7 +26,7 @@ import { useMyLocation, locErrorKey } from "./device.jsx";
 import MapPicker from "./mappicker.jsx";
 import {
   searchAnywhere, reverseLookup, placeCoords, nearestPlaces, bestNearName,
-  snapToKnown, pinForPlace, warmPlaceSearch, geoJson, googleDescribe,
+  snapToKnown, pinForPlace, warmPlaceSearch, geoJson, googleDescribe, googleSearch,
 } from "./regions.js";
 
 const metresBetween = (aLat, aLng, bLat, bLng) => {
@@ -160,7 +160,13 @@ export function LocationSheet({ place, onChange, onClose }) {
     if (typed.length < 3) { setRows([]); setLooking(false); setSearched(false); setSearchDown(null); return undefined; }
     const ctrl = new AbortController();
     setLooking(true);
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      // Google first; the free search when Google has nothing, is not set
+      // up, or this month's allowance for it is used up.
+      const g = typed.length >= 4
+        ? await googleSearch(typed, near && near.lat, near && near.lng) : [];
+      if (ctrl.signal.aborted) return;
+      if (g.length) { setRows(g); setSearched(true); setSearchDown(null); setPartial(false); setLooking(false); return; }
       searchAnywhere(typed, { state: state0, near, signal: ctrl.signal })
         .then((out) => {
           if (ctrl.signal.aborted) return;
@@ -169,7 +175,7 @@ export function LocationSheet({ place, onChange, onClose }) {
           setPartial(!!out.partial && !out.failed);
         })
         .finally(() => { if (!ctrl.signal.aborted) setLooking(false); });
-    }, 300);
+    }, 700);
     return () => { clearTimeout(timer); ctrl.abort(); setLooking(false); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);

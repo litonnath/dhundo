@@ -320,12 +320,17 @@ export default function MapPicker({ start, state, onCancel, onConfirm }) {
     if (q.length < 3) { setSrows([]); setSbusy(false); return undefined; }
     const ctrl = new AbortController();
     setSbusy(true);
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      // Google first; the free search when it has nothing or its monthly
+      // allowance is used up.
+      const g = q.length >= 4 ? await googleSearch(q, point.lat, point.lng) : [];
+      if (ctrl.signal.aborted) return;
+      if (g.length) { setSrows(g); setSbusy(false); return; }
       searchAnywhere(q, { state, near: point, signal: ctrl.signal })
         .then((out) => { if (!ctrl.signal.aborted) setSrows(((out && out.rows) || []).slice(0, 6)); })
         .catch(() => {})
         .finally(() => { if (!ctrl.signal.aborted) setSbusy(false); });
-    }, 350);
+    }, 700);
     return () => { clearTimeout(timer); ctrl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sq]);
