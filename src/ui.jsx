@@ -87,6 +87,9 @@ export function Icon({ name, size = 24, style }) {
     share: <><path {...P} d="M12 4v11" /><path {...P} d="M8.3 7.7L12 4l3.7 3.7" /><path {...P} d="M5.5 13v5.5a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5V13" /></>,
     alert: <><circle {...P} cx="12" cy="12" r="8.5" /><path {...P} d="M12 8v5" /><circle cx="12" cy="16.2" r="1" fill="currentColor" /></>,
     wallet: <><path {...P} d="M3.5 7.5A2.5 2.5 0 0 1 6 5h11a1.5 1.5 0 0 1 1.5 1.5V8" /><rect {...P} x="3.5" y="7.5" width="17" height="11.5" rx="2.5" /><path {...P} d="M20.5 11.5h-3.6a1.9 1.9 0 0 0 0 3.8h3.6" /></>,
+    menu: <><path {...P} d="M4 7h16M4 12h16M4 17h16" /></>,
+    help: <><path {...P} d="M4 5h16v11H9l-5 4z" /><path {...P} d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.4" /><path {...P} d="M12 14.8v.2" /></>,
+    shield: <><path {...P} d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z" /><path {...P} d="M9 12l2 2 4-4" /></>,
     chev: <><path {...P} d="M7 10l5 5 5-5" /></>,
     user: <><circle {...P} cx="12" cy="8.5" r="3.7" /><path {...P} d="M4.8 20c.7-3.6 3.6-5.6 7.2-5.6s6.5 2 7.2 5.6" /></>,
     crosshair: <><circle {...P} cx="12" cy="12" r="6.5" /><circle {...P} cx="12" cy="12" r="1.8" /><path {...P} d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>,
@@ -1595,26 +1598,6 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         <LanguageSwitch />
       </div>
 
-      {/* TWO HALVES, one switch: somebody who needs something, and somebody
-          who offers it. The last one used is remembered. */}
-      {onMode && mode && (
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 14px 8px" }}>
-          <div role="tablist" style={{
-            display: "flex", background: "#F1F4F6", borderRadius: 12, padding: 3, maxWidth: 360,
-          }}>
-            {[["need", t("mode_need")], ["offer", t("mode_offer")]].map(([m, label]) => (
-              <button key={m} role="tab" aria-selected={mode === m} onClick={() => onMode(m)} style={{
-                flex: 1, border: "none", borderRadius: 9, minHeight: 40, cursor: "pointer",
-                fontFamily: "inherit", fontSize: 14, fontWeight: mode === m ? 800 : 600,
-                background: mode === m ? T.white : "transparent",
-                color: mode === m ? T.brandDark : T.inkSoft,
-                boxShadow: mode === m ? "0 1px 3px rgba(15,20,25,0.15)" : "none",
-              }}>{label}</button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* An admin's extra tools, on their own row so nobody else sees them. */}
       {isAdmin && (
         <div style={{
@@ -1636,13 +1619,13 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
 // every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
 // carries a green dot while the worker is online, so they can see from any
 // screen that customers can still find them.
-export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null }) {
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null }) {
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
     tab === "account" || tab === "profile" ? "account"
     : mode === "offer" && tab === "sell" ? "sell"
-    : tab === "market" || tab === "sell" ? "market"
+    : tab === "market" || tab === "sell" ? (mode === "need" ? "find" : "market")
     : mode === "offer" && (tab === "mine" || tab === "add") ? "mine"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
     : "find";
@@ -1686,13 +1669,13 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
             {item("mine", "edit", t("nav_mine"), () => setTab(hasListing ? "mine" : "add"))}
             {item("sell", "tag", t("mk_my_ads"), () => setTab("sell"))}
             {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
-            {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+            {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
           </>
         ) : mode === "need" ? (
           <>
-            {item("find", "search", t("mode_find"), () => setTab("browse"))}
-            {item("market", "tag", t("mk_tab"), () => setTab("market"))}
+            {item("find", "home", t("nav_home"), () => setTab("browse"))}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+            {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
           </>
         ) : (
           <>
@@ -2347,7 +2330,8 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
 
         <nav aria-label={t("ft_links")}>
           <p style={heading}>{t("ft_links")}</p>
-          <button style={link} onClick={go("browse")}>{t("nav_find")}</button>
+          <button style={link} onClick={go("browse")}>{t("nav_home")}</button>
+          <button style={link} onClick={go("market")}>{t("mk_tab")}</button>
           <button style={link} onClick={go(hasListing ? "mine" : "add")}>
             {hasListing ? t("nav_mine") : t("nav_list")}
           </button>
@@ -2364,8 +2348,8 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
               </a>
             )}
             {CONTACT.whatsapp && (
-              <a style={link} href={`https://wa.me/${CONTACT.whatsapp}`}
-                 target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              <a style={link} href={`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(t("sh_msg"))}`}
+                 target="_blank" rel="noopener noreferrer">{t("sh_title")}</a>
             )}
             {CONTACT.email && (
               <a style={link} href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>

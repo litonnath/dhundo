@@ -39,7 +39,8 @@ import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i1
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
-import { StartGate, OfferTypeGate, CustomerLauncher } from "./start.jsx";
+import { MenuSheet } from "./menu.jsx";
+import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -430,13 +431,15 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
   );
 }
 
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
   // Which front tile this person entered: null shows the six tiles.
   const [section, setSection] = useState(null);
   const [trade, setTrade] = useState(null);
+  // "Show everyone in this category" instead of picking a sub-category.
+  const [allIn, setAllIn] = useState(false);
   const [search, setSearch] = useState("");
   // Read the phone's position (asks first, see consent-core.js) and look
   // from there. Used by the button below and by the card on the home screen.
@@ -783,12 +786,19 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     else if (k === "shop") setGroup("Suppliers");
     else if (k === "eat") setGroup("Eat & Stay");
   };
-  const goHome = () => { setSection(null); setGroup(null); setTrade(null); setSearch(""); };
+  const goHome = () => { setSection(null); setGroup(null); setTrade(null); setAllIn(false); setSearch(""); };
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker") {
-    return <CustomerLauncher onPick={pickTile} />;
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} />;
   }
+  const SECTION = {
+    worker: ["home_worker", "construction", "#C2410C", "#FFF1E6"],
+    ride: ["home_ride", "drivers", "#1D4ED8", "#E8F0FE"],
+    shop: ["home_shop", "suppliers", "#15803D", "#E7F5EC"],
+    eat: ["home_eat", "food", "#A16207", "#FDF3DC"],
+  }[section] || ["home_worker", "construction", "#C2410C", "#FFF1E6"];
+  const showTiles = !!group && !trade && !allIn && !search.trim() && inGroup.length > 0;
   const workerGroups = groups.filter((g) => !["Drivers", "Suppliers", "Eat & Stay"].includes(g));
 
   return (
@@ -814,17 +824,9 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
-            <InstallBanner onOpen={onInstall} />
-            <LocationBar place={place} onOpen={onPickLocation}
-                         onLocate={geo.supported ? locate : null}
-                         locating={geo.state === "locating"}
-                         errorKey={geo.state === "error" ? locErrorKey(geo.reason) : null} />
-            {!(user && user.id) && <SignupHelp />}
-            <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
-              {t("what_need")}
-            </h2>
-            <PopularTrades trades={trades}
-                           onPick={(tr) => { setGroup(tr.group_name); setTrade(tr.slug); }} />
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
+            <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
+            <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />
             {live.length > 0 && (
               <div style={{ marginTop: 28 }}>
                 <h2 style={{
@@ -859,17 +861,16 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               </div>
             )}
 
-            <h2 id="all-cats" style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: "28px 0 12px" }}>
-              {t("all_categories")}
-            </h2>
-            <CategoryGrid groups={section === "worker" ? workerGroups : groups} counts={counts} onPick={setGroup} />
             <TrustBar />
           </>
         ) : (
           <>
-            <div style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+            {!showTiles && <div style={{ display: "flex", gap: 9, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
               <button
-                onClick={() => { setGroup(null); setTrade(null); setSearch(""); }}
+                onClick={() => {
+                  setSearch("");
+                  if (trade || allIn) { setTrade(null); setAllIn(false); } else { setGroup(null); }
+                }}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 5, background: "none",
                   border: "none", cursor: "pointer", color: T.brandDark, fontWeight: 700,
@@ -893,9 +894,16 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   {groupLabel(group, lang)}
                 </span>
               )}
-            </div>
+            </div>}
 
-            {group && inGroup.length > 0 && (
+            {showTiles && (
+              <SubCategories
+                title={groupLabel(group, lang)} icon={groupStyle(group).icon} fg={groupStyle(group).fg} bg={groupStyle(group).bg}
+                items={inGroup.map((tr) => ({ key: tr.slug, label: tradeName(tr, lang) }))}
+                onPick={(slug) => setTrade(slug)}
+                onAll={() => setAllIn(true)} allLabel={t("all")} />
+            )}
+            {!showTiles && group && inGroup.length > 0 && (
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 18 }}>
                 <Chip active={!trade} onClick={() => setTrade(null)}>{t("all")}</Chip>
                 {inGroup.map((tr) => (
@@ -911,6 +919,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
 
             {note && <Notice tone="bad">{note}</Notice>}
             {error && <Notice tone="bad">{error}</Notice>}
+            {!showTiles && (<>
 
             {/* Ordering is the database's -- 63 sorts by real distance once
                 it is given coordinates. This line exists so the person can
@@ -1049,6 +1058,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 </div>
               ) : <EmptyState isAdmin={isAdmin} onAdd={onAdd} />
             )}
+            </>)}
           </>
         )}
       </div>
@@ -2358,6 +2368,7 @@ export default function ServicesPage({
     setLangGate(false);
   };
   const [installOpen, setInstallOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   // Buy & Sell: the ad open on top of whatever tab, and the ad being edited.
   // A shared link (?item=<id>) opens that ad straight away.
@@ -2721,7 +2732,6 @@ export default function ServicesPage({
         place={place}
         onOpenLocation={() => setLocOpen(true)}
         mode={mode}
-        onMode={switchMode}
       />
 
       {outside && (
@@ -2741,6 +2751,11 @@ export default function ServicesPage({
         </div>
       )}
 
+      {menuOpen && (
+        <MenuSheet mode={mode} onMode={switchMode} signedIn={signedIn}
+                   onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
+                   onClose={() => setMenuOpen(false)} />
+      )}
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
       {bookRow && signedIn && <BookingSheet api={api} row={bookRow} onClose={() => setBookRow(null)} />}
       {requestsOpen && signedIn && <MyRequestsSheet api={api} onClose={() => setRequestsOpen(false)} />}
@@ -2774,6 +2789,7 @@ export default function ServicesPage({
           onPickLocation={() => setLocOpen(true)}
           onMarket={() => setTab("market")}
           onPartner={() => setPartnerOpen(true)}
+          onOffer={() => switchMode("offer")}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
       )}
@@ -2913,7 +2929,8 @@ export default function ServicesPage({
 
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
-                 onWallet={signedIn ? () => setWalletOpen(true) : null} />
+                 onWallet={signedIn ? () => setWalletOpen(true) : null}
+                 onMenu={() => setMenuOpen(true)} />
     </div>
   );
 }

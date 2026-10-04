@@ -80,20 +80,20 @@ export function OfferTypeGate({ onPick, onBack }) {
 }
 
 
-// THE FRONT OF THE APP for somebody who needs something: only these tiles,
-// big and centred. Each one opens its own screen.
+// THE FRONT OF THE APP for somebody who needs something: six plain tiles,
+// a line icon on a soft tint, a title and one line under it. Each opens its
+// own screen. Deliberately flat -- no gradients, no pictures.
 const TILES = [
-  ["worker", "construction", "#F97316", "#FB923C", "home_worker", "offer_sub_worker"],
-  ["ride", "drivers", "#2563EB", "#3B82F6", "home_ride", "offer_sub_ride"],
-  ["shop", "suppliers", "#16A34A", "#22C55E", "home_shop", "offer_sub_shop"],
-  ["eat", "food", "#D97706", "#F59E0B", "home_eat", "offer_sub_eat"],
-  ["market", "tag", "#9333EA", "#A855F7", "mk_tab", "mk_tab_sub"],
-  ["partner", "user", "#0D9488", "#14B8A6", "home_partner", "home_partner_sub"],
+  ["worker", "construction", "#C2410C", "#FFF1E6", "home_worker", "offer_sub_worker"],
+  ["ride", "drivers", "#1D4ED8", "#E8F0FE", "home_ride", "offer_sub_ride"],
+  ["shop", "suppliers", "#15803D", "#E7F5EC", "home_shop", "offer_sub_shop"],
+  ["eat", "food", "#A16207", "#FDF3DC", "home_eat", "offer_sub_eat"],
+  ["market", "tag", "#7E22CE", "#F3E8FD", "mk_tab", "mk_tab_sub"],
+  ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub"],
 ];
 
-export function CustomerLauncher({ onPick }) {
+export function CustomerLauncher({ onPick, onOffer }) {
   const { t } = useI18n();
-  // Three across on a wide screen, two on a phone: always even rows.
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
     const on = () => setWide(window.innerWidth >= 600);
@@ -101,34 +101,74 @@ export function CustomerLauncher({ onPick }) {
     return () => window.removeEventListener("resize", on);
   }, []);
   return (
-    <div style={{
-      minHeight: "calc(100vh - 190px)", display: "flex", flexDirection: "column",
-      justifyContent: "center", padding: "26px 16px 30px", boxSizing: "border-box",
-    }}>
+    <div style={{ padding: "26px 16px 120px", boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: "0 0 20px", textAlign: "center", lineHeight: 1.25 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>
           {t("launch_title")}
         </h1>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 14 }}>
-          {TILES.map(([key, icon, c1, c2, label, sub]) => (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
+          {TILES.map(([key, icon, fg, bg, label, sub]) => (
             <button key={key} onClick={() => onPick(key)} style={{
-              display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10,
-              padding: "22px 12px 18px", borderRadius: 22, border: `1px solid ${T.line}`, background: T.white,
-              cursor: "pointer", fontFamily: "inherit", minHeight: 168,
-              boxShadow: "0 6px 18px rgba(15,20,25,0.07)",
+              display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", gap: 10,
+              padding: "16px 14px 15px", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
+              cursor: "pointer", fontFamily: "inherit", minHeight: 142,
             }}>
               <span style={{
-                width: 76, height: 76, borderRadius: 24, color: "#fff", flexShrink: 0,
-                background: `linear-gradient(145deg, ${c1}, ${c2})`,
-                boxShadow: `0 8px 18px ${c1}55`,
+                width: 46, height: 46, borderRadius: 12, color: fg, background: bg, flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
-              }}><Icon name={icon} size={38} /></span>
-              <span style={{ fontSize: 17, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
+              }}><Icon name={icon} size={24} /></span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
               <span style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>{t(sub)}</span>
             </button>
           ))}
         </div>
+        {onOffer && (
+          <button onClick={onOffer} style={{
+            display: "flex", alignItems: "center", gap: 12, width: "100%", marginTop: 18, padding: "14px 16px",
+            borderRadius: 14, border: `1px dashed ${T.brandDark}`, background: T.brandSoft, color: T.brandDark,
+            cursor: "pointer", fontFamily: "inherit", textAlign: "left", fontSize: 15, fontWeight: 700,
+          }}>
+            <Icon name="edit" size={20} />
+            <span style={{ flex: 1 }}>{t("launch_offer")}</span>
+            <Icon name="chev" size={18} style={{ transform: "rotate(-90deg)" }} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
+// WHAT DO YOU NEED, for the app somebody chose: only that app's own
+// sub-categories, as plain rows with a line icon. No illustrations.
+export function SubCategories({ title, icon, fg, bg, items, onPick, onAll, allLabel }) {
+  const { t } = useI18n();
+  return (
+    <div>
+      <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>
+      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
+      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+        {onAll && (
+          <button onClick={onAll} style={tileStyle(T.brandSoft, T.brandDark)}>
+            <span style={iconBox(T.white, T.brandDark)}><Icon name="search" size={20} /></span>
+            <span style={labelStyle}>{allLabel}</span>
+          </button>
+        )}
+        {items.map((it) => (
+          <button key={it.key} onClick={() => onPick(it.key)} style={tileStyle(T.white, T.line)}>
+            <span style={iconBox(bg, fg)}><Icon name={it.icon || icon} size={20} /></span>
+            <span style={labelStyle}>{it.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+const tileStyle = (bg, line) => ({
+  display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 12px", minHeight: 62,
+  borderRadius: 12, border: `1px solid ${line}`, background: bg, cursor: "pointer", fontFamily: "inherit",
+});
+const iconBox = (bg, fg) => ({
+  width: 38, height: 38, borderRadius: 10, background: bg, color: fg, flexShrink: 0,
+  display: "flex", alignItems: "center", justifyContent: "center",
+});
+const labelStyle = { fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0 };
