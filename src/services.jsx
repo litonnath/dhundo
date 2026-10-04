@@ -383,7 +383,42 @@ function rateLabel(min, max, suffix = "/day") {
 }
 
 // -------------------------------------------------------------------- browse
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation }) {
+// THE SIX WAYS IN: big tiles on the customer home. Each opens the search
+// already narrowed to that kind of thing; Buy & Sell opens the ads; Partner is
+// shown as coming soon until it exists.
+function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket }) {
+  const { t } = useI18n();
+  const tiles = [
+    ["construction", t("home_worker"), onWorker, "#FFF1E6", "#B45309"],
+    ["drivers", t("home_ride"), onRide, "#E8F1FF", "#1D4ED8"],
+    ["suppliers", t("home_shop"), onShop, "#EAF7EE", "#15803D"],
+    ["food", t("home_eat"), onEat, "#FFF4D6", "#A16207"],
+    ["tag", t("mk_tab"), onMarket, "#F3E8FF", "#7E22CE"],
+    ["user", t("home_partner"), null, "#F1F4F6", "#64748B"],
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, margin: "0 0 22px" }}>
+      {tiles.map(([icon, label, go, bg, fg]) => (
+        <button key={icon + label} onClick={go || undefined} disabled={!go} style={{
+          display: "flex", alignItems: "center", gap: 12, minHeight: 74, padding: "10px 14px",
+          borderRadius: 16, border: `1px solid ${T.line}`, background: T.white, textAlign: "left",
+          cursor: go ? "pointer" : "default", fontFamily: "inherit", opacity: go ? 1 : 0.7,
+        }}>
+          <span style={{
+            width: 46, height: 46, borderRadius: 14, background: bg, color: fg, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}><Icon name={icon} size={24} /></span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{label}</span>
+            {!go && <span style={{ display: "block", fontSize: 12, color: T.inkFaint, fontWeight: 600 }}>{t("home_soon")}</span>}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -748,6 +783,13 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                          locating={geo.state === "locating"}
                          errorKey={geo.state === "error" ? locErrorKey(geo.reason) : null} />
             {!(user && user.id) && <SignupHelp />}
+            <HomeTiles
+              onWorker={() => { const el = document.getElementById("all-cats"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+              onRide={() => setGroup("Drivers")}
+              onShop={() => setGroup("Suppliers")}
+              onEat={() => setGroup("Food")}
+              onMarket={onMarket}
+            />
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
             </h2>
@@ -787,7 +829,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               </div>
             )}
 
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: "28px 0 12px" }}>
+            <h2 id="all-cats" style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: "28px 0 12px" }}>
               {t("all_categories")}
             </h2>
             <CategoryGrid groups={groups} counts={counts} onPick={setGroup} />
@@ -2661,6 +2703,7 @@ export default function ServicesPage({
           place={place} setPlace={setPlace}
           onInstall={() => setInstallOpen(true)}
           onPickLocation={() => setLocOpen(true)}
+          onMarket={() => setTab("market")}
         />
       )}
 
