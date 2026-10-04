@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "নালাগিলে জিনিস বিক্ৰী কৰক",
   launch_title: "আপুনি কি বিচাৰি আছে?",
   launch_back: "হোম",
+  offer_sell: "কিবা বিক্ৰী কৰক",
   menu_title: "মেনু",
   nav_home: "হোম",
   launch_offer: "মই সেৱা আগবঢ়াওঁ বা কিবা বিক্ৰী কৰোঁ",

@@ -67,7 +67,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false }) {
     ["ride", "drivers", "#E8F0FE", "#1D4ED8", "home_ride", "offer_sub_ride"],
     ["shop", "suppliers", "#E7F5EC", "#15803D", "home_shop", "offer_sub_shop"],
     ["eat", "food", "#FDF3DC", "#A16207", "home_eat", "offer_sub_eat"],
-    ["sell", "tag", "#F3E8FD", "#7E22CE", "mk_my_ads", "offer_sub_sell"],
+    ["sell", "tag", "#F3E8FD", "#7E22CE", "offer_sell", "offer_sub_sell"],
   ];
   const body = (
     <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px 120px" : "20px 16px 34px", boxSizing: "border-box" }}>

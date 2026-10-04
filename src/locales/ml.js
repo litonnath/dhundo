@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ആവശ്യമില്ലാത്ത സാധനങ്ങൾ വിൽക്കുക",
   launch_title: "നിങ്ങൾ എന്താണ് തിരയുന്നത്?",
   launch_back: "ഹോം",
+  offer_sell: "എന്തെങ്കിലും വിൽക്കുക",
   menu_title: "മെനു",
   nav_home: "ഹോം",
   launch_offer: "ഞാൻ സേവനം നൽകുന്നു അല്ലെങ്കിൽ എന്തെങ്കിലും വിൽക്കുന്നു",

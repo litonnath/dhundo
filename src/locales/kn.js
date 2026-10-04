@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ಬೇಡವಾದ ವಸ್ತುಗಳನ್ನು ಮಾರಿ",
   launch_title: "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
   launch_back: "ಮುಖಪುಟ",
+  offer_sell: "ಏನಾದರೂ ಮಾರಿ",
   menu_title: "ಮೆನು",
   nav_home: "ಮುಖಪುಟ",
   launch_offer: "ನಾನು ಸೇವೆ ನೀಡುತ್ತೇನೆ ಅಥವಾ ಏನಾದರೂ ಮಾರುತ್ತೇನೆ",

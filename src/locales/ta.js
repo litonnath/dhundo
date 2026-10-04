@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "தேவையில்லாத பொருட்களை விற்கவும்",
   launch_title: "நீங்கள் எதைத் தேடுகிறீர்கள்?",
   launch_back: "முகப்பு",
+  offer_sell: "ஏதாவது விற்கவும்",
   menu_title: "மெனு",
   nav_home: "முகப்பு",
   launch_offer: "நான் சேவை வழங்குகிறேன் அல்லது ஏதாவது விற்கிறேன்",

@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ଦରକାର ନଥିବା ଜିନିଷ ବିକନ୍ତୁ",
   launch_title: "ଆପଣ କଣ ଖୋଜୁଛନ୍ତି?",
   launch_back: "ହୋମ୍",
+  offer_sell: "କିଛି ବିକ୍ରି କରନ୍ତୁ",
   menu_title: "ମେନୁ",
   nav_home: "ହୋମ",
   launch_offer: "ମୁଁ ସେବା ଦିଏ କିମ୍ବା କିଛି ବିକ୍ରି କରେ",
