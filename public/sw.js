@@ -15,7 +15,7 @@
 // during a bad minute keeps serving it -- and with it, the chunk hashes from
 // that build -- long after the source is fixed. That is how a fault that no
 // longer exists in the code keeps appearing in somebody's browser.
-const CACHE = "services-shell-v2";
+const CACHE = "services-shell-v3";
 const SHELL = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {
@@ -40,6 +40,10 @@ self.addEventListener("fetch", (e) => {
   // Anything that is not this origin -- Supabase, the geocoder -- goes
   // straight to the network, untouched.
   if (url.origin !== self.location.origin) return;
+  // The place search and address lookup (nginx proxies them under /geo/) are
+  // answered fresh and remembered by the server, not here: every different
+  // search would otherwise be stored in this cache for good.
+  if (url.pathname.startsWith("/geo/")) return;
 
   // Whether this is a page load or an asset. It decides what a failure may
   // fall back to, and getting that wrong is worse than having no worker.

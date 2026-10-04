@@ -76,6 +76,10 @@ export function LocationSheet({ place, onChange, onClose }) {
   const [rows, setRows] = useState([]);
   const [looking, setLooking] = useState(false);
   const [searched, setSearched] = useState(false);
+  // Set when the search service could not be asked at all (as opposed to
+  // answering "nothing found"): the words say so, and the detail is for
+  // whoever has to find out why.
+  const [searchDown, setSearchDown] = useState(null);
   const [chosen, setChosen] = useState(null);
   const [chosenQ, setChosenQ] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
@@ -84,12 +88,16 @@ export function LocationSheet({ place, onChange, onClose }) {
   // Searching: one request per pause in typing, never one per keystroke.
   useEffect(() => {
     const typed = q.trim();
-    if (typed.length < 3) { setRows([]); setLooking(false); setSearched(false); return undefined; }
+    if (typed.length < 3) { setRows([]); setLooking(false); setSearched(false); setSearchDown(null); return undefined; }
     const ctrl = new AbortController();
     setLooking(true);
     const timer = setTimeout(() => {
       searchAnywhere(typed, { state: state0, near, signal: ctrl.signal })
-        .then((r) => { if (!ctrl.signal.aborted) { setRows(r); setSearched(true); } })
+        .then((out) => {
+          if (ctrl.signal.aborted) return;
+          setRows(out.rows); setSearched(true);
+          setSearchDown(out.failed ? (out.detail || "unreachable") : null);
+        })
         .finally(() => { if (!ctrl.signal.aborted) setLooking(false); });
     }, 300);
     return () => { clearTimeout(timer); ctrl.abort(); setLooking(false); };
@@ -227,9 +235,15 @@ export function LocationSheet({ place, onChange, onClose }) {
             {looking && (
               <div style={{ fontSize: 13, color: T.inkFaint, padding: "10px 4px" }}>{t("loc_looking")}</div>
             )}
-            {!looking && searched && rows.length === 0 && (
+            {!looking && searched && rows.length === 0 && !searchDown && (
               <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, padding: "10px 4px" }}>
                 {t("loc_none")}
+              </div>
+            )}
+            {!looking && searchDown && (
+              <div style={{ padding: "10px 4px" }}>
+                <div style={{ fontSize: 13.5, color: T.red, lineHeight: 1.55 }}>{t("loc_search_down")}</div>
+                <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 3 }}>{searchDown}</div>
               </div>
             )}
           </div>

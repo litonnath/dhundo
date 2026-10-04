@@ -40,8 +40,36 @@ import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent } from "./consent-core.js";
 
-const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// THREE WAYS TO SEE THE GROUND, in the order they are tried.
+//   sat     satellite photographs (Esri World Imagery) with place names on top.
+//           The one that matters for "put the pin on my house": a village lane
+//           that OpenStreetMap draws as nothing is plain to see from above.
+//   street  OpenStreetMap's own map.
+//   carto   Carto's street map, the backup when the first two do not load.
+// Each is one entry here, so swapping a provider (or putting a keyed one in
+// when the free ones are outgrown) is a one-line change. Esri's public tile
+// service is meant for light use and asks for the attribution shown on the
+// map; for heavier use take a keyed provider (MapTiler, Mapbox, Esri's own).
+const TILES = {
+  sat: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    labels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    native: 18,
+    attrib: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+  },
+  street: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    native: 19,
+    attrib: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  },
+  carto: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    sub: "abcd", native: 19,
+    attrib: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+};
+const ORDER = ["sat", "street", "carto"];
+const LAYER_KEY = "dhundo_map_layer";
 
 // Agartala, for when there is nothing else to centre on.
 const FALLBACK = { lat: 23.8315, lng: 91.2868 };
@@ -59,6 +87,16 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
   );
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [layer, setLayerState] = useState(() => {
+    try { const v = window.localStorage.getItem(LAYER_KEY); if (TILES[v]) return v; } catch (_) {}
+    return "sat";
+  });
+  const [backup, setBackup] = useState(false);
+  const LRef = useRef(null);
+  const setLayer = (v) => {
+    setLayerState(v);
+    try { window.localStorage.setItem(LAYER_KEY, v); } catch (_) {}
+  };
 
   useEffect(() => {
     let map = null;
@@ -76,13 +114,13 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
       }
       if (cancelled || !boxRef.current) return;
 
+      LRef.current = L;
       map = L.map(boxRef.current, {
         center: [point.lat, point.lng],
-        zoom: start && typeof start.lat === "number" ? 17 : 13,
+        zoom: start && typeof start.lat === "number" ? 17 : 14,
         zoomControl: true,
         attributionControl: true,
       });
-      L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIB }).addTo(map);
 
       // The pin is FIXED to the centre of the screen and the map moves under
       // it -- the pattern every delivery app settled on. Dragging a small
@@ -109,6 +147,33 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     // Built once: re-running this would tear down the map mid-drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The ground under the pin. Re-drawn when the person switches, and moved on
+  // to the next provider by itself when the first one is not loading (a
+  // blocked server, a network that refuses it): six failures and not one tile
+  // is how a blank grey map is told from a slow one.
+  useEffect(() => {
+    const L = LRef.current, map = mapRef.current;
+    if (!ready || !L || !map) return undefined;
+    const spec = TILES[layer];
+    const parts = [L.tileLayer(spec.url, {
+      maxZoom: 19, maxNativeZoom: spec.native, subdomains: spec.sub || "abc", attribution: spec.attrib,
+    })];
+    if (spec.labels) parts.push(L.tileLayer(spec.labels, { maxZoom: 19, maxNativeZoom: 18 }));
+    let good = 0, bad = 0, moved = false;
+    parts[0].on("tileload", () => { good += 1; });
+    parts[0].on("tileerror", () => {
+      bad += 1;
+      if (!moved && good === 0 && bad >= 6) {
+        moved = true;
+        const next = ORDER[(ORDER.indexOf(layer) + 1) % ORDER.length];
+        if (next !== "sat") { setBackup(true); setLayerState(next); }
+        else setBackup(false);
+      }
+    });
+    parts.forEach((x) => x.addTo(map));
+    return () => { parts.forEach((x) => { try { map.removeLayer(x); } catch (_) {} }); };
+  }, [layer, ready]);
 
   const useDeviceFix = async () => {
     if (!navigator.geolocation) return;
@@ -188,6 +253,30 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
             </span>
             <Btn onClick={useDeviceFix}>{t("map_use_gps")}</Btn>
           </div>
+        )}
+
+        {ready && (
+          <div style={{
+            position: "absolute", right: 12, top: 12, zIndex: 500, display: "flex",
+            borderRadius: 10, overflow: "hidden", boxShadow: "0 2px 8px rgba(15,20,25,0.3)",
+            background: T.white,
+          }}>
+            {[["sat", "map_sat"], ["street", "map_street"]].map(([k, label]) => (
+              <button key={k} onClick={() => { setBackup(false); setLayer(k); }} style={{
+                border: "none", padding: "10px 14px", minHeight: 42, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13.5, fontWeight: 800,
+                background: (layer === k || (k === "street" && layer === "carto")) ? T.brandDark : T.white,
+                color: (layer === k || (k === "street" && layer === "carto")) ? "#fff" : T.ink,
+              }}>{t(label)}</button>
+            ))}
+          </div>
+        )}
+        {ready && backup && (
+          <div style={{
+            position: "absolute", left: 12, right: 70, top: 12, zIndex: 500, padding: "8px 11px",
+            borderRadius: 9, background: "rgba(255,255,255,0.94)", color: T.inkSoft, fontSize: 12.5,
+            lineHeight: 1.45, boxShadow: "0 2px 8px rgba(15,20,25,0.2)", marginLeft: 44,
+          }}>{t("map_backup")}</div>
         )}
 
         {ready && (

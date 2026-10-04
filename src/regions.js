@@ -666,6 +666,41 @@ function fromNominatim(r) {
   };
 }
 
+// ONE WAY TO ASK THE MAP SERVICES.
+//
+// First through this site's own server (/geo/photon, /geo/nominatim -- see
+// deploy/nginx-geo.conf), which asks them once, with a name they can identify,
+// and remembers the answers. That is what OpenStreetMap's usage policy wants,
+// and it sidesteps everything that makes a browser's own request fail on one
+// laptop and not on a phone: an ad-blocker, a school or office network, a
+// rate limit shared by everybody behind one address.
+//
+// Where that is not set up -- the answer is a 404, or the page itself -- the
+// public servers are asked directly, as before.
+const GEO_DIRECT = { photon: "https://photon.komoot.io/", nominatim: "https://nominatim.openstreetmap.org/" };
+let geoProxy = null; // null = not tried yet, true = works, false = not there
+
+export async function geoJson(service, rel, signal) {
+  if (geoProxy !== false) {
+    try {
+      const res = await fetch(`/geo/${service}/${rel}`, { signal, headers: { Accept: "application/json" } });
+      const type = res.headers.get("content-type") || "";
+      if (res.ok && type.includes("json")) { geoProxy = true; return await res.json(); }
+      // A 404, or 200 with the site's own page: there is no proxy here.
+      if (res.status === 404 || res.ok) geoProxy = false;
+      // Anything else (429, 502): the proxy exists but was refused upstream;
+      // try the public server for this one request and keep the proxy.
+    } catch (e) {
+      if (signal && signal.aborted) throw e;
+    }
+  }
+  const res = await fetch(GEO_DIRECT[service] + rel, { signal, headers: { Accept: "application/json" } });
+  if (!res.ok) { const e = new Error(String(res.status)); e.status = res.status; throw e; }
+  return res.json();
+}
+
+const whyFailed = (e) => (e && e.status ? `HTTP ${e.status}` : "blocked or offline");
+
 async function politeNominatim() {
   const wait = lastNominatim + 1100 - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -674,10 +709,11 @@ async function politeNominatim() {
 
 export async function searchAnywhere(query, { state, near, signal } = {}) {
   const q = clean(query);
-  if (q.length < 3) return [];
+  if (q.length < 3) return { rows: [], failed: false, detail: "" };
   const key = `${state || ""}|${q.toLowerCase()}`;
   const hit = anyCache.get(key);
-  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.rows;
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.out;
+  const aborted = () => !!(signal && signal.aborted);
 
   // 1. Our own table: the villages, with positions.
   const spellings = hasIndic(q) ? variants(q, 4) : [q];
@@ -698,26 +734,30 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
   const c = near && typeof near.lat === "number" ? { lat: near.lat, lon: near.lng }
           : STATE_CENTERS[state] ? { lat: STATE_CENTERS[state][0], lon: STATE_CENTERS[state][1] } : BIAS;
   let remote = [];
+  let photonErr = null, nomErr = null, triedNom = false;
   try {
     const sp = spellings.find((x) => clean(x).length >= 3) || q;
-    const res = await fetch(
-      `${PHOTON}?q=${encodeURIComponent(sp)}&limit=12&lang=en&lat=${c.lat}&lon=${c.lon}&bbox=${INDIA_BBOX}`,
-      { signal, headers: { Accept: "application/json" } });
-    if (res.ok) remote = ((await res.json()).features || []).map(fromPhoton).filter(Boolean);
-  } catch (_) { /* offline, blocked, aborted: the next source, then the map */ }
+    const j = await geoJson("photon",
+      `api/?q=${encodeURIComponent(sp)}&limit=12&lang=en&lat=${c.lat}&lon=${c.lon}&bbox=${INDIA_BBOX}`, signal);
+    remote = (j.features || []).map(fromPhoton).filter(Boolean);
+  } catch (e) {
+    if (aborted()) return { rows: [], failed: false, detail: "" };
+    photonErr = whyFailed(e);
+  }
 
   // 3. Nominatim, only when nothing else found anything.
-  if (!own.length && !remote.length && !(signal && signal.aborted)) {
+  if (!own.length && !remote.length) {
     try {
+      triedNom = true;
       await politeNominatim();
-      const res = await fetch(
-        "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=in&accept-language=en" +
-        `&q=${encodeURIComponent(q)}`, { signal, headers: { Accept: "application/json" } });
-      if (res.ok) {
-        const rows = await res.json();
-        remote = (Array.isArray(rows) ? rows : []).map(fromNominatim).filter(Boolean);
-      }
-    } catch (_) {}
+      const rows = await geoJson("nominatim",
+        "search?format=jsonv2&addressdetails=1&limit=8&countrycodes=in&accept-language=en" +
+        `&q=${encodeURIComponent(q)}`, signal);
+      remote = (Array.isArray(rows) ? rows : []).map(fromNominatim).filter(Boolean);
+    } catch (e) {
+      if (aborted()) return { rows: [], failed: false, detail: "" };
+      nomErr = whyFailed(e);
+    }
   }
 
   const seen = new Set();
@@ -727,11 +767,19 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
     seen.add(k);
     return true;
   }).slice(0, 12);
-  if (!(signal && signal.aborted)) {
-    anyCache.set(key, { at: Date.now(), rows });
+  // "Nothing found" and "could not ask" are different answers: the first is
+  // about the place, the second about the connection, and the person should
+  // be told which.
+  const failed = !rows.length && !!photonErr && (!triedNom || !!nomErr);
+  const out = {
+    rows, failed,
+    detail: failed ? `photon: ${photonErr}${triedNom ? `, nominatim: ${nomErr || "ok"}` : ""}` : "",
+  };
+  if (!aborted() && !failed) {
+    anyCache.set(key, { at: Date.now(), out });
     if (anyCache.size > 60) anyCache.delete(anyCache.keys().next().value);
   }
-  return rows;
+  return out;
 }
 
 // What is at a point on the map: the address, the state, the PIN the map has.
@@ -739,12 +787,9 @@ export async function reverseLookup(lat, lng, signal) {
   if (typeof lat !== "number" || typeof lng !== "number") return null;
   try {
     await politeNominatim();
-    const res = await fetch(
-      "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
-      `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
-      { signal, headers: { Accept: "application/json" } });
-    if (!res.ok) return null;
-    const body = await res.json();
+    const body = await geoJson("nominatim",
+      "reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
+      `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`, signal);
     const a = (body && body.address) || {};
     return {
       area: a.suburb || a.neighbourhood || a.quarter || a.village || a.hamlet || a.town || a.city_district || a.county || null,

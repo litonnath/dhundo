@@ -85,3 +85,23 @@ seconds (OpenStreetMap asks for about one request a second).
   middle of the village, so it is flagged and not saved as exact.
 * A saved browsing location whose coordinates do not fit its state is dropped.
 * Distances shown are straight-line, as the crow flies. Roads are longer.
+
+## Place search and the map
+
+* **Search** (`searchAnywhere` in `src/regions.js`) asks, in order: our own place
+  table, Photon (shops, roads, landmarks, villages), then Nominatim if both found
+  nothing. If none could be reached the sheet says so, with a short detail line
+  (for example `photon: blocked or offline`) instead of "nothing found".
+* **`geo-proxy.sh`** (run once on the server: `sudo bash geo-proxy.sh`) puts those
+  two services behind this site (`/geo/photon`, `/geo/nominatim`) with a rate
+  limit, an identifying User-Agent and a one-day cache. The app uses it when it
+  answers JSON and goes direct when it does not, so nothing depends on it. It is
+  what fixes "works on a phone, not on a laptop" caused by an ad-blocker, a
+  network that blocks the host, or a rate limit shared by one address.
+* **Map** (`src/mappicker.jsx`, `TILES`): satellite imagery with place names
+  (Esri World Imagery) by default, a Map button for OpenStreetMap, and an automatic
+  switch to Carto if the first source loads no tiles at all. Esri's public tile
+  service is meant for light use and wants the attribution shown on the map; for
+  heavier use put a keyed provider (MapTiler, Mapbox) into `TILES`: one entry.
+* The service worker leaves `/geo/` alone, so searches are not stored in the
+  phone's cache.

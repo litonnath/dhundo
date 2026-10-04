@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { normalizeState } from "./states.js";
 import { useConsent } from "./consent-core.js";
-import { addressFrom } from "./regions.js";
+import { addressFrom, geoJson } from "./regions.js";
 
 // ---------------------------------------------------------------------------
 // LOCATION
@@ -136,20 +136,16 @@ export function useMyLocation() {
               // accept-language=en: the app stores state and place names in
               // English, and without this Nominatim answers in whatever the
               // browser prefers -- "ত্রিপুরা" never matches "Tripura".
-              const url =
-                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
-                `&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`;
-
               const ctrl = new AbortController();
               const kill = setTimeout(() => ctrl.abort(), GEO_TIMEOUT_MS);
-              const res = await fetch(url, {
-                signal: ctrl.signal,
-                headers: { Accept: "application/json" },
-              });
-              clearTimeout(kill);
-              if (!res.ok) throw new Error("geocoder");
-
-              const body = await res.json();
+              let body;
+              try {
+                body = await geoJson("nominatim",
+                  "reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
+                  `&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`, ctrl.signal);
+              } finally {
+                clearTimeout(kill);
+              }
               const a = (body && body.address) || {};
               // Most specific first. `suburb` is what Agartala's localities
               // are usually tagged as in OSM; the rest are fallbacks for
