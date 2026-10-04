@@ -82,6 +82,13 @@ export async function describePoint({ lat, lng, state, address, area, accuracy }
     title: base,
     area: named, state: st, lat, lng,
     line: landmark ? `Near ${landmark}, ${base}` : base,
+    // The pieces the address is built from, so the person can rename the
+    // spot or move it to another village and the line follows.
+    parts: true,
+    road: (addr && addr.road) || null,
+    district: (centre && centre.district) || (close[0] && close[0].district) || null,
+    nearby: close.filter((r) => typeof r.km === "number" && r.km <= 6).slice(0, 6)
+      .map((r) => ({ place: r.place, district: r.district, km: r.km })),
     landmark,
     centreKm: centre && typeof centre.km === "number" ? centre.km : null,
     pin: (pinR && pinR.pincode) || "", town: (pinR && pinR.place) || "",
@@ -89,6 +96,26 @@ export async function describePoint({ lat, lng, state, address, area, accuracy }
     exact: true,
   };
 }
+
+const joinUnique = (parts) => {
+  const seen = new Set();
+  return parts.map((x) => String(x || "").trim()).filter((x) => {
+    const k = x.toLowerCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).join(", ");
+};
+
+// The address as it will be saved and shown: the name the person gave the
+// spot (else the nearest landmark), the road, the village, the district.
+const lineOf = (c) => {
+  if (!c) return "";
+  if (c.parts) {
+    return joinUnique([c.label || (c.landmark ? `Near ${c.landmark}` : ""), c.road, c.area, c.district]);
+  }
+  return c.label ? joinUnique([c.label, c.line]) : (c.line || c.area || "");
+};
 
 const startOf = (place, state) => {
   if (place && typeof place.lat === "number") return { lat: place.lat, lng: place.lng };
@@ -185,6 +212,18 @@ export function LocationSheet({ place, onChange, onClose }) {
     setBusy(false);
   };
 
+  // The nearest village on record is not always the one people call this
+  // place (a pin in Tilthai was named after a para of the next village).
+  const pickVillage = async (r) => {
+    setBusy(true);
+    const pr = await pinForPlace({ name: r.place, state: chosen.state, district: r.district }).catch(() => null);
+    setChosen((c) => ({
+      ...c, area: r.place, district: r.district || c.district, centreKm: r.km,
+      pin: (pr && pr.pincode) || c.pin, town: (pr && pr.place) || c.town,
+    }));
+    setBusy(false);
+  };
+
   const outside = chosen && chosen.state && !STATES.includes(chosen.state) ? chosen.state : null;
   const done = () => {
     if (!chosen || outside) return;
@@ -193,7 +232,7 @@ export function LocationSheet({ place, onChange, onClose }) {
       lat: typeof chosen.lat === "number" ? chosen.lat : undefined,
       lng: typeof chosen.lng === "number" ? chosen.lng : undefined,
       pin: chosen.pin || undefined, city: chosen.town || undefined,
-      address: chosen.line || undefined, source: chosen.source, exact: !!chosen.exact,
+      address: lineOf(chosen) || undefined, source: chosen.source, exact: !!chosen.exact,
     });
     onClose();
   };
@@ -304,7 +343,7 @@ export function LocationSheet({ place, onChange, onClose }) {
                   {chosen.source === "picked" && chosen.exact ? t("loc_pin_set") : t("loc_selected")}
                 </span>
                 <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.4 }}>
-                  {chosen.line || chosen.area}
+                  {lineOf(chosen)}
                 </span>
                 <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>
                   {chosen.state ? stateName(chosen.state, lang) : ""}
@@ -322,12 +361,49 @@ export function LocationSheet({ place, onChange, onClose }) {
                 {t("loc_pin_off").replace("{d}", fmtKm(chosen.centreKm)).replace("{a}", chosen.area)}
               </div>
             )}
+            {chosen.exact && (
+              <input
+                value={chosen.label || ""} maxLength={80}
+                onChange={(e) => setChosen((c) => ({ ...c, label: e.target.value }))}
+                placeholder={t("loc_name_ph")} aria-label={t("loc_name_ph")}
+                style={{ ...input, marginTop: 10, minHeight: 44, fontSize: 14.5 }}
+              />
+            )}
+            {chosen.nearby && chosen.nearby.length > 1 && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, marginBottom: 6 }}>
+                  {t("loc_other_village")}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {chosen.nearby.map((r) => {
+                    const on = r.place === chosen.area;
+                    return (
+                      <button key={`${r.place}|${r.district}`} onClick={() => pickVillage(r)} disabled={busy} style={{
+                        padding: "7px 11px", borderRadius: 18, cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 13, fontWeight: on ? 800 : 600, minHeight: 36,
+                        border: `1.5px solid ${on ? T.brandDark : T.line}`,
+                        background: on ? T.white : "rgba(255,255,255,0.7)", color: on ? T.brandDeep : T.ink,
+                      }}>
+                        {r.place} <span style={{ color: T.inkFaint, fontWeight: 600 }}>· {fmtKm(r.km)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {chosen.exact && typeof chosen.lat === "number" && (
               <a href={`https://www.openstreetmap.org/?mlat=${chosen.lat}&mlon=${chosen.lng}#map=18/${chosen.lat}/${chosen.lng}`}
                  target="_blank" rel="noopener noreferrer" style={{
                 display: "inline-block", marginTop: 6, color: T.brandDark, fontWeight: 700,
                 fontSize: 12.5, textDecoration: "underline",
               }}>{t("loc_view_map")}</a>
+            )}
+            {chosen.exact && typeof chosen.lat === "number" && (
+              <a href={`https://www.google.com/maps/search/?api=1&query=${chosen.lat},${chosen.lng}`}
+                 target="_blank" rel="noopener noreferrer" style={{
+                display: "inline-block", marginTop: 6, marginLeft: 14, color: T.brandDark, fontWeight: 700,
+                fontSize: 12.5, textDecoration: "underline",
+              }}>Google Maps</a>
             )}
             <button onClick={() => setMapOpen(true)} style={{
               marginTop: 8, background: "none", border: "none", padding: "6px 0", cursor: "pointer",
