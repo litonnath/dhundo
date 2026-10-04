@@ -38,6 +38,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { useConsent } from "./consent-core.js";
 
 const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
@@ -46,6 +47,7 @@ const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">Op
 const FALLBACK = { lat: 23.8315, lng: 91.2868 };
 
 export default function MapPicker({ start, onCancel, onConfirm }) {
+  const consent = useConsent();
   const { t } = useI18n();
   // Back closes the map rather than leaving the app -- the most likely place
   // for somebody to press it, since this covers the whole screen.
@@ -108,8 +110,10 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const useDeviceFix = () => {
+  const useDeviceFix = async () => {
     if (!navigator.geolocation) return;
+    // The phone's position is read only after a yes.
+    if (!(await consent.ask("location"))) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;

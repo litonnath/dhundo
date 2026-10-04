@@ -18,6 +18,7 @@ import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable
 import { useI18n, stateName } from "./i18n.jsx";
 import { ITEM_CATEGORIES, itemCategoryFor } from "./itemwords.js";
 import { hasIndic, variants } from "./translit.js";
+import { useConsent } from "./consent-core.js";
 
 const NEAR_KM = 30;
 const FAR_KM = 100;
@@ -776,6 +777,7 @@ function MyAdRow({ api, item, onOpen, onEdit, onChanged }) {
 }
 
 function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }) {
+  const consent = useConsent();
   const { t, lang } = useI18n();
   const [f, setF] = useState({
     category: null, title: "", price: "", negotiable: true, condition: "used",
@@ -842,6 +844,7 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
     if (f.title.trim().length < 3) return setErr(t("mk_e_title"));
     if (f.price === "" || Number.isNaN(Number(f.price))) return setErr(t("mk_e_price"));
     if (!where || !where.state) return setErr(t("mk_e_state"));
+    if (!(await consent.ask("market"))) return;
     setBusy(true); setErr(null);
     try {
       const num = (v) => (String(v).trim() === "" ? null : Math.round(Number(v)));

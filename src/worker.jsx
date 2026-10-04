@@ -21,6 +21,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Icon, Btn, Notice, SignupHelp } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
 
@@ -41,6 +42,7 @@ function metresBetween(a, b) {
 // Lives at page level (ServicesPage), not inside the Work screen, so the
 // position keeps going while the worker looks at their listing or wallet.
 export function useAvailability(api, enabled) {
+  const consent = useConsent();
   const [s, setS] = useState({
     loaded: false, online: false, until: null, seenAt: null,
     visible: true, busy: false, error: null,
@@ -83,9 +85,12 @@ export function useAvailability(api, enabled) {
       const r = one(await api.setAvailability(true, p, null));
       if (r && r.ok) patch({ seenAt: new Date().toISOString(), until: r.online_until, error: null });
       else if (r && r.reason === "offline") patch({ online: false, until: null });
-    } catch (_) {
-      // A dropped request on a weak signal: the next beat tries again, and
-      // the database's 30-minute window absorbs a few missed ones.
+    } catch (e) {
+      // The database refuses a position with no live-location consent on
+      // record (withdrawn on another phone): stop saying "online".
+      if (e && e.code === "consent_required") { patch({ online: false, until: null, error: "consent" }); return; }
+      // Otherwise a dropped request on a weak signal: the next beat tries
+      // again, and the database's 30-minute window absorbs a few missed ones.
     }
   }, [api]);
 
@@ -93,6 +98,9 @@ export function useAvailability(api, enabled) {
   // standing still at a stand is still "seen".
   useEffect(() => {
     if (!enabled || !s.online) return undefined;
+    // The position is read only with the live-location consent given ON THIS
+    // DEVICE: a worker who was online from another phone is asked again here.
+    if (!consent.has("live")) { patch({ error: "consent" }); return undefined; }
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (geo) {
       watch.current = geo.watchPosition(
@@ -114,10 +122,11 @@ export function useAvailability(api, enabled) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onShow);
     };
-  }, [enabled, s.online, beat]);
+  }, [enabled, s.online, beat, consent.tick]);
 
-  const goOnline = useCallback((hours) => {
+  const goOnline = useCallback(async (hours) => {
     patch({ busy: true, error: null });
+    if (!(await consent.ask("live"))) { patch({ busy: false, error: "consent" }); return; }
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (!geo) { patch({ busy: false, error: "location" }); return; }
     geo.getCurrentPosition(
@@ -133,14 +142,14 @@ export function useAvailability(api, enabled) {
           } else {
             patch({ busy: false, error: (r && r.reason) || "failed" });
           }
-        } catch (_) {
-          patch({ busy: false, error: "failed" });
+        } catch (e) {
+          patch({ busy: false, error: e && e.code === "consent_required" ? "consent" : "failed" });
         }
       },
       () => patch({ busy: false, error: "location" }),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
     );
-  }, [api]);
+  }, [api, consent.ask]);
 
   const goOffline = useCallback(async () => {
     patch({ busy: true, error: null });
@@ -148,6 +157,16 @@ export function useAvailability(api, enabled) {
     sent.current = null;
     patch({ online: false, until: null, busy: false });
   }, [api]);
+
+  // Withdrawing the live-location consent switches it off at once, here and
+  // (the database deletes the position when it records the withdrawal) there.
+  useEffect(() => {
+    const onConsent = (e) => {
+      if (e.detail && e.detail.purpose === "live" && !e.detail.granted) goOffline();
+    };
+    window.addEventListener(CONSENT_EVENT, onConsent);
+    return () => window.removeEventListener(CONSENT_EVENT, onConsent);
+  }, [goOffline]);
 
   return { ...s, goOnline, goOffline };
 }
@@ -255,7 +274,8 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
       </div>
 
       {avail.error === "location" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("av_need_loc")}</Notice></div>}
-      {avail.error && avail.error !== "location" && (
+      {avail.error === "consent" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("cs_server")}</Notice></div>}
+      {avail.error && avail.error !== "location" && avail.error !== "consent" && (
         <div style={{ marginTop: 14 }}><Notice tone="bad">{t("e_save")}</Notice></div>
       )}
       {on && !avail.visible && (

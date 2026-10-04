@@ -35,7 +35,9 @@ import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
 import { useMyLocation, isInstalledApp } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
-import { useI18n, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { LocationAskCard, PrivacyPanel } from "./consent-ui.jsx";
+import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
 // ---------------------------------------------------------------- data layer
 // How far "near" is for people available right now, and how far to look
@@ -73,7 +75,16 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
     if (!res.ok) {
-      throw new Error((data && (data.message || data.error)) || `Request failed (${res.status})`);
+      const msg = data && (data.message || data.error);
+      // Two answers the database gives on purpose, said in the person's own
+      // language: too many tries, or no consent on record for what was sent.
+      if (res.status === 429 || msg === "rate_limited") {
+        const e = new Error(tNow("rl_msg")); e.code = "rate_limited"; throw e;
+      }
+      if (msg === "consent_required") {
+        const e = new Error(tNow("cs_server")); e.code = "consent_required"; e.purpose = data && data.hint; throw e;
+      }
+      throw new Error(msg || `Request failed (${res.status})`);
     }
     return data;
   }
@@ -332,6 +343,19 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const [group, setGroup] = useState(null);
   const [trade, setTrade] = useState(null);
   const [search, setSearch] = useState("");
+  // Read the phone's position (asks first, see consent-core.js) and look
+  // from there. Used by the button below and by the card on the home screen.
+  const locate = async () => {
+    const got = await geo.detect();
+    if (!got || typeof got.lat !== "number") return;
+    setPlace((p) => ({
+      ...p,
+      area: got.area || p.area,
+      state: got.state && STATES.includes(got.state) ? got.state : p.state,
+      // A new position may be in another PIN; worked out again.
+      lat: got.lat, lng: got.lng, pin: undefined, city: undefined,
+    }));
+  };
   // The area and the state are set in the header and owned by the page, so
   // there is one answer to "where am I looking?" rather than two.
   const locality = (place && place.area) || "";
@@ -615,6 +639,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
             <InstallBanner onOpen={onInstall} />
+            {geo.supported && !hasPos && <LocationAskCard onAllowed={locate} />}
             {!(user && user.id) && <SignupHelp />}
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
@@ -744,17 +769,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 </span>
               ) : geo.supported ? (
                 <button
-                  onClick={async () => {
-                    const got = await geo.detect();
-                    if (!got || typeof got.lat !== "number") return;
-                    setPlace((p) => ({
-                      ...p,
-                      area: got.area || p.area,
-                      state: got.state && STATES.includes(got.state) ? got.state : p.state,
-                      // A new position may be in another PIN; worked out again.
-                      lat: got.lat, lng: got.lng, pin: undefined, city: undefined,
-                    }));
-                  }}
+                  onClick={locate}
                   disabled={geo.state === "locating"}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
@@ -908,6 +923,7 @@ const bigInput = {
 };
 
 function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace }) {
+  const consent = useConsent();
   const { t, lang } = useI18n();
   const geo = useMyLocation();
 
@@ -986,6 +1002,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
     if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
     if (!picked.length) return setErr(t("e_category"));
     if (needsVehicle && !plateLooksRight(f.vehicle_number)) return setErr(t("e_vehicle"));
+    // A listing is stored and shown to other people: a yes first. (An admin
+    // adding one for somebody else is not the owner and is not asked.)
+    if (!isAdmin && !(await consent.ask("listing"))) return;
 
     setBusy(true);
     try {
@@ -2120,10 +2139,25 @@ export default function ServicesPage({
   }, [place.lat, place.lng, place.pin, place.area]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const geo = useMyLocation();
+  const consent = useConsent();
+  // Withdrawing the location consent takes the phone's position out of the
+  // saved place at once; the area name the person chose stays.
+  useEffect(() => {
+    const onConsent = (e) => {
+      if (e.detail && e.detail.purpose === "location" && !e.detail.granted) {
+        setPlace((p) => ({ ...p, lat: undefined, lng: undefined }));
+      }
+    };
+    window.addEventListener(CONSENT_EVENT, onConsent);
+    return () => window.removeEventListener(CONSENT_EVENT, onConsent);
+  }, []);
   useEffect(() => {
     let done = false;
     try { done = window.localStorage.getItem("dhundo_geo_tried") === "1"; } catch (_) {}
-    if (done || !geo.supported) return;
+    // Never on a first visit: this runs only for someone who already said
+    // yes. Everybody else is asked by the card on the home screen, or by the
+    // button that needs the location.
+    if (done || !geo.supported || !consent.has("location")) return;
     try { window.localStorage.setItem("dhundo_geo_tried", "1"); } catch (_) {}
     let alive = true;
     geo.detect().then(async (got) => {
@@ -2390,6 +2424,7 @@ export default function ServicesPage({
           onOpenProfile={() => setTab("profile")}
           onOpenAds={() => setTab("sell")}
           showCredits={inApp}
+          privacy={<PrivacyPanel />}
         />
       )}
 

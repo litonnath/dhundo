@@ -22,6 +22,7 @@ import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinLookup, pinForPlace } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
+import { useConsent } from "./consent-core.js";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
@@ -2584,6 +2585,7 @@ export function waLink(phone) {
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
   hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, showCredits = false,
+  privacy = null,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra, sub) => (
@@ -2664,6 +2666,9 @@ export function AccountPage({
         {account && row("back", t("nav_signout"), onSignOut)}
       </div>
 
+      {/* What the person has allowed, and a way to take it back. */}
+      {privacy}
+
       {/* In the app, where there is no footer: the ownership line and the
           credit the OpenStreetMap and GeoNames licences require. */}
       {showCredits && (
@@ -2686,6 +2691,7 @@ export function AccountPage({
 // sign-in number, shown but not editable here.
 export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved }) {
   const { t } = useI18n();
+  const consent = useConsent();
   const [f, setF] = useState({
     full_name: (account && account.full_name) || "", email: "", address: "",
     city: "", state: "", pincode: "",
@@ -2712,6 +2718,9 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
 
   const save = async () => {
     if (!f.full_name.trim()) return setMsg({ tone: "bad", text: t("ae_name") });
+    // An address, an email or a PIN is stored: a yes first. The name alone
+    // is already covered by the account consent given at sign-up.
+    if ((f.email || f.address || f.city || f.pincode) && !(await consent.ask("profile"))) return;
     setBusy(true); setMsg(null);
     try {
       const r = await api.updateMyProfile(f);
@@ -2724,8 +2733,9 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
           why === "bad_name" ? "ae_name" : why === "bad_email" ? "prof_e_email"
           : why === "bad_pincode" ? "e_badpin" : why === "bad_state" ? "e_badstate" : "e_save") });
       }
-    } catch (_) {
-      setMsg({ tone: "bad", text: t("e_save") });
+    } catch (e) {
+      // Too many tries or no consent on record: already worded for the person.
+      setMsg({ tone: "bad", text: e && e.code ? e.message : t("e_save") });
     } finally { setBusy(false); }
   };
 

@@ -40,6 +40,7 @@ import {
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import MapPicker from "./mappicker.jsx";
 import { useMyLocation } from "./device.jsx";
+import { useConsent } from "./consent-core.js";
 import { pinForPlace } from "./regions.js";
 
 const PHOTO_BUCKET = "services-photos";
@@ -105,6 +106,7 @@ function Section({ title, children, onSave, saving, saved, dirty, note }) {
 }
 
 export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
+  const consent = useConsent();
   const { t, lang } = useI18n();
   const geo = useMyLocation();
 
@@ -216,6 +218,9 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   // cannot invent its own error handling.
   const save = async (key, payload, opts = {}) => {
     setErr(null); setMsg(null);
+    // Changing a listing stores it and shows it: needs the listing consent
+    // (an admin editing somebody else's is not the owner and is not asked).
+    if (!isAdmin && !(await consent.ask("listing"))) return;
     setSavingKey(key);
     try {
       const r = await api.updateMyListing(payload);

@@ -34,6 +34,8 @@ import { I18nProvider, useI18n } from "./i18n.jsx";
 import { registerServiceWorker } from "./device.jsx";
 import { DhundoLogo } from "./brand.jsx";
 import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
+import { ConsentProvider } from "./consent-ui.jsx";
+import { useConsent } from "./consent-core.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import {
   signUpWithPhone, signInWithPhone, refreshAccount, signOutEverywhere,
@@ -97,8 +99,42 @@ function messageFor(code, t) {
     case "BAD_CREDENTIALS":     return t("ae_bad");
     case "ACCOUNT_BLOCKED":     return t("ae_blocked");
     case "CONFIRM_EMAIL_IS_ON": return t("ae_confirm");
+    case "RATE_LIMITED":        return t("rl_msg");
     default:                    return t("ae_failed");
   }
+}
+
+// A courtesy lock on this browser: five wrong PINs in ten minutes and the
+// form waits, a minute at first and longer each time. It stops a thumb that
+// keeps guessing; the real limit is the sign-in service's own, per address,
+// which a person on a script would not be stopped by this.
+const LOCK_KEY = "dhundo_authlock";
+const LOCK_FAILS = 5;
+const LOCK_WINDOW = 10 * 60 * 1000;
+function readLock() {
+  try { return JSON.parse(window.localStorage.getItem(LOCK_KEY)) || {}; } catch (_) { return {}; }
+}
+function writeLock(o) {
+  try { window.localStorage.setItem(LOCK_KEY, JSON.stringify(o)); } catch (_) {}
+}
+function lockLeft() {
+  const l = readLock();
+  return l.until && l.until > Date.now() ? Math.ceil((l.until - Date.now()) / 1000) : 0;
+}
+// Seconds to wait after this failure, or 0 while still allowed.
+function noteFail() {
+  const l = readLock();
+  const now = Date.now();
+  const fails = (l.fails || []).filter((x) => now - x < LOCK_WINDOW);
+  fails.push(now);
+  if (fails.length >= LOCK_FAILS) {
+    const strikes = Math.min((l.strikes || 0) + 1, 5);
+    const secs = Math.min(60 * 2 ** (strikes - 1), 900);
+    writeLock({ fails: [], strikes, until: now + secs * 1000 });
+    return secs;
+  }
+  writeLock({ ...l, fails });
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +156,9 @@ function AuthPanel({ onDone, onClose }) {
   // and that friend had nowhere to put it. A link still works and still
   // pre-fills this box; typing is the path that was missing.
   const [code, setCode] = useState(() => pendingCode() || "");
+  const consent = useConsent();
+  const [agree, setAgree] = useState(false);
+  const [more, setMore] = useState(false);
 
   const signup = mode === "signup";
   const codeBad = code.length > 0 && !codeLooksRight(code);
@@ -139,14 +178,25 @@ function AuthPanel({ onDone, onClose }) {
     // it would cost them everything. The database decides whether it is real.
     if (signup && code.trim() && codeLooksRight(code)) rememberCode(code);
 
+    // Storing a name, a number and a PIN needs a yes first. Recorded on this
+    // device now and in the database as soon as the account exists.
+    if (signup && !agree) return setErr(t("cs_agree_need"));
+    if (!signup) {
+      const wait = lockLeft();
+      if (wait > 0) return setErr(t("rl_signin").replace("{n}", wait));
+    }
+
     setBusy(true);
     try {
+      if (signup) await consent.grant("account");
       const s = signup
         ? await signUpWithPhone(CFG, { phone, name, password })
         : await signInWithPhone(CFG, { phone, password });
+      if (!signup) writeLock({});
       onDone(s);
     } catch (e) {
-      setErr(messageFor(e.message, t));
+      const wait = !signup && e.message === "BAD_CREDENTIALS" ? noteFail() : 0;
+      setErr(wait ? t("rl_signin").replace("{n}", wait) : messageFor(e.message, t));
     } finally {
       setBusy(false);
     }
@@ -288,6 +338,23 @@ function AuthPanel({ onDone, onClose }) {
           {signup && <p style={hint}>{t("au_pin_hint")}</p>}
         </div>
 
+        {signup && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "flex", gap: 11, alignItems: "flex-start", cursor: "pointer" }}>
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
+                     disabled={busy} style={{ width: 22, height: 22, marginTop: 1, flexShrink: 0 }} />
+              <span style={{ fontSize: 13.5, color: INK, lineHeight: 1.55 }}>{t("cs_agree")}</span>
+            </label>
+            <button type="button" onClick={() => setMore((v) => !v)} style={{
+              background: "none", border: "none", padding: "6px 0 0 33px", color: DEEP,
+              fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", minHeight: 32,
+            }}>{t("cs_agree_more")}</button>
+            {more && (
+              <p style={{ ...hint, paddingLeft: 33, fontSize: 12.5, color: MUTED }}>{t("cs_b_account")}</p>
+            )}
+          </div>
+        )}
+
         <button onClick={submit} disabled={busy} style={{
           width: "100%", padding: "13px", borderRadius: 11, border: "none",
           background: busy ? "rgba(0,180,216,0.6)" : `linear-gradient(135deg, ${MATCH}, ${DEEP})`,
@@ -373,8 +440,23 @@ function App() {
       }
     : null;
 
+  // The calls the consent layer makes as the signed-in person.
+  const consentRpc = useCallback(async (name, body) => {
+    const token = session && session.access_token;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token || SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(body || {}),
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.json();
+  }, [session]);
+
   return (
-    <>
+    <ConsentProvider rpc={consentRpc} signedIn={!!session}>
       <ServicesPage
         supabaseUrl={SUPABASE_URL}
         anonKey={SUPABASE_ANON_KEY}
@@ -396,7 +478,7 @@ function App() {
           onClose={() => setShowAuth(false)}
         />
       )}
-    </>
+    </ConsentProvider>
   );
 }
 

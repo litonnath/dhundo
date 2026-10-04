@@ -4,6 +4,7 @@
 // ===========================================================================
 import { useState, useEffect, useCallback, useRef } from "react";
 import { normalizeState } from "./states.js";
+import { useConsent } from "./consent-core.js";
 
 // ---------------------------------------------------------------------------
 // LOCATION
@@ -28,8 +29,16 @@ import { normalizeState } from "./states.js";
 // ---------------------------------------------------------------------------
 const GEO_TIMEOUT_MS = 12000;
 
+// One read at a time, and not again within a few seconds: OpenStreetMap asks
+// for no more than about a request a second, and a nervous double tap is
+// better answered with the fix just taken than with a second lookup.
+let inflight = null;
+let recent = null;
+const RECENT_MS = 4000;
+
 export function useMyLocation() {
   const [state, setState] = useState("idle"); // idle | locating | done | error
+  const consent = useConsent();
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
 
@@ -41,8 +50,19 @@ export function useMyLocation() {
     (window.isSecureContext || window.location.hostname === "localhost");
 
   const detect = useCallback(
-    () =>
-      new Promise((resolve) => {
+    async () => {
+      // The phone's position is read only after a yes (consent-core.js). A
+      // no is not an error: nothing is shown, and the caller gets null.
+      if (!(await consent.ask("location"))) {
+        if (alive.current) setState("idle");
+        return null;
+      }
+      if (inflight) return inflight;
+      if (recent && Date.now() - recent.at < RECENT_MS) return recent.value;
+      // A reading was taken, so the first-visit auto-detect has no business
+      // running again behind it.
+      try { window.localStorage.setItem("dhundo_geo_tried", "1"); } catch (_) {}
+      inflight = new Promise((resolve) => {
         if (!supported) { setState("error"); return resolve(null); }
         setState("locating");
 
@@ -154,8 +174,14 @@ export function useMyLocation() {
           coarse,
           { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
         );
-      }),
-    [supported]
+      }).then((v) => {
+        recent = v ? { at: Date.now(), value: v } : null;
+        inflight = null;
+        return v;
+      });
+      return inflight;
+    },
+    [supported, consent.ask]
   );
 
   return { supported, state, detect, reset: () => setState("idle") };
