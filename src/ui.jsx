@@ -21,7 +21,7 @@
 import React, { useState } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinLookup, pinForPlace } from "./regions.js";
-import { useMyLocation, useInstallPrompt, isInstalledApp } from "./device.jsx";
+import { useMyLocation, useInstallPrompt, isInstalledApp, locErrorKey } from "./device.jsx";
 import { useConsent } from "./consent-core.js";
 import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
@@ -176,6 +176,12 @@ export const groupLabel = (g, lang) =>
 // history is left exactly as it was found and one Back press never does
 // nothing.
 // ---------------------------------------------------------------------------
+// Sheets can stack (a question over the location sheet, the map over a sheet),
+// so only the TOP one answers Back and Escape, and the history step a closing
+// sheet takes back is not mistaken for a Back press by the sheet underneath.
+const openSheets = [];
+let ignorePopUntil = 0;
+
 export function useDismissable(open, onClose) {
   // Held in a ref so that a parent re-rendering with a new inline onClose
   // does not re-run this effect and push a second history entry.
@@ -183,11 +189,18 @@ export function useDismissable(open, onClose) {
   React.useEffect(() => { cb.current = onClose; }, [onClose]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     let byBack = false;
+    const token = {};
+    openSheets.push(token);
+    const isTop = () => openSheets[openSheets.length - 1] === token;
 
-    const onKey = (e) => { if (e.key === "Escape") cb.current(); };
-    const onPop = () => { byBack = true; cb.current(); };
+    const onKey = (e) => { if (e.key === "Escape" && isTop()) cb.current(); };
+    const onPop = () => {
+      if (Date.now() < ignorePopUntil || !isTop()) return;
+      byBack = true;
+      cb.current();
+    };
 
     try { window.history.pushState({ dhundoSheet: true }, ""); } catch (_) {}
     window.addEventListener("keydown", onKey);
@@ -196,9 +209,14 @@ export function useDismissable(open, onClose) {
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("popstate", onPop);
+      const i = openSheets.indexOf(token);
+      if (i >= 0) openSheets.splice(i, 1);
       if (!byBack) {
         try {
-          if (window.history.state && window.history.state.dhundoSheet) window.history.back();
+          if (window.history.state && window.history.state.dhundoSheet) {
+            ignorePopUntil = Date.now() + 350;
+            window.history.back();
+          }
         } catch (_) {}
       }
     };
@@ -1481,344 +1499,6 @@ export function LocationPill({ place, onOpen, compact }) {
       </span>
       <span style={{ color: T.inkFaint, flexShrink: 0 }}><Icon name="chev" size={16} /></span>
     </button>
-  );
-}
-
-export function LocationSheet({ place, onChange, onClose }) {
-  const { t, lang } = useI18n();
-  useDismissable(true, onClose);
-  const geo = useMyLocation();
-  const [area, setArea] = useState((place && place.area) || "");
-  const [state, setState] = useState((place && place.state) || DEFAULT_STATE);
-  const [outside, setOutside] = useState(null);
-  const [cleared, setCleared] = useState(null);
-  // Set when the name in `area` was GUESSED from coordinates rather than
-  // chosen by the person. The guess is a lookup of the nearest place in a
-  // register, so for anybody whose para is not in one it names a village
-  // down the road -- which is how "Champaknagar" appeared for somebody who
-  // does not live there. The fix is not a better GPS reading; the reading
-  // was fine. It is to stop presenting the guess as a fact.
-  const [guessed, setGuessed] = useState(null);
-  // The places nearest the phone, from the place table, to tap when the
-  // guess is not quite right.
-  const [near, setNear] = useState([]);
-  // The PIN code: filled in from the position, or typed. Results show
-  // everybody in the same PIN code first.
-  const [pin, setPin] = useState((place && place.pin) || "");
-  // The town the PIN code belongs to (the head post office), so a listing
-  // in the same town can say so instead of showing a distance.
-  const [town, setTown] = useState((place && place.city) || "");
-  // Which name the current position belongs to. A GPS position is where the
-  // PHONE is; picking another area afterwards must not keep it -- that is
-  // how picking Ramnagar kept the PIN code of Tilthai.
-  const [fixFor, setFixFor] = useState(null);
-  // Metres. Shown so a 30-metre fix and a 2-kilometre one do not look alike.
-  const [acc, setAcc] = useState(null);
-
-  const detect = async () => {
-    setOutside(null); setCleared(null);
-    const got = await geo.detect();
-    if (!got) return;
-    setAcc(typeof got.accuracy === "number" ? Math.round(got.accuracy) : null);
-    if (got.state && !STATES.includes(got.state)) {
-      setOutside(got.state);
-      if (got.area) setArea(got.area);
-      return;
-    }
-    // Both together, always. Setting one without the other is how the header
-    // ended up reading "Champaknagar, Delhi" -- a Tripura locality under a
-    // state it is nowhere near.
-    if (typeof got.lat === "number") setFix({ lat: got.lat, lng: got.lng });
-    if (got.state) setState(got.state);
-    // Snapped to a known name: OpenStreetMap says "Krishna Nagar" where this
-    // list says "Krishnanagar", and two spellings of one place is the exact
-    // problem the list exists to end.
-    // The map service names the nearest mapped TOWN when a village is only
-    // a dot on the map; the place table knows the village itself.
-    const close = typeof got.lat === "number" ? await nearestPlaces(got.lat, got.lng) : [];
-    setNear(close.filter((r) => r.km <= 5));
-    const fromMap = got.area ? snapToKnown(got.state || state, got.area) : null;
-    const named = bestNearName(close, fromMap);
-    // The PIN of the village's own post office first, then by position.
-    const gotPin = await pinForPlace({ lat: got.lat, lng: got.lng, name: named,
-                                       state: got.state || state }).catch(() => null);
-    if (gotPin) { setPin(gotPin.pincode); setTown(gotPin.place || ""); }
-    if (named) {
-      setArea(named);
-      setGuessed(named);
-    }
-    setFixFor(named || "");
-  };
-
-  // Changing the state invalidates the area, because an area name only means
-  // anything inside a state. Keeping the old one produced a header that was
-  // simply false, and a search filtered on a locality that does not exist in
-  // the state being searched -- which looked like "it shows nothing".
-  const pickState = (st) => {
-    setOutside(null);
-    setFix(null);
-    if (st === state) return;
-    if (area.trim()) { setCleared(state); setArea(""); }
-    setState(st);
-  };
-
-  // The coordinates from a successful detection ride along with the name.
-  // Without them the browse falls back to name matching, which is the thing
-  // the distance work exists to replace.
-  const [fix, setFix] = useState(null);
-  const done = async () => {
-    const a = area.trim();
-    // The position belongs to the name only if it was found for that name.
-    let xy = fix && (fixFor === null || fixFor === "" || fixFor === a) ? fix : null;
-    if (!xy && a) xy = await placeCoords(state, a).catch(() => null);
-    const typed6 = pin.replace(/\D/g, "");
-    // A village picked from around a typed PIN code that has no position of
-    // its own is still in that PIN: its position is good enough.
-    if (!xy && fix && typed6.length === 6) xy = fix;
-    let p6 = typed6.length === 6 ? typed6 : null;
-    let tw = town;
-    if (!p6) {
-      const r = await pinForPlace({ ...(xy || {}), name: a, state }).catch(() => null);
-      p6 = r && r.pincode; tw = (r && r.place) || "";
-    }
-    onChange({ area: a, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
-               pin: p6 || undefined, city: tw || undefined });
-    onClose();
-  };
-  // A typed PIN on its own is a location: its name and position come with it.
-  const typePin = async (v) => {
-    const d = v.replace(/\D/g, "").slice(0, 6);
-    setPin(d);
-    if (d.length !== 6) return;
-    const r = await pinLookup(d);
-    if (!r) return;
-    // The PIN code decides the place: its state, its town, its position --
-    // replacing whatever area was there before, which belongs to another PIN.
-    setOutside(null); setCleared(null);
-    if (r.state && STATES.includes(r.state) && r.state !== state) setState(r.state);
-    setTown(r.place || "");
-    if (r.place) { setArea(r.place); setGuessed(r.place); }
-    if (typeof r.lat === "number") {
-      setFix({ lat: r.lat, lng: r.lng });
-      setFixFor(r.place || "");
-      // The villages in and around that PIN, to tap your own.
-      const close = await nearestPlaces(r.lat, r.lng).catch(() => []);
-      setNear(close.filter((x) => x.km <= 8));
-    }
-  };
-
-  return (
-    <div
-      role="dialog" aria-modal="true"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: "fixed", inset: 0, zIndex: 320, background: "rgba(15,20,25,0.55)",
-        display: "flex", alignItems: "flex-end", justifyContent: "center",
-      }}
-    >
-      <div style={{
-        background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 460,
-        padding: "20px 18px 24px", boxShadow: "0 -10px 40px rgba(0,30,45,0.25)",
-        maxHeight: "88vh", overflowY: "auto",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: T.ink, flex: 1 }}>
-            {t("loc_title")}
-          </span>
-          <CloseButton onClick={onClose} />
-        </div>
-
-        {/* The state comes FIRST now. It decides what the area field even
-            means, so asking for the area above it had the order backwards. */}
-        <StateSelect value={state} onChange={pickState} big
-                     style={{ display: "block", width: "100%", marginBottom: 16 }} />
-
-        {geo.supported && (
-          <button
-            onClick={detect}
-            disabled={geo.state === "locating"}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 9, padding: "13px 14px", borderRadius: 11, marginBottom: 12,
-              border: `1px solid rgba(5,66,145,0.28)`, background: T.brandSoft,
-              color: T.brandDeep, fontSize: 14.5, fontWeight: 700, fontFamily: "inherit",
-              cursor: geo.state === "locating" ? "default" : "pointer", minHeight: 50,
-            }}
-          >
-            <Icon name="crosshair" size={19} />
-            {geo.state === "locating" ? t("loc_detecting") : t("loc_detect")}
-          </button>
-        )}
-
-        {geo.state === "error" && (
-          <div style={{ fontSize: 12.5, color: T.red, margin: "-4px 2px 10px", lineHeight: 1.5 }}>
-            {t("location_denied")}
-          </div>
-        )}
-
-        {/* The PIN code: everybody knows theirs, and people in the same PIN
-            are shown first. Filled in from the position; typing one alone
-            is enough to set the location. */}
-        <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
-                        padding: "8px 12px", borderRadius: 11, border: `1px solid ${T.line}`,
-                        background: T.white }}>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: T.ink }}>{t("loc_pin")}</span>
-            <span style={{ display: "block", fontSize: 12, color: T.inkFaint, lineHeight: 1.4 }}>{t("loc_pin_hint")}</span>
-          </span>
-          <input value={pin} onChange={(e) => typePin(e.target.value)} inputMode="numeric"
-                 maxLength={6} placeholder="799001" aria-label={t("loc_pin")} style={{
-            ...input, width: 110, minHeight: 44, fontSize: 17, fontWeight: 800, letterSpacing: 1,
-            textAlign: "center",
-          }} />
-        </label>
-
-        {/* Shown the moment a name is guessed, phrased as a question rather
-            than an announcement. Somebody who sees the wrong village named
-            confidently assumes the app is broken and gives up; somebody
-            asked "is this right?" corrects it in one tap. */}
-        {/* A fix too vague to name. Said plainly rather than silently
-            leaving the field blank, which reads as the button not working. */}
-        {acc !== null && acc > 1500 && !guessed && (
-          <div style={{
-            padding: "12px 13px", borderRadius: 11, marginBottom: 12,
-            background: T.accentSoft, border: `1px solid rgba(248,118,23,0.35)`,
-            color: "#8A4A00", fontSize: 13, lineHeight: 1.55,
-          }}>
-            {t("loc_vague").replace("{km}", (acc / 1000).toFixed(acc >= 10000 ? 0 : 1))}
-          </div>
-        )}
-
-        {guessed && !outside && (
-          <div style={{
-            padding: "12px 13px", borderRadius: 11, marginBottom: 12,
-            background: T.brandSoft, border: `1px solid rgba(5,66,145,0.22)`,
-          }}>
-            <div style={{ fontSize: 13.5, color: T.brandDeep, lineHeight: 1.55 }}>
-              {t("loc_guess").replace("{x}", guessed)}
-              {acc !== null && (
-                <span style={{ display: "block", fontSize: 12, color: T.inkFaint, marginTop: 4 }}>
-                  {t("loc_accuracy").replace("{m}", String(acc))}
-                </span>
-              )}
-            </div>
-            {near.length > 0 && !(near.length === 1 && near[0].place === area) && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, marginBottom: 6 }}>
-                  {t("loc_near_places")}
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {near.map((r) => {
-                    const on = r.place === area;
-                    return (
-                      <button key={r.place} onClick={async () => {
-                        setArea(r.place); setGuessed(r.place);
-                        // That village's own PIN code, from its post office.
-                        const pr = await pinForPlace({ name: r.place, state, district: r.district }).catch(() => null);
-                        if (pr) { setPin(pr.pincode); setTown(pr.place || ""); }
-                      }} style={{
-                        padding: "7px 11px", borderRadius: 18, cursor: "pointer", fontFamily: "inherit",
-                        fontSize: 13, fontWeight: on ? 800 : 600, minHeight: 36,
-                        border: `1.5px solid ${on ? T.brandDark : T.line}`,
-                        background: on ? T.white : "rgba(255,255,255,0.7)", color: on ? T.brandDeep : T.ink,
-                      }}>
-                        {r.place} <span style={{ color: T.inkFaint, fontWeight: 600 }}>
-                          · {r.km < 1 ? `${Math.round(r.km * 1000)} m` : `${r.km.toFixed(1)} km`}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <button onClick={() => { setArea(""); setGuessed(null); }} style={{
-              background: "none", border: "none", cursor: "pointer", color: T.brandDark,
-              fontWeight: 800, fontSize: 13.5, minHeight: 40, fontFamily: "inherit",
-              padding: "6px 0 0", textDecoration: "underline",
-            }}>{t("loc_guess_fix")}</button>
-          </div>
-        )}
-
-        {cleared && (
-          <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-4px 2px 10px", lineHeight: 1.5 }}>
-            {t("loc_cleared").replace("{s}", stateName(cleared, lang))}
-          </div>
-        )}
-
-        {outside && (
-          <div style={{
-            padding: "12px 13px", borderRadius: 10, marginBottom: 12,
-            background: T.accentSoft, border: `1px solid rgba(248,118,23,0.35)`,
-            color: "#8A4A00", fontSize: 13, lineHeight: 1.55,
-          }}>
-            <strong style={{ display: "block", marginBottom: 3 }}>
-              {t("oos_title").replace("{x}", outside)}
-            </strong>
-            {t("oos_body").replace("{x}", outside)}
-          </div>
-        )}
-
-        {/* What is chosen right now, said plainly: a village picked from the
-            search is not in the list below, so without this the sheet
-            looked as if nothing had been chosen. */}
-        {area.trim() && !guessed && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 9, padding: "11px 13px", marginBottom: 12,
-            borderRadius: 11, background: T.greenSoft, border: "1px solid rgba(18,128,74,0.3)",
-          }}>
-            <span style={{ color: T.green, flexShrink: 0 }}><Icon name="check" size={19} /></span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 11.5, fontWeight: 800, color: T.green,
-                             textTransform: "uppercase", letterSpacing: 0.4 }}>{t("loc_selected")}</span>
-              <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink }}>
-                {area.trim()}
-                {pin && <span style={{ fontWeight: 600, color: T.inkSoft }}> · PIN {pin}</span>}
-                {town && town.toLowerCase() !== area.trim().toLowerCase() && (
-                  <span style={{ fontWeight: 600, color: T.inkSoft }}> · {town}</span>
-                )}
-              </span>
-            </span>
-          </div>
-        )}
-
-        <label style={{
-          display: "block", fontSize: 12, fontWeight: 700, color: T.inkFaint,
-          textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 7,
-        }}>{t("loc_area_for").replace("{s}", stateName(state, lang))}</label>
-        <div style={{ marginBottom: 18 }}>
-          <AreaPicker
-            state={state}
-            value={area}
-            // A tap on a place IS the choice: save it and close, the way
-            // picking a destination works in every ride app. It used to
-            // only mark the row, with the list still open and "Done" below
-            // the fold, so the tap looked as if it had done nothing. The
-            // place's own position comes along when it has one, so results
-            // sort by distance even for somebody who never shares GPS.
-            onPick={async (p, meta) => {
-              const hasXY = meta && typeof meta.lat === "number" && typeof meta.lng === "number";
-              // The place's own position. The phone's GPS position only when
-              // this is the very place it was found for -- never for another
-              // area picked afterwards.
-              let xy = hasXY ? { lat: meta.lat, lng: meta.lng } : (fix && fixFor === p ? fix : null);
-              // A name from the built-in list carries no position: look it up,
-              // under the heading it was listed in, so results still sort by
-              // distance and the PIN code is the one for THIS place.
-              if (!xy) xy = await placeCoords(state, p, meta && meta.group).catch(() => null);
-              // By position, else by name and district: a village with no
-              // position of its own still gets its PIN code.
-              const r = await pinForPlace({ ...(xy || {}), name: p, state,
-                                            district: meta && meta.district }).catch(() => null);
-              onChange({ area: p, state, lat: xy ? xy.lat : undefined, lng: xy ? xy.lng : undefined,
-                         pin: (r && r.pincode) || undefined, city: (r && r.place) || undefined });
-              onClose();
-            }}
-          />
-        </div>
-
-        <Btn full onClick={done}>{t("loc_done")}</Btn>
-      </div>
-    </div>
   );
 }
 

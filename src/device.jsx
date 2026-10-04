@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { normalizeState } from "./states.js";
 import { useConsent } from "./consent-core.js";
+import { addressFrom } from "./regions.js";
 
 // ---------------------------------------------------------------------------
 // LOCATION
@@ -35,9 +36,28 @@ const GEO_TIMEOUT_MS = 12000;
 let inflight = null;
 let recent = null;
 const RECENT_MS = 4000;
+// A read that never answers (the phone's permission prompt left open, or a
+// GPS that never settles) must not be handed to every later tap.
+const GIVE_UP_MS = 45000;
+
+// Why a read failed, from the browser's own error code, so the screen can say
+// what to DO rather than one sentence for everything.
+function reasonOf(err) {
+  if (err && err.code === 1) return "denied";
+  if (err && err.code === 2) return "unavailable";
+  if (err && err.code === 3) return "timeout";
+  return "other";
+}
+// The text key for a reason (loc_e_* in i18n).
+export function locErrorKey(reason) {
+  return reason === "denied" ? "loc_e_denied"
+       : reason === "unavailable" ? "loc_e_unavailable"
+       : reason === "timeout" ? "loc_e_timeout" : "loc_e_other";
+}
 
 export function useMyLocation() {
   const [state, setState] = useState("idle"); // idle | locating | done | error
+  const [reason, setReason] = useState(null); // why it failed: denied | unavailable | timeout | other
   const consent = useConsent();
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
@@ -54,7 +74,7 @@ export function useMyLocation() {
       // The phone's position is read only after a yes (consent-core.js). A
       // no is not an error: nothing is shown, and the caller gets null.
       if (!(await consent.ask("location"))) {
-        if (alive.current) setState("idle");
+        if (alive.current) { setState("idle"); setReason(null); }
         return null;
       }
       if (inflight) return inflight;
@@ -62,9 +82,17 @@ export function useMyLocation() {
       // A reading was taken, so the first-visit auto-detect has no business
       // running again behind it.
       try { window.localStorage.setItem("dhundo_geo_tried", "1"); } catch (_) {}
-      inflight = new Promise((resolve) => {
-        if (!supported) { setState("error"); return resolve(null); }
+      inflight = new Promise((resolve0) => {
+        let settled = false;
+        const resolve = (v) => { settled = true; resolve0(v); };
+        if (!supported) { setReason("other"); setState("error"); return resolve(null); }
+        setReason(null);
         setState("locating");
+        setTimeout(() => {
+          if (settled) return;
+          if (alive.current) { setReason("timeout"); setState("error"); }
+          resolve(null);
+        }, GIVE_UP_MS);
 
         // ------------------------------------------------------------------
         // WHY THIS ASKS TWICE
@@ -109,7 +137,7 @@ export function useMyLocation() {
               // English, and without this Nominatim answers in whatever the
               // browser prefers -- "ত্রিপুরা" never matches "Tripura".
               const url =
-                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&accept-language=en" +
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
                 `&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`;
 
               const ctrl = new AbortController();
@@ -137,12 +165,16 @@ export function useMyLocation() {
               const st = a.state ? normalizeState(a.state) : (a.country_code === "in" ? null : a.country || null);
 
               if (!alive.current) return resolve(null);
-              if (!area && !st) { setState("error"); return resolve(null); }
+              // A remote spot the map names in no way at all is still a
+              // position: keep it. Throwing a good GPS fix away because the
+              // map has nothing written there is how "cannot find my
+              // location" happened in villages.
               setState("done");
               // The coordinates come back too, not just the name. Distance
               // is computed from these -- "4 km away" cannot be derived
               // from the word "Krishnanagar".
-              resolve({ area, state: st, lat: latitude, lng: longitude, accuracy });
+              resolve({ area, state: st, lat: latitude, lng: longitude, accuracy,
+                        address: addressFrom(a, body && body.display_name) });
             } catch (_) {
               // The geocoder failed, but the FIX did not. Coordinates
               // without a name are still worth having: distance works, and
@@ -165,7 +197,7 @@ export function useMyLocation() {
         const coarse = () =>
           window.navigator.geolocation.getCurrentPosition(
             onFix,
-            () => { if (alive.current) setState("error"); resolve(null); },
+            (err) => { if (alive.current) { setReason(reasonOf(err)); setState("error"); } resolve(null); },
             { enableHighAccuracy: false, timeout: 10000, maximumAge: 60 * 1000 }
           );
 
@@ -184,7 +216,7 @@ export function useMyLocation() {
     [supported, consent.ask]
   );
 
-  return { supported, state, detect, reset: () => setState("idle") };
+  return { supported, state, reason, detect, reset: () => { setState("idle"); setReason(null); } };
 }
 
 // ---------------------------------------------------------------------------

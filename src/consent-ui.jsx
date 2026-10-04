@@ -167,41 +167,6 @@ export function ConsentProvider({ rpc, signedIn, children }) {
   );
 }
 
-// -------------------------------------------------------------- home card
-// Shown once, until the person answers either way. Nothing asks for the
-// location on its own any more: this card, or a button that needs it.
-export function LocationAskCard({ style, onAllowed }) {
-  const { t } = useI18n();
-  const c = useConsent();
-  if (getLocal("location")) return null;
-  return (
-    <div style={{
-      display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 14,
-      background: T.white, border: `1px solid ${T.line}`, marginBottom: 16, ...style,
-    }}>
-      <span aria-hidden="true" style={{
-        width: 40, height: 40, borderRadius: 12, flexShrink: 0, color: "#fff", background: T.brand,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}><Icon name="pin" size={21} /></span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink }}>{t("cs_card_t")}</span>
-        <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "3px 0 10px" }}>
-          {t("cs_card_b")}
-        </span>
-        <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Btn onClick={async () => { if ((await c.ask("location")) && onAllowed) onAllowed(); }}
-               style={{ minHeight: 42, padding: "9px 16px" }}>
-            {t("cs_card_btn")}
-          </Btn>
-          <Btn kind="ghost" onClick={() => c.withdraw("location")} style={{ minHeight: 42, padding: "9px 16px" }}>
-            {t("cs_deny")}
-          </Btn>
-        </span>
-      </span>
-    </div>
-  );
-}
-
 // ------------------------------------------------------ account > privacy
 export function PrivacyPanel() {
   const { t } = useI18n();

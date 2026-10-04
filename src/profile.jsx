@@ -32,16 +32,13 @@
 // ===========================================================================
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  T, Icon, Btn, Chip, Notice, input, AreaField, AreaInput, CityPicker, ConfirmDelete,
-  StateSelect,
+  T, Icon, Btn, Chip, Notice, input, ConfirmDelete,
   groupStyle, groupLabel,
   plateLooksRight,
 } from "./ui.jsx";
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
-import MapPicker from "./mappicker.jsx";
-import { useMyLocation } from "./device.jsx";
+import { PlaceField } from "./locpicker.jsx";
 import { useConsent } from "./consent-core.js";
-import { pinForPlace } from "./regions.js";
 
 const PHOTO_BUCKET = "services-photos";
 const ID_BUCKET = "services-ids";
@@ -108,7 +105,6 @@ function Section({ title, children, onSave, saving, saved, dirty, note }) {
 export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const consent = useConsent();
   const { t, lang } = useI18n();
-  const geo = useMyLocation();
 
   const [row, setRow] = useState(undefined);   // undefined = loading, null = none
   const [f, setF] = useState(null);
@@ -124,7 +120,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const [moreGroup, setMoreGroup] = useState(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
   const [savingKey, setSavingKey] = useState(null);
   const [savedKey, setSavedKey] = useState(null);
   const [dirty, setDirty] = useState({});
@@ -203,16 +198,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
     setSavedKey(null);
   };
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
-  // The PIN code of a picked area or town. The area is closer than the town,
-  // so it replaces a PIN the town filled in; a town only fills an empty one.
-  const autoPin = async (o, fromTown = false) => {
-    const r = await pinForPlace(o).catch(() => null);
-    if (!r || !r.pincode) return;
-    setF((p) => (fromTown && p.pincode && !p.pin_auto ? p
-      : { ...p, pincode: r.pincode, pin_auto: true }));
-    setDirty((d) => ({ ...d, contact: true }));
-  };
-
   // -------------------------------------------------------------- saving
   // One place, so every section behaves identically and a new section
   // cannot invent its own error handling.
@@ -328,24 +313,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
     } catch (e) { setErr(e.message || t("e_save")); }
   };
 
-  const saveFix = async (lat, lng) => {
-    setErr(null); setMsg(null);
-    try {
-      const r = await api.setMyLocation(lat, lng);
-      const one = Array.isArray(r) ? r[0] : r;
-      if (one && one.ok) {
-        setMsg(t("p_gps_set"));
-        // An exact position settles the PIN code too, when none is set.
-        if (!/^\d{6}$/.test(String(f.pincode || "").trim())) {
-          const pr = await pinForPlace({ lat, lng }).catch(() => null);
-          if (pr && pr.pincode) await save("address", { p_pincode: pr.pincode });
-        }
-        load();
-      }
-      else setErr(t("e_save"));
-    } catch (e) { setErr(e.message || t("e_save")); }
-  };
-
   // ------------------------------------------------------------ to-do list
   // Only what is missing, in the order it is worth doing, each saying what
   // the person GETS rather than what the app wants.
@@ -379,14 +346,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
 
   return (
     <div style={{ maxWidth: 620, paddingBottom: 40 }}>
-      {mapOpen && (
-        <MapPicker
-          start={row && typeof row.lat === "number" ? { lat: row.lat, lng: row.lng } : null}
-          onCancel={() => setMapOpen(false)}
-          onConfirm={async (pt) => { setMapOpen(false); await saveFix(pt.lat, pt.lng); }}
-        />
-      )}
-
       {/* ------------------------------------------------------- status */}
       <div style={{
         background: T.white, border: `1px solid ${T.line}`, borderRadius: 16,
@@ -759,18 +718,26 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
         <Section
           title={t("p_contact")}
           dirty={dirty.contact} saving={savingKey === "contact"} saved={savedKey === "contact"}
-          onSave={() => {
+          onSave={async () => {
             if (!f.full_name.trim()) return setErr(t("e_name"));
             if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
+            if (!isAdmin && !(await consent.ask("listing"))) return;
+            // An exact spot is saved first, as the listing's position; the
+            // rest then follows without moving it.
+            if (f.pos && f.pos.exact) {
+              try { await api.setMyPosition(f.pos.lat, f.pos.lng, f.pos.source); }
+              catch (e) { return setErr(e.message || t("e_save")); }
+            }
             save("contact", {
               p_full_name: f.full_name.trim(),
               p_phone: f.phone.trim(),
               p_locality: f.locality.trim() || null,
               p_state: f.state,
               // 0, not null: null means "leave alone" everywhere else in
-              // this function, so clearing the city needs its own signal.
-              p_city_id: f.city_id || 0,
-              // The PIN code that came with the picked area or town.
+              // this function, so clearing the city needs its own signal. Only
+              // when the place was changed: the old town belonged to the old one.
+              ...(f.pos ? { p_city_id: 0 } : {}),
+              // The PIN code that came with the chosen place.
               ...(f.pin_auto && /^\d{6}$/.test(f.pincode) ? { p_pincode: f.pincode } : {}),
             });
           }}
@@ -798,93 +765,24 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             </div>
           </Row>
 
-          <Row label={t("w2_city")} hint={t("w2_city_hint")}>
-            <CityPicker
-              api={api} state={f.state}
-              cityId={f.city_id} cityName={f.city_name}
-              onPick={(c) => {
-                setF((p) => ({ ...p, city_id: c.id, city_name: c.place,
-                               district: c.district || "" }));
-                setDirty((d) => ({ ...d, contact: true }));
-                autoPin({ lat: c.lat, lng: c.lng, name: c.place, state: f.state, district: c.district || null }, true);
-              }}
-            />
-            {f.district && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 7 }}>
-                {t("w2_district").replace("{d}", f.district)}
-              </div>
-            )}
-          </Row>
-
+          {/* ONE QUESTION: where. Type a road, a shop or a village and tap it,
+              or use the phone's position, then move the pin to the exact
+              door. State, PIN code and address follow from the spot. */}
           <Row label={t("w2_area")}>
-            <AreaInput state={f.state} value={f.locality}
-                       onChange={(p, meta) => {
-                         set("contact", "locality", p);
-                         // A place picked from the list brings its PIN code.
-                         if (meta && meta.picked) {
-                           autoPin({ lat: meta.lat, lng: meta.lng, name: p, state: f.state,
-                                     district: meta.district || f.district || null });
-                         }
-                       }} />
-
-            {/* A SEPARATE QUESTION, and now labelled as one. These write
-                coordinates, which is what distance is calculated from; they
-                do not set the name above. Presenting them as an alternative
-                way to fill in the area is what let a GPS guess overwrite a
-                name somebody had typed correctly.
-
-                Both save on their own -- they write through a different
-                function, and making somebody press the section's Save
-                afterwards would imply the pin had not registered. */}
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: T.inkFaint,
-                          textTransform: "uppercase", letterSpacing: 0.4,
-                          margin: "16px 0 2px" }}>
-              {t("p_distance_title")}
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10,
-                          flexWrap: "wrap" }}>
-              <button
-                onClick={async () => {
-                  setErr(null); setMsg(null);
-                  const got = await geo.detect();
-                  if (!got || typeof got.lat !== "number") { setErr(t("location_denied")); return; }
-                  await saveFix(got.lat, got.lng);
-                }}
-                disabled={geo.state === "locating"}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "11px 14px", borderRadius: 10, minHeight: 46,
-                  border: `1px solid rgba(5,66,145,0.28)`, background: T.brandSoft,
-                  color: T.brandDeep, fontSize: 13.5, fontWeight: 700,
-                  fontFamily: "inherit", cursor: "pointer",
-                }}>
-                <Icon name="crosshair" size={17} />
-                {geo.state === "locating" ? t("loc_detecting") : t("p_use_gps")}
-              </button>
-
-              <button onClick={() => setMapOpen(true)} style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "11px 14px", borderRadius: 10, minHeight: 46,
-                border: `1px solid ${T.line}`, background: T.white,
-                color: T.ink, fontSize: 13.5, fontWeight: 700,
-                fontFamily: "inherit", cursor: "pointer",
-              }}>
-                <Icon name="pin" size={17} style={{ color: T.brandDark }} />
-                {t("p_use_map")}
-              </button>
-            </div>
-            <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
-              {t("p_gps_hint")}
-            </div>
-
-            <StateSelect
-              value={f.state}
-              style={{ marginTop: 12 }}
-              onChange={(st) => {
-                setF((p) => ({
-                  ...p, state: st, locality: p.state === st ? p.locality : "",
+            <PlaceField
+              value={f.locality ? { area: f.locality, state: f.state, pin: f.pincode, exact: f.pos ? f.pos.exact : undefined } : null}
+              sheetPlace={{ state: f.state, area: f.locality }}
+              onChange={(p) => {
+                setF((prev) => ({
+                  ...prev,
+                  locality: p.area, state: p.state || prev.state,
+                  pincode: p.pin || prev.pincode, pin_auto: true,
+                  // The town picked before belonged to the old place.
+                  city_id: null, city_name: "", district: "",
+                  address_line: prev.address_line || (p.exact && p.address ? p.address : ""),
+                  pos: typeof p.lat === "number" ? { lat: p.lat, lng: p.lng, source: p.source, exact: !!p.exact } : null,
                 }));
-                setDirty((d) => ({ ...d, contact: true }));
+                setDirty((d) => ({ ...d, contact: true, address: true }));
               }}
             />
           </Row>
@@ -915,12 +813,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             <input style={field} value={f.landmark} placeholder={t("p_landmark_ph")}
                    onChange={(e) => set("address", "landmark", e.target.value)} />
           </Row>
-          <Row label={t("p_pincode")}>
-            <input style={{ ...field, maxWidth: 180 }} value={f.pincode} inputMode="numeric"
-                   maxLength={6} placeholder="799001"
-                   onChange={(e) => { set("address", "pincode", e.target.value); setF((p) => ({ ...p, pin_auto: false })); }} />
-          </Row>
-
           <label style={{
             display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
             padding: "13px 14px", borderRadius: 11, minHeight: 52, marginBottom: 14,

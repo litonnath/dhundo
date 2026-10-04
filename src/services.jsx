@@ -23,20 +23,21 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
-  ListingCard, EmptyState, TrustBar, InstallSheet, LocationSheet, OutOfArea,
-  AreaField, AreaInput, CityPicker, StateSwitch, StateSelect, groupStyle, groupLabel, WalletSheet,
+  ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea,
+  groupStyle, groupLabel, WalletSheet,
   plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
-import { useMyLocation, isInstalledApp } from "./device.jsx";
+import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
-import { LocationAskCard, PrivacyPanel } from "./consent-ui.jsx";
+import { PrivacyPanel } from "./consent-ui.jsx";
+import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
 // ---------------------------------------------------------------- data layer
@@ -197,6 +198,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
 
     // ---------------------------------------------------------- profile
     myListing: () => rpc("services_my_listing", {}, true),
+    // An exact position for the listing: "device" for the phone GPS, "picked"
+    // for a place chosen or a pin placed by hand (no GPS consent needed).
+    setMyPosition: (lat, lng, source) =>
+      rpc("services_set_my_position", { p_lat: lat, p_lng: lng, p_source: source || "picked" }, true),
     setMyLocation: (lat, lng) =>
       rpc("services_set_my_location", { p_lat: lat, p_lng: lng }, true),
     updateMyListing: (p) => rpc("services_update_my_listing", p, true),
@@ -337,7 +342,7 @@ function rateLabel(min, max, suffix = "/day") {
 }
 
 // -------------------------------------------------------------------- browse
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -348,13 +353,14 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const locate = async () => {
     const got = await geo.detect();
     if (!got || typeof got.lat !== "number") return;
-    setPlace((p) => ({
-      ...p,
-      area: got.area || p.area,
-      state: got.state && STATES.includes(got.state) ? got.state : p.state,
-      // A new position may be in another PIN; worked out again.
-      lat: got.lat, lng: got.lng, pin: undefined, city: undefined,
-    }));
+    const d = await describePoint({ lat: got.lat, lng: got.lng, state: got.state || place.state,
+                                    address: got.address, area: got.area, accuracy: got.accuracy });
+    // A position outside the states we cover is left to the "outside" notice
+    // in the location sheet rather than saved as a place here.
+    if (d.state && !STATES.includes(d.state)) { onPickLocation && onPickLocation(); return; }
+    setPlace({ area: d.area || (place && place.area) || "", state: d.state || place.state,
+               lat: d.lat, lng: d.lng, pin: d.pin || undefined, city: d.town || undefined,
+               address: d.line || undefined });
   };
   // The area and the state are set in the header and owned by the page, so
   // there is one answer to "where am I looking?" rather than two.
@@ -639,7 +645,10 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
             <InstallBanner onOpen={onInstall} />
-            {geo.supported && !hasPos && <LocationAskCard onAllowed={locate} />}
+            <LocationBar place={place} onOpen={onPickLocation}
+                         onLocate={geo.supported ? locate : null}
+                         locating={geo.state === "locating"}
+                         errorKey={geo.state === "error" ? locErrorKey(geo.reason) : null} />
             {!(user && user.id) && <SignupHelp />}
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
@@ -782,6 +791,11 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   {geo.state === "locating" ? t("loc_detecting") : t("near_on")}
                 </button>
               ) : null}
+              {geo.state === "error" && typeof (place && place.lat) !== "number" && (
+                <span style={{ flexBasis: "100%", fontSize: 12.5, color: T.red, lineHeight: 1.5 }}>
+                  {t(locErrorKey(geo.reason))}
+                </span>
+              )}
             </div>
 
             {/* How far to look: the person decides, and it is remembered. */}
@@ -959,16 +973,12 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [done, setDone] = useState(null);
+  // Where THIS listing is. Its own, not the place somebody is browsing from:
+  // choosing a shop's location here must not move the home screen, and the
+  // home screen's location must not become a shop's by accident.
+  const [lp, setLp] = useState(null);
 
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
-  // Fill the PIN code from a picked town or area, unless the person typed
-  // one themselves.
-  const autoPin = async (o) => {
-    const r = await pinForPlace(o).catch(() => null);
-    if (r && r.pincode) {
-      setF((p) => (!p.pincode || p.pin_auto ? { ...p, pincode: r.pincode, pin_auto: true } : p));
-    }
-  };
 
   const togglePick = (slug) => {
     setErr(null);
@@ -1015,13 +1025,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
         p_years_experience: num(f.years_experience),
         p_day_rate_min: num(f.day_rate_min),
         p_day_rate_max: num(f.day_rate_max),
-        p_locality: (place.area || "").trim() || null,
+        p_locality: ((lp && lp.area) || "").trim() || null,
         p_city: null,
         p_about: f.about.trim() || null,
         p_languages: [],
         p_photos: [],
         p_business_name: f.business_name.trim() || null,
-        p_state: place.state,
+        p_state: (lp && lp.state) || place.state,
       };
       // No caller id in either payload -- 59 takes it from the token.
       const r = one(isAdmin
@@ -1052,6 +1062,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           // The listing itself succeeded. Losing an optional address is not
           // worth showing an error over -- it can be added from My listing.
         }
+      }
+
+      // An exact spot (the phone GPS, a pin placed on the map, a shop or
+      // road chosen from the search) is saved as the listing's position, so
+      // distance is from the door and not from the middle of the village.
+      if (r && r.ok && !isAdmin && lp && lp.exact && typeof lp.lat === "number") {
+        try { await api.setMyPosition(lp.lat, lp.lng, lp.source); } catch (_) {}
       }
 
       if (r && r.ok) {
@@ -1308,75 +1325,31 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             </div>
           </BigField>
 
-          {/* Typed, not picked. The list cannot hold every para in Tripura,
-              and the crosshair that used to sit beside this produced a NAME
-              by looking up the nearest listed village -- which is how
-              somebody ended up filed under a place they do not live in.
-              Coordinates are asked for separately, in My listing, where they
-              do what they are actually for: distance. */}
-          {/* Three questions, in the order they depend on each other:
-              state, then city (from a list), then the para (typed). The
-              district is not asked at all -- it follows from the city, so
-              asking would be asking somebody to confirm a fact we already
-              hold, and giving them a chance to get it wrong. */}
-          <BigField label={t("w2_city")} hint={t("w2_city_hint")}>
-            <CityPicker
-              api={api} state={place.state}
-              cityId={f.city_id} cityName={f.city_name}
-              onPick={(c) => {
-                setF((p) => ({ ...p, city_id: c.id, city_name: c.place,
-                               district: c.district || "" }));
-                // The town gives a PIN code until the area gives a closer one.
-                autoPin({ lat: c.lat, lng: c.lng, name: c.place, state: place.state,
-                          district: c.district || null });
-              }}
-            />
-            {f.district && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 7 }}>
-                {t("w2_district").replace("{d}", f.district)}
-              </div>
-            )}
-            <StateSelect
-              value={place.state}
-              style={{ marginTop: 10 }}
-              onChange={(st) => {
-                if (place.state === st) return;
-                // A city belongs to a state. Keeping it across a change
-                // would file somebody in a city their state does not
-                // contain -- the same class of bug as "Champaknagar, Delhi".
-                setF((p) => ({ ...p, city_id: null, city_name: "", district: "" }));
-                setPlace({ area: "", state: st });
-              }}
-            />
-          </BigField>
-
+          {/* ONE QUESTION: where. Type a road, a shop or a village and tap it,
+              or use the phone's position, then move the pin to the exact
+              door if it is not already there. The state, the PIN code and
+              the address all follow from the spot -- none of them is typed. */}
           <BigField label={t("w2_area")}>
-            <AreaInput state={place.state} value={place.area}
-                       onChange={(v, meta) => {
-                         setPlace({ ...place, area: v });
-                         // A place picked from the list fills in its PIN code.
-                         if (meta && meta.picked) {
-                           autoPin({ lat: meta.lat, lng: meta.lng, name: v, state: place.state,
-                                     district: meta.district || f.district || null });
-                         }
-                       }} />
-          </BigField>
-
-          {/* Here, not on the optional step: customers see everybody in their
-              own PIN code first, so this is what puts a listing in front of
-              its neighbours. Filled in from the area or town picked above;
-              what the person types themselves is never overwritten. */}
-          <BigField label={t("p_pincode")} hint={t("w2_pin_hint")}>
-            <input style={{ ...bigInput, maxWidth: 200, fontWeight: 800, letterSpacing: 1 }}
-                   value={f.pincode} inputMode="numeric" maxLength={6}
-                   placeholder="799001"
-                   onChange={(e) => setF((p) => ({ ...p, pin_auto: false,
-                     pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))} />
+            <PlaceField
+              value={lp}
+              sheetPlace={lp || { state: place.state }}
+              onChange={(p) => {
+                setLp(p);
+                setF((prev) => ({
+                  ...prev,
+                  pincode: p.pin || prev.pincode, pin_auto: true,
+                  // The address line starts from what the map found, only for
+                  // an exact spot and only when nothing is written yet.
+                  address_line: prev.address_line || (p.exact && p.address ? p.address : ""),
+                }));
+              }}
+            />
           </BigField>
 
           <Btn full onClick={() => {
             if (!f.full_name.trim()) return setErr(t("e_name"));
             if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
+            if (!lp || (!lp.area && typeof lp.lat !== "number")) return setErr(t("loc_need"));
             setErr(null); setStep(3);
           }}>{t("w_next")}</Btn>
         </>
@@ -2095,6 +2068,7 @@ export default function ServicesPage({
             lat: typeof p.lat === "number" ? p.lat : undefined,
             lng: typeof p.lng === "number" ? p.lng : undefined,
             pin: /^\d{6}$/.test(String(p.pin || "")) ? String(p.pin) : undefined,
+            address: typeof p.address === "string" && p.address ? p.address : undefined,
             // Saved before post office suffixes were dropped: "Dharmanagar H.O".
             city: typeof p.city === "string" && p.city
               ? p.city.replace(/\s+(?:H\.?\s?O|S\.?\s?O|B\.?\s?O|G\.?\s?P\.?\s?O)\.?$/i, "").trim() : undefined,
@@ -2108,6 +2082,16 @@ export default function ServicesPage({
     return { area: "", state: DEFAULT_STATE };
   });
   const [outside, setOutside] = useState(null);
+
+  // The position, PIN, town and address belong to the state they were found
+  // in. A saved place whose position does not fit its state (Tripura's
+  // coordinates under Haryana) would show people from the wrong state, so it
+  // is cut back to the area and the state, and asked for again.
+  useEffect(() => {
+    if (!placeIsCoherent(place)) {
+      setPlace((p) => ({ area: p.area, state: p.state }));
+    }
+  }, [place.lat, place.lng, place.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     try { window.localStorage.setItem("dhundo_place", JSON.stringify(place)); } catch (_) {}
@@ -2163,15 +2147,16 @@ export default function ServicesPage({
     geo.detect().then(async (got) => {
       if (!alive || !got) return;
       if (got.state && !STATES.includes(got.state)) { setOutside(got.state); return; }
-      // The nearest village from the place table, not the town the map
-      // service names when a village is only a dot on its map.
-      const close = await nearestPlaces(got.lat, got.lng);
-      const named = bestNearName(close, got.area);
+      // The village from the place table, the address and the PIN, for the
+      // spot the phone is at.
+      const d = await describePoint({ lat: got.lat, lng: got.lng, state: got.state,
+                                      address: got.address, area: got.area, accuracy: got.accuracy });
       if (!alive) return;
       setPlace((p) => ({
-        area: named || p.area,
-        state: got.state && STATES.includes(got.state) ? got.state : p.state,
-        lat: got.lat, lng: got.lng,
+        area: d.area || p.area,
+        state: d.state && STATES.includes(d.state) ? d.state : p.state,
+        lat: d.lat, lng: d.lng, pin: d.pin || undefined, city: d.town || undefined,
+        address: d.line || undefined,
       }));
     });
     return () => { alive = false; };
@@ -2321,6 +2306,7 @@ export default function ServicesPage({
           onAdd={() => setTab(hasListing && !isAdmin ? "mine" : "add")}
           place={place} setPlace={setPlace}
           onInstall={() => setInstallOpen(true)}
+          onPickLocation={() => setLocOpen(true)}
         />
       )}
 

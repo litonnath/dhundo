@@ -400,7 +400,7 @@ export async function pinNear(lat, lng) {
 // position, else from its name (and district) -- so picking a village never
 // leaves the PIN empty just because the village has no position of its own.
 // { pincode, place } or null.
-export async function pinForPlace({ lat, lng, name, state, district } = {}) {
+export async function pinForPlace({ lat, lng, name, state, district, postcode } = {}) {
   // 1. The post office of that name: exact India Post data -- "Tilthai
   //    Nutanbazar B.O" is 799260. The PIN-centre positions are rough, so a
   //    position alone once gave Tilthai the PIN of Dharmanagar.
@@ -409,6 +409,10 @@ export async function pinForPlace({ lat, lng, name, state, district } = {}) {
       { p_state: state || null, p_place: name, p_district: district || null });
     if (byOffice) return byOffice;
   }
+  // 1b. The PIN the map itself has for that very spot (an address with a
+  //     postcode in OpenStreetMap): better than the PIN centre nearest.
+  const mapPin = validPin(postcode);
+  if (mapPin) return { pincode: mapPin, place: "" };
   // 2. The PIN centre nearest the position.
   const byPos = await pinNear(lat, lng);
   if (byPos) return byPos;
@@ -562,4 +566,205 @@ function sameState(osmState, ours) {
   if (a === b) return true;
   if (b === "delhi") return a.includes("delhi");          // "National Capital Territory of Delhi"
   return a.includes(b) || b.includes(a);
+}
+
+
+// ===========================================================================
+// SEARCH FOR ANYWHERE -- roads, shops, landmarks, villages
+//
+// What "type your location" runs on, the way Uber and Rapido do it: a road, a
+// shop, a school, a colony or a village, anywhere in India, each with the
+// position it has on the map. Three sources, asked in this order:
+//   1. our own place table (villages, with positions, instant);
+//   2. Photon, over OpenStreetMap -- shops, roads and landmarks included;
+//   3. Nominatim, OpenStreetMap's own search, only when both came back empty
+//      (it asks for no more than a request a second).
+// Whatever none of them knows can still be placed with the pin on the map.
+// ===========================================================================
+const INDIA_BBOX = "68.0,6.5,97.5,35.8";
+const anyCache = new Map();
+let lastNominatim = 0;
+
+const clean = (x) => String(x == null ? "" : x).trim();
+
+export function validPin(x) {
+  const d = clean(x).replace(/\s/g, "");
+  return /^[1-9]\d{5}$/.test(d) ? d : null;
+}
+
+// Parts joined with commas, empty ones and repeats left out.
+function uniqueJoin(parts) {
+  const seen = new Set();
+  return parts.map(clean).filter((x) => {
+    const k = x.toLowerCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).join(", ");
+}
+
+// The address as people say it, from what OpenStreetMap knows about a spot:
+// house, road, locality, village or town, district -- and the PIN code when
+// it has one. Parts the map does not have are simply left out.
+export function addressFrom(a, display) {
+  a = a || {};
+  let line = uniqueJoin([
+    a.house_number, a.road, a.neighbourhood || a.suburb || a.quarter,
+    a.village || a.hamlet || a.town || a.city, a.state_district || a.county,
+  ]);
+  if (!line && display) line = String(display).split(",").slice(0, 3).join(",").trim();
+  return { line: line || null, postcode: validPin(a.postcode), road: a.road || null };
+}
+
+function fromPhoton(f) {
+  const p = (f && f.properties) || {};
+  const xy = (f && f.geometry && f.geometry.coordinates) || [];
+  if (typeof xy[1] !== "number" || typeof xy[0] !== "number") return null;
+  if (p.countrycode && p.countrycode !== "IN") return null;
+  const street = [p.housenumber, p.street].filter(Boolean).join(" ");
+  const title = clean(p.name) || street;
+  if (!title) return null;
+  const isPlace = p.osm_key === "place" || p.osm_key === "boundary";
+  const locality = clean(p.locality || p.district);
+  const town = clean(p.city);
+  return {
+    title,
+    subtitle: uniqueJoin([street !== title ? street : "", locality, town, p.county, p.state])
+      .split(", ").filter((x) => x.toLowerCase() !== title.toLowerCase()).join(", "),
+    lat: xy[1], lng: xy[0],
+    state: p.state ? normalizeState(p.state) : null,
+    district: clean(p.county || p.district) || null,
+    area: isPlace ? title : (locality || town || clean(p.county)),
+    line: isPlace ? uniqueJoin([title, town, p.county])
+                  : uniqueJoin([p.name, street, locality, town, p.county]),
+    postcode: validPin(p.postcode),
+    kind: isPlace ? "place" : (p.osm_key || "poi"),
+  };
+}
+
+function fromNominatim(r) {
+  const a = (r && r.address) || {};
+  const lat = parseFloat(r && r.lat), lng = parseFloat(r && r.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (a.country_code && a.country_code !== "in") return null;
+  const road = [a.house_number, a.road].filter(Boolean).join(" ");
+  const loc = clean(a.neighbourhood || a.suburb || a.quarter || a.village || a.hamlet || a.town || a.city || a.city_district);
+  const town = clean(a.village || a.town || a.city || a.hamlet);
+  const title = clean(r.name) || road || loc || clean(String(r.display_name || "").split(",")[0]);
+  if (!title) return null;
+  return {
+    title,
+    subtitle: uniqueJoin([road !== title ? road : "", loc !== title ? loc : "", town, a.state_district || a.county, a.state])
+      .split(", ").filter((x) => x.toLowerCase() !== title.toLowerCase()).join(", "),
+    lat, lng,
+    state: a.state ? normalizeState(a.state) : null,
+    district: clean(a.state_district || a.county) || null,
+    area: loc || town || title,
+    line: uniqueJoin([r.name && r.name !== loc ? r.name : "", road, loc, town, a.state_district || a.county]),
+    postcode: validPin(a.postcode),
+    kind: r.category || "poi",
+  };
+}
+
+async function politeNominatim() {
+  const wait = lastNominatim + 1100 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastNominatim = Date.now();
+}
+
+export async function searchAnywhere(query, { state, near, signal } = {}) {
+  const q = clean(query);
+  if (q.length < 3) return [];
+  const key = `${state || ""}|${q.toLowerCase()}`;
+  const hit = anyCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.rows;
+
+  // 1. Our own table: the villages, with positions.
+  const spellings = hasIndic(q) ? variants(q, 4) : [q];
+  let mine = [];
+  for (const sp of spellings) {
+    if (clean(sp).length < 3) continue;
+    mine = await searchDb(state, sp, signal);
+    if (mine.length) break;
+  }
+  const own = mine.slice(0, 6).map((r) => ({
+    title: r.place,
+    subtitle: uniqueJoin([r.group, state]),
+    lat: r.lat, lng: r.lng, state: state || null, district: r.district,
+    area: r.place, line: uniqueJoin([r.place, r.district]), postcode: null, kind: "place",
+  }));
+
+  // 2. Photon: shops, roads, landmarks and settlements anywhere in India.
+  const c = near && typeof near.lat === "number" ? { lat: near.lat, lon: near.lng }
+          : STATE_CENTERS[state] ? { lat: STATE_CENTERS[state][0], lon: STATE_CENTERS[state][1] } : BIAS;
+  let remote = [];
+  try {
+    const sp = spellings.find((x) => clean(x).length >= 3) || q;
+    const res = await fetch(
+      `${PHOTON}?q=${encodeURIComponent(sp)}&limit=12&lang=en&lat=${c.lat}&lon=${c.lon}&bbox=${INDIA_BBOX}`,
+      { signal, headers: { Accept: "application/json" } });
+    if (res.ok) remote = ((await res.json()).features || []).map(fromPhoton).filter(Boolean);
+  } catch (_) { /* offline, blocked, aborted: the next source, then the map */ }
+
+  // 3. Nominatim, only when nothing else found anything.
+  if (!own.length && !remote.length && !(signal && signal.aborted)) {
+    try {
+      await politeNominatim();
+      const res = await fetch(
+        "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=in&accept-language=en" +
+        `&q=${encodeURIComponent(q)}`, { signal, headers: { Accept: "application/json" } });
+      if (res.ok) {
+        const rows = await res.json();
+        remote = (Array.isArray(rows) ? rows : []).map(fromNominatim).filter(Boolean);
+      }
+    } catch (_) {}
+  }
+
+  const seen = new Set();
+  const rows = [...own, ...remote].filter((r) => {
+    const k = `${r.title}|${r.subtitle}`.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 12);
+  if (!(signal && signal.aborted)) {
+    anyCache.set(key, { at: Date.now(), rows });
+    if (anyCache.size > 60) anyCache.delete(anyCache.keys().next().value);
+  }
+  return rows;
+}
+
+// What is at a point on the map: the address, the state, the PIN the map has.
+export async function reverseLookup(lat, lng, signal) {
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+  try {
+    await politeNominatim();
+    const res = await fetch(
+      "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en" +
+      `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
+      { signal, headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const body = await res.json();
+    const a = (body && body.address) || {};
+    return {
+      area: a.suburb || a.neighbourhood || a.quarter || a.village || a.hamlet || a.town || a.city_district || a.county || null,
+      state: a.state ? normalizeState(a.state) : null,
+      address: addressFrom(a, body && body.display_name),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+// A saved place whose position does not fit its state (Tripura's coordinates
+// under Haryana) is not a place: it made results appear from the wrong state.
+export function placeIsCoherent(p) {
+  if (!p || typeof p.lat !== "number" || typeof p.lng !== "number") return true;
+  if (p.lat < 5 || p.lat > 38 || p.lng < 67 || p.lng > 98.5) return false;
+  const c = STATE_CENTERS[p.state];
+  if (!c) return true;
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (p.lat - c[0]) * rad, dLng = (p.lng - c[1]) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(c[0] * rad) * Math.cos(p.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h)) <= 800;
 }

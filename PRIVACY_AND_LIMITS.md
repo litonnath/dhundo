@@ -46,6 +46,7 @@ person's language.
 | Item edits | 60 per day |
 | Item reports | 20 per day |
 | Profile saves (address, email, PIN) | 30 per hour |
+| Saving an exact position | 30 per hour |
 | Referral code tries | 10 per hour |
 | Phone numbers opened (already existed) | 40 per hour |
 | Item contacts opened (already existed) | 40 per day |
@@ -69,3 +70,18 @@ seconds (OpenStreetMap asks for about one request a second).
 * **Search and lookup functions** (browse, place search, PIN lookup) are
   read-only and cannot count calls; they are protected by what Supabase puts in
   front of the API, not by this code.
+
+## Location
+
+* The home screen and both listing forms use one control: type a road, shop,
+  landmark or village and tap it, or use the phone's position, then move the
+  pin to the exact house. There is no PIN code box and no state list; the PIN
+  comes from the spot (the village's post office, else the map's own postcode).
+* A listing has its own location. Choosing it never moves the location someone
+  is browsing from.
+* An exact position (phone GPS, a pin placed on the map, a shop or road chosen
+  from the search) is saved as the listing's position and is not overwritten by
+  later edits (`sql/94_parts`). A village chosen from the search is only the
+  middle of the village, so it is flagged and not saved as exact.
+* A saved browsing location whose coordinates do not fit its state is dropped.
+* Distances shown are straight-line, as the crow flies. Roads are longer.

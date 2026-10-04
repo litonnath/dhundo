@@ -16,7 +16,7 @@ begin
   alter table public.services_workers disable trigger user;
   alter table public.services_workers enable trigger services_workers_fill_coords;
   update public.services_workers set locality = locality
-   where loc_source is distinct from 'device';
+   where loc_source is distinct from 'device' and loc_source is distinct from 'picked';
   alter table public.services_workers enable trigger user;
 end $b$;
 
