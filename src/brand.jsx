@@ -65,6 +65,10 @@ export const CONTACT = {
   email: "",
 };
 
+// Who answers privacy requests and complaints (shown in the notice and My
+// data). Replace with the person who will really answer, then redeploy.
+export const GRIEVANCE = { name: "Liton Nath" };
+
 export function DhundoLogo({ size = 34, showWord = true, tagline = null, ink = "#0F1419" }) {
   return (
     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>

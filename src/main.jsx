@@ -34,6 +34,7 @@ import { I18nProvider, useI18n } from "./i18n.jsx";
 import { registerServiceWorker } from "./device.jsx";
 import { DhundoLogo } from "./brand.jsx";
 import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
+import { NoticePage, NoticeSheet } from "./privacy.jsx";
 import { ConsentProvider } from "./consent-ui.jsx";
 import { useConsent } from "./consent-core.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
@@ -159,6 +160,7 @@ function AuthPanel({ onDone, onClose }) {
   const consent = useConsent();
   const [agree, setAgree] = useState(false);
   const [more, setMore] = useState(false);
+  const [notice, setNotice] = useState(false);
 
   const signup = mode === "signup";
   const codeBad = code.length > 0 && !codeLooksRight(code);
@@ -311,7 +313,7 @@ function AuthPanel({ onDone, onClose }) {
               placeholder="ABC123"
               onChange={(e) => setCode(cleanCode(e.target.value))}
             />
-            <p style={hint}>{codeBad ? t("au_code_bad") : t("au_code_hint")}</p>
+            <p style={hint}>{codeBad ? t("au_code_bad") : t("au_code_hint")}{code.trim() && !codeBad ? ` ${t("au_code_note")}` : ""}</p>
           </div>
         )}
 
@@ -352,6 +354,11 @@ function AuthPanel({ onDone, onClose }) {
             {more && (
               <p style={{ ...hint, paddingLeft: 33, fontSize: 12.5, color: MUTED }}>{t("cs_b_account")}</p>
             )}
+            <button type="button" onClick={() => setNotice(true)} style={{
+              background: "none", border: "none", padding: "2px 0 0 33px", color: DEEP,
+              fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", minHeight: 32,
+            }}>{t("pn_link")}</button>
+            {notice && <NoticeSheet onClose={() => setNotice(false)} />}
           </div>
         )}
 
@@ -486,9 +493,14 @@ function App() {
 // network-first, so it can never pin people to an old build.
 registerServiceWorker();
 
+// /privacy is the standalone notice (the Play Store and the footer link to it).
+const onPrivacyPage = (() => {
+  try { return window.location.pathname.replace(/\/+$/, "") === "/privacy"; } catch (_) { return false; }
+})();
+
 createRoot(document.getElementById("root")).render(
   <I18nProvider>
-    <App />
+    {onPrivacyPage ? <NoticePage /> : <App />}
   </I18nProvider>
 );
 

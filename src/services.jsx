@@ -36,7 +36,7 @@ import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
-import { PrivacyLink } from "./consent-ui.jsx";
+import { PrivacyLinks } from "./privacy.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -292,6 +292,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
+    myData: () => rpc("services_my_data", {}, true),
+    setNominee: (name, phone) => rpc("services_set_nominee", { p_name: name, p_phone: phone }, true),
+    privacyRequest: (kind, body) => rpc("services_privacy_request", { p_kind: kind, p_body: body }, true),
+    logAdminAccess: (id, what) => rpc("services_log_admin_access", { p_worker_id: id, p_what: what }, true).catch(() => null),
     withdraw: (upi) => rpc("services_withdraw_request", { p_upi: upi }, true),
     myWithdrawals: () => rpc("services_my_withdrawals", {}, true),
     walletHistory: (limit = 50) =>
@@ -1509,13 +1513,14 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
   useEffect(() => {
     let alive = true;
     api.adminDetail(workerId)
-      .then((r) => { if (alive) setD(one(r)); })
+      .then((r) => { if (alive) { setD(one(r)); api.logAdminAccess(workerId, "listing"); } })
       .catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, [api, workerId]);
 
   const showId = async () => {
     setIdErr(false);
+    api.logAdminAccess(workerId, "id_document");
     try { setIdUrl(await api.signedIdUrl(d.id_doc_path)); }
     catch (_) { setIdErr(true); }
   };
@@ -2495,7 +2500,7 @@ export default function ServicesPage({
           onOpenProfile={() => setTab("profile")}
           onOpenAds={() => setTab("sell")}
           showCredits={inApp}
-          privacy={<PrivacyLink />}
+          privacy={<PrivacyLinks api={api} />}
         />
       )}
 

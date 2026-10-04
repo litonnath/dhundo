@@ -2254,6 +2254,7 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
             {hasListing ? t("nav_mine") : t("nav_list")}
           </button>
           {onInstall && <button style={link} onClick={onInstall}>{t("install_app")}</button>}
+          <a style={link} href="/privacy">{t("pn_link")}</a>
         </nav>
 
         {hasContact && (
