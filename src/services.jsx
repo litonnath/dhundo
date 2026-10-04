@@ -38,6 +38,7 @@ import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
+import { PhoneVerifySheet } from "./verify.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -301,6 +302,27 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     setNominee: (name, phone) => rpc("services_set_nominee", { p_name: name, p_phone: phone }, true),
     privacyRequest: (kind, body) => rpc("services_privacy_request", { p_kind: kind, p_body: body }, true),
     logAdminAccess: (id, what) => rpc("services_log_admin_access", { p_worker_id: id, p_what: what }, true).catch(() => null),
+    // CHECKING THE PHONE (sql/109). GoTrue sends the SMS (phone_change) and
+    // checks the code; the database then sees phone_confirmed_at.
+    phoneVerified: () => rpc("services_phone_verified", {}, true),
+    claimRewards: () => rpc("services_claim_rewards", {}, true),
+    sendPhoneCode: async (phone) => {
+      try {
+        const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          method: "PUT", headers: await authHeaders(), body: JSON.stringify({ phone }),
+        });
+        return { ok: res.ok, status: res.status };
+      } catch (_) { return { ok: false, status: 0 }; }
+    },
+    verifyPhoneCode: async (phone, token) => {
+      try {
+        const res = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+          method: "POST", headers: await authHeaders(),
+          body: JSON.stringify({ type: "phone_change", phone, token }),
+        });
+        return { ok: res.ok, status: res.status };
+      } catch (_) { return { ok: false, status: 0 }; }
+    },
     withdraw: (upi) => rpc("services_withdraw_request", { p_upi: upi }, true),
     myWithdrawals: () => rpc("services_my_withdrawals", {}, true),
     walletHistory: (limit = 50) =>
@@ -2271,6 +2293,7 @@ export default function ServicesPage({
   });
   const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   // null until it has loaded, which is what keeps the header chip from
   // flashing ₹0 first. Paise, as an integer, all the way to rupees().
   const [walletPaise, setWalletPaise] = useState(null);
@@ -2396,6 +2419,21 @@ export default function ServicesPage({
     }).catch(() => {});
     return () => { alive = false; };
   }, [place.lat, place.lng, place.pin, place.area]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Right after sign-up: offer to check the phone, once. Skippable; the
+  // wallet keeps the reminder until it is done.
+  useEffect(() => {
+    if (!user || !user.id) return undefined;
+    let flag = null;
+    try { flag = window.localStorage.getItem("dhundo_verify_prompt"); } catch (_) {}
+    if (!flag) return undefined;
+    try { window.localStorage.removeItem("dhundo_verify_prompt"); } catch (_) {}
+    let alive = true;
+    Promise.resolve(api.phoneVerified()).then((v) => {
+      if (alive && v === false) setVerifyOpen(true);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [user && user.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const geo = useMyLocation();
   const consent = useConsent();
@@ -2560,8 +2598,13 @@ export default function ServicesPage({
       )}
 
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
+      {verifyOpen && signedIn && (
+        <PhoneVerifySheet api={api} phone={user && user.phone}
+                          onClose={() => setVerifyOpen(false)}
+                          onDone={() => setVerifyOpen(false)} />
+      )}
       {walletOpen && signedIn && (
-        <WalletSheet api={api} phone={user && user.phone}
+        <WalletSheet api={api} phone={user && user.phone} PhoneVerify={PhoneVerifySheet}
                      onClose={() => setWalletOpen(false)} />
       )}
       {locOpen && (

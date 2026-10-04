@@ -675,7 +675,7 @@ function InvitePanel({ api }) {
 
 const WD_MIN = 50000; // paise: Rs 500, the same figure sql/103 enforces
 
-export function WalletSheet({ api, phone, onClose }) {
+export function WalletSheet({ api, phone, onClose, PhoneVerify = null }) {
   const { t, lang } = useI18n();
   useDismissable(true, onClose);
   const [state, setState] = React.useState({ loading: true, paise: 0, rows: [], failed: false });
@@ -683,11 +683,16 @@ export function WalletSheet({ api, phone, onClose }) {
   const [wd, setWd] = React.useState({ upi: "", busy: false, err: "", sent: false });
   const [open, setOpen] = React.useState([]);
   const [reload, setReload] = React.useState(0);
+  const [verified, setVerified] = React.useState(true);
+  const [pvOpen, setPvOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
     Promise.resolve(api.myWithdrawals ? api.myWithdrawals() : [])
       .then((w) => { if (alive) setOpen((Array.isArray(w) ? w : []).filter((x) => x.status === "requested")); })
+      .catch(() => {});
+    Promise.resolve(api.phoneVerified ? api.phoneVerified() : true)
+      .then((v) => { if (alive) setVerified(v !== false && !(Array.isArray(v) && v[0] === false)); })
       .catch(() => {});
     Promise.all([api.walletBalance(), api.walletHistory(50)])
       .then(([b, h]) => {
@@ -710,7 +715,7 @@ export function WalletSheet({ api, phone, onClose }) {
         setReload((n) => n + 1);
       } else {
         const k = x && x.reason;
-        setWd((y) => ({ ...y, busy: false, err: k === "bad_upi" ? t("wal_wd_bad_upi") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
+        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
       }
     } catch (e) {
       setWd((y) => ({ ...y, busy: false, err: (e && e.message) || t("e_gone") }));
@@ -775,6 +780,16 @@ export function WalletSheet({ api, phone, onClose }) {
         {/* Said before the history, not after: somebody who sees ₹5 and a
             list of credits will ask "can I take this out" within seconds,
             and the answer should reach them before the question does. */}
+        {!verified && (
+          <div style={{ marginBottom: 12, border: `1.5px solid ${T.red}`, background: T.redSoft, borderRadius: 14, padding: "13px 14px" }}>
+            <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.55, marginBottom: 9 }}>{t("pv_banner")}</div>
+            <Btn full onClick={() => setPvOpen(true)}>{t("pv_title")}</Btn>
+          </div>
+        )}
+        {pvOpen && PhoneVerify && (
+          <PhoneVerify api={api} phone={phone} onClose={() => setPvOpen(false)}
+                       onDone={() => { setPvOpen(false); setVerified(true); setReload((n) => n + 1); }} />
+        )}
         <Notice tone="info">{t("wal_not_spendable")}</Notice>
 
         {/* Below the balance and its caveat, above withdraw: this is the one

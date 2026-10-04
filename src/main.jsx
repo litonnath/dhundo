@@ -195,6 +195,7 @@ function AuthPanel({ onDone, onClose }) {
         ? await signUpWithPhone(CFG, { phone, name, password })
         : await signInWithPhone(CFG, { phone, password });
       if (!signup) writeLock({});
+      if (signup) { try { window.localStorage.setItem("dhundo_verify_prompt", "1"); } catch (_) {} }
       onDone(s);
     } catch (e) {
       const wait = !signup && e.message === "BAD_CREDENTIALS" ? noteFail() : 0;
