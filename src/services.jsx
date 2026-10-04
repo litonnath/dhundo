@@ -40,6 +40,7 @@ import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { StartGate, OfferTypeGate } from "./start.jsx";
+import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -305,6 +306,16 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     logAdminAccess: (id, what) => rpc("services_log_admin_access", { p_worker_id: id, p_what: what }, true).catch(() => null),
     // CHECKING THE PHONE (sql/109). GoTrue sends the SMS (phone_change) and
     // checks the code; the database then sees phone_confirmed_at.
+    jobPost: (note, drop, fee) => rpc("services_job_post", { p_note: note, p_drop: drop, p_fee_rupees: fee }, true),
+    jobsNearby: () => rpc("services_jobs_nearby", {}, true),
+    jobAccept: (id) => rpc("services_job_accept", { p_job: id }, true),
+    jobUpdate: (id, action) => rpc("services_job_update", { p_job: id, p_action: action }, true),
+    myJobs: () => rpc("services_my_jobs", {}, true),
+    bookingRequest: (worker, period, start, note) =>
+      rpc("services_booking_request", { p_worker: worker, p_period: period, p_start: start, p_note: note || null }, true),
+    bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    bookingCancel: (id) => rpc("services_booking_cancel", { p_id: id }, true),
+    myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
     phoneVerified: () => rpc("services_phone_verified", {}, true),
@@ -387,7 +398,7 @@ function rateLabel(min, max, suffix = "/day") {
 // THE SIX WAYS IN: big tiles on the customer home. Each opens the search
 // already narrowed to that kind of thing; Buy & Sell opens the ads; Partner is
 // shown as coming soon until it exists.
-function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket }) {
+function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
   const { t } = useI18n();
   const tiles = [
     ["construction", t("home_worker"), onWorker, "#FFF1E6", "#B45309"],
@@ -395,7 +406,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket }) {
     ["suppliers", t("home_shop"), onShop, "#EAF7EE", "#15803D"],
     ["food", t("home_eat"), onEat, "#FFF4D6", "#A16207"],
     ["tag", t("mk_tab"), onMarket, "#F3E8FF", "#7E22CE"],
-    ["user", t("home_partner"), null, "#F1F4F6", "#64748B"],
+    ["user", t("home_partner"), onPartner, "#E0F2F1", "#0F766E"],
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, margin: "0 0 22px" }}>
@@ -419,7 +430,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket }) {
   );
 }
 
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -790,6 +801,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               onShop={() => setGroup("Suppliers")}
               onEat={() => setGroup("Eat & Stay")}
               onMarket={onMarket}
+              onPartner={onPartner}
             />
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
@@ -821,7 +833,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
                       directions={dirs[row.id]} origin={place}
-                      posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]}
+                      posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -981,7 +993,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
                   directions={dirs[row.id]} origin={place}
-                  posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]}
+                  posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}
@@ -2341,6 +2353,10 @@ export default function ServicesPage({
   const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const [bookRow, setBookRow] = useState(null);
+  const [myTrade, setMyTrade] = useState(null);
   // FIRST SCREENS: after the language, "I need" or "I offer"; for "I offer",
   // what is offered. Shown once on a new phone, and never to somebody who is
   // already signed in.
@@ -2572,7 +2588,7 @@ export default function ServicesPage({
     if (!signedIn) { setHasListing(false); return; }
     let alive = true;
     api.myListing()
-      .then((r) => { if (alive) setHasListing(!!(one(r) && one(r).id)); })
+      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); } })
       .catch(() => {});
     return () => { alive = false; };
   }, [api, signedIn, reloadKey]);
@@ -2589,11 +2605,14 @@ export default function ServicesPage({
     }
   }, [tab]);
   const modeChosen = useRef(false);
+  // Read once, before the effect above overwrites it with the first screen.
+  const savedMode = useRef((() => {
+    try { return window.localStorage.getItem("dhundo_mode"); } catch (_) { return null; }
+  })());
   useEffect(() => {
     if (!hasListing || isAdmin || modeChosen.current) return;
     modeChosen.current = true;
-    let saved = null;
-    try { saved = window.localStorage.getItem("dhundo_mode"); } catch (_) {}
+    const saved = savedMode.current;
     if (saved !== "find" && tab === "browse") setTab("work");
     // Only on first learning that this person has a listing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2706,6 +2725,9 @@ export default function ServicesPage({
       )}
 
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
+      {bookRow && signedIn && <BookingSheet api={api} row={bookRow} onClose={() => setBookRow(null)} />}
+      {requestsOpen && signedIn && <MyRequestsSheet api={api} onClose={() => setRequestsOpen(false)} />}
+      {partnerOpen && <PartnerSheet api={api} signedIn={signedIn} onSignIn={onSignIn} onClose={() => setPartnerOpen(false)} />}
       {verifyOpen && signedIn && (
         <PhoneVerifySheet api={api} phone={user && user.phone}
                           onClose={() => setVerifyOpen(false)}
@@ -2734,6 +2756,8 @@ export default function ServicesPage({
           onInstall={() => setInstallOpen(true)}
           onPickLocation={() => setLocOpen(true)}
           onMarket={() => setTab("market")}
+          onPartner={() => setPartnerOpen(true)}
+          onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
       )}
 
@@ -2765,6 +2789,14 @@ export default function ServicesPage({
 
       {tab === "work" && (
         <WorkerHome
+          extra={(() => {
+            const tr = trades.find((x) => x.slug === myTrade) || {};
+            if (!signedIn || !hasListing || isAdmin) return null;
+            if (tr.group_name === "Drivers") return <RiderJobs api={api} online={avail.online} />;
+            if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
+              return <ShopJobs api={api} hasListing={hasListing} />;
+            return null;
+          })()}
           avail={avail} signedIn={signedIn} hasListing={hasListing}
           onSignIn={onSignIn}
           onList={() => setTab("add")}
@@ -2833,6 +2865,7 @@ export default function ServicesPage({
           phoneOk={phoneOk}
           onVerifyPhone={() => setVerifyOpen(true)}
           onOpenWallet={() => setWalletOpen(true)}
+          onOpenRequests={() => setRequestsOpen(true)}
           onSignIn={onSignIn}
           onSignOut={onSignOut}
           onInstall={() => setInstallOpen(true)}

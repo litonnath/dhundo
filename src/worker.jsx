@@ -179,7 +179,7 @@ function timeOf(iso, lang) {
   } catch (_) { return ""; }
 }
 
-export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing }) {
+export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing, extra = null }) {
   const { t, lang } = useI18n();
   const [hours, setHours] = useState(4);
   const [, tick] = useState(0);
@@ -292,6 +292,7 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
           <Icon name="edit" size={16} /> {t("nav_mine")}
         </Btn>
       </div>
+      {extra}
     </>
   );
 }

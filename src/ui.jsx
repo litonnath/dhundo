@@ -595,7 +595,7 @@ export function rupees(paise) {
 // The counts are deliberately two numbers, not one: somebody with nine
 // invited and nothing earned should be able to see that the money waits for
 // their friends to be published, rather than concluding the app is broken.
-function InvitePanel({ api }) {
+export function InvitePanel({ api }) {
   const { t } = useI18n();
   const [r, setR] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
@@ -1871,7 +1871,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm }) {
+                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm, onBook }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1888,6 +1888,13 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
     : areaText
       ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(areaText + ", India")}&travelmode=driving${from}`
       : null;
+  const bookBtn = onBook && !row.is_example && !isSupplier && (
+    <button onClick={() => onBook(row)} style={{
+      display: "inline-flex", alignItems: "center", gap: 7, background: T.white, color: T.brandDark,
+      border: `1.5px solid ${T.brandDark}`, padding: "10px 12px", borderRadius: 10, fontWeight: 700,
+      fontSize: 14, minHeight: 46, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+    }}><Icon name="clock" size={17} /> {t("bk_btn")}</button>
+  );
   const dirLink = dirHref && !row.is_example && (
     <a href={dirHref} target="_blank" rel="noopener noreferrer" style={{
       display: "inline-flex", alignItems: "center", gap: 7, background: T.brandDark,
@@ -2196,6 +2203,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
                 customer's own pin when they have placed one exactly, otherwise
                 from wherever the phone is: the maps app asks for it. */}
             {dirLink}
+            {bookBtn}
           </span>
         ) : (
           <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -2206,6 +2214,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               {revealing ? "…" : canCall ? t("ft_call") : t("signin_to_call")}
             </Btn>
             {dirLink}
+            {bookBtn}
           </span>
         )}
 
@@ -2414,7 +2423,7 @@ export function waLink(phone) {
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
   hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, showCredits = false,
-  privacy = null, phoneOk = null, onVerifyPhone = null,
+  privacy = null, phoneOk = null, onVerifyPhone = null, onOpenRequests = null,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra, sub) => (
@@ -2500,6 +2509,7 @@ export function AccountPage({
         {account && onOpenAds && row("tag", t("mk_my_ads"), onOpenAds, null, t("mk_my_ads_sub"))}
         {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
           <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
+        {account && onOpenRequests && row("check", t("rq_title"), onOpenRequests, null, t("rq_sub"))}
         {row("download", t("install_app"), onInstall)}
         {account && row("back", t("nav_signout"), onSignOut)}
       </div>
