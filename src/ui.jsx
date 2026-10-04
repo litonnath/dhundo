@@ -1776,6 +1776,26 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
   const s = groupStyle(row.trade_group);
   const isSupplier = row.trade_kind === "supplier";
   const initial = (row.display_name || "?").trim().charAt(0).toUpperCase();
+  // DIRECTIONS in Google Maps. The exact spot when the shop shares one and
+  // the customer is signed in; otherwise the area and PIN already printed on
+  // the card, so the button is there on every listing and never gives away
+  // more than the card itself shows.
+  const areaText = [row.locality, row.city, row.pincode].filter(Boolean).join(", ");
+  const from = origin && origin.exact && typeof origin.lat === "number" ? `&origin=${origin.lat},${origin.lng}` : "";
+  const dirHref = directions
+    ? `https://www.google.com/maps/dir/?api=1&destination=${directions.lat},${directions.lng}&travelmode=driving${from}`
+    : areaText
+      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(areaText + ", India")}&travelmode=driving${from}`
+      : null;
+  const dirLink = dirHref && !row.is_example && (
+    <a href={dirHref} target="_blank" rel="noopener noreferrer" style={{
+      display: "inline-flex", alignItems: "center", gap: 7, background: T.brandDark,
+      color: "#fff", padding: "12px 14px", borderRadius: 10, fontWeight: 700,
+      fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
+    }}>
+      <Icon name="pin" size={18} /> {t("dir_btn")}
+    </a>
+  );
 
   // Live distances get a decimal under 10 km: "1.4 km" is the whole point
   // of knowing where an auto is now, and rounding it to "1 km" hides it.
@@ -2054,25 +2074,18 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
             {/* DIRECTIONS, for a shop that chose to show where it is. From the
                 customer's own pin when they have placed one exactly, otherwise
                 from wherever the phone is: the maps app asks for it. */}
-            {directions && (
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${directions.lat},${directions.lng}&travelmode=driving${
-                     origin && origin.exact && typeof origin.lat === "number" ? `&origin=${origin.lat},${origin.lng}` : ""}`}
-                 target="_blank" rel="noopener noreferrer" style={{
-                display: "inline-flex", alignItems: "center", gap: 7, background: T.brandDark,
-                color: "#fff", padding: "12px 14px", borderRadius: 10, fontWeight: 700,
-                fontSize: 15, textDecoration: "none", minHeight: 46, boxSizing: "border-box",
-              }}>
-                <Icon name="pin" size={18} /> {t("dir_btn")}
-              </a>
-            )}
+            {dirLink}
           </span>
         ) : (
-          <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}
-               style={{ minHeight: 50, fontSize: 16.5, borderRadius: 12, whiteSpace: "nowrap",
-                        padding: "0 22px" }}>
-            <Icon name="phone" size={18} />
-            {revealing ? "…" : canCall ? t("ft_call") : t("signin_to_call")}
-          </Btn>
+          <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <Btn kind="call" onClick={() => onCall(row)} disabled={revealing}
+                 style={{ minHeight: 50, fontSize: 16.5, borderRadius: 12, whiteSpace: "nowrap",
+                          padding: "0 22px" }}>
+              <Icon name="phone" size={18} />
+              {revealing ? "…" : canCall ? t("ft_call") : t("signin_to_call")}
+            </Btn>
+            {dirLink}
+          </span>
         )}
 
         <span style={{ flex: 1 }} />
