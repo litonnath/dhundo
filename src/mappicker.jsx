@@ -39,7 +39,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent } from "./consent-core.js";
-import { geoJson, takeGoogleMap, googleTileUrl } from "./regions.js";
+import { geoJson, takeGoogleMap, googleTileUrl, searchAnywhere, placeCoords } from "./regions.js";
 
 // THREE WAYS TO SEE THE GROUND, in the order they are tried.
 //   sat     satellite photographs (Esri World Imagery) with place names on top.
@@ -81,7 +81,7 @@ const LAYER_KEY = "dhundo_map_layer";
 // Agartala, for when there is nothing else to centre on.
 const FALLBACK = { lat: 23.8315, lng: 91.2868 };
 
-export default function MapPicker({ start, onCancel, onConfirm }) {
+export default function MapPicker({ start, state, onCancel, onConfirm }) {
   const consent = useConsent();
   const { t } = useI18n();
   // Back closes the map rather than leaving the app -- the most likely place
@@ -103,6 +103,9 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
   const [gate, setGate] = useState(null);
   const gsess = useRef({});
   const [near, setNear] = useState([]);
+  const [sq, setSq] = useState("");
+  const [srows, setSrows] = useState([]);
+  const [sbusy, setSbusy] = useState(false);
   const LRef = useRef(null);
   const setLayer = (v) => {
     setLayerState(v);
@@ -310,6 +313,34 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     };
   }, [ready, gate]);
 
+  // SEARCH INSIDE THE MAP: type a village, shop or road and the map moves
+  // there, so the pin can be set on the exact spot without going back.
+  useEffect(() => {
+    const q = sq.trim();
+    if (q.length < 3) { setSrows([]); setSbusy(false); return undefined; }
+    const ctrl = new AbortController();
+    setSbusy(true);
+    const timer = setTimeout(() => {
+      searchAnywhere(q, { state, near: point, signal: ctrl.signal })
+        .then((out) => { if (!ctrl.signal.aborted) setSrows(((out && out.rows) || []).slice(0, 6)); })
+        .catch(() => {})
+        .finally(() => { if (!ctrl.signal.aborted) setSbusy(false); });
+    }, 350);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sq]);
+
+  const goTo = async (r) => {
+    let { lat, lng } = r;
+    if (typeof lat !== "number") {
+      const xy = await placeCoords(r.state || state, r.area || r.title).catch(() => null);
+      if (xy) { lat = xy.lat; lng = xy.lng; }
+    }
+    if (typeof lat !== "number" || !mapRef.current) return;
+    mapRef.current.setView([lat, lng], r.kind === "place" ? 16 : 18);
+    setSq(""); setSrows([]);
+  };
+
   const useDeviceFix = async () => {
     if (!navigator.geolocation) return;
     // The phone's position is read only after a yes.
@@ -387,6 +418,38 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
               {t("map_failed")}
             </span>
             <Btn onClick={useDeviceFix}>{t("map_use_gps")}</Btn>
+          </div>
+        )}
+
+        {ready && (
+          <div style={{ position: "absolute", left: 12, right: 150, top: 12, zIndex: 500 }}>
+            <input
+              value={sq} onChange={(e) => setSq(e.target.value)}
+              placeholder={t("map_search_ph")} aria-label={t("map_search_ph")}
+              style={{
+                width: "100%", boxSizing: "border-box", minHeight: 42, borderRadius: 10,
+                border: `1px solid ${T.line}`, padding: "8px 12px", fontSize: 14.5,
+                fontFamily: "inherit", boxShadow: "0 2px 8px rgba(15,20,25,0.3)", background: T.white, color: T.ink,
+              }}
+            />
+            {(srows.length > 0 || (sbusy && sq.trim().length >= 3)) && (
+              <div style={{
+                marginTop: 4, background: T.white, borderRadius: 10, overflow: "hidden",
+                boxShadow: "0 2px 10px rgba(15,20,25,0.3)", maxHeight: 260, overflowY: "auto",
+              }}>
+                {srows.length === 0 && <div style={{ padding: "10px 12px", fontSize: 13, color: T.inkFaint }}>…</div>}
+                {srows.map((r, i) => (
+                  <button key={i} onClick={() => goTo(r)} style={{
+                    display: "block", width: "100%", textAlign: "left", border: "none", cursor: "pointer",
+                    background: T.white, padding: "9px 12px", borderTop: i ? `1px solid ${T.line}` : "none",
+                    fontFamily: "inherit",
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.title}</div>
+                    <div style={{ fontSize: 12, color: T.inkFaint }}>{r.line || r.area}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -188,6 +188,9 @@ export function LocationSheet({ place, onChange, onClose }) {
     });
     setChosenQ(q);
     setBusy(false);
+    // A searched place opens on the map at once, so the pin can be set on
+    // the exact spot instead of being left at the village centre.
+    if (typeof lat === "number") setMapOpen(true);
   };
 
   const useGps = async () => {
@@ -440,7 +443,7 @@ export function LocationSheet({ place, onChange, onClose }) {
       </div>
 
       {mapOpen && (
-        <MapPicker start={chosen || startOf(place, state0)} onCancel={() => setMapOpen(false)} onConfirm={onPin} />
+        <MapPicker start={chosen || startOf(place, state0)} state={(chosen && chosen.state) || state0} onCancel={() => setMapOpen(false)} onConfirm={onPin} />
       )}
     </div>
   );
