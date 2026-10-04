@@ -3,8 +3,8 @@
 // scooter on the move, a worker at a wall, a shop front. Drawn as SVG so the
 // app needs no image download and works offline.
 //
-// To use real photographs instead, put files named worker.jpg, ride.jpg,
-// shop.jpg, eat.jpg, market.jpg and partner.jpg in public/tiles/. A photo
+// To use real photographs instead, put files named worker, ride, shop, eat,
+// market, partner, need and offer (.jpg, .webp or .png) in public/tiles/ (see its README). A photo
 // that loads is shown over the drawing; a missing one changes nothing.
 // ---------------------------------------------------------------------------
 import React, { useState } from "react";
@@ -160,13 +160,17 @@ const SCENES = {
 };
 
 export function TileArt({ k, style }) {
+  // jpg first, then webp, then png; the drawing stays until one loads.
+  const EXT = ["jpg", "webp", "png"];
   const [photo, setPhoto] = useState(false);
+  const [ei, setEi] = useState(0);
   return (
     <span style={{ display: "block", position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", ...style }} aria-hidden="true">
       <span style={{ position: "absolute", inset: 0, display: "block" }}>
         {React.cloneElement(SCENES[k === "sell" ? "market" : k] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
       </span>
-      <img src={`/tiles/${k}.jpg`} alt="" loading="lazy" onLoad={() => setPhoto(true)} onError={() => setPhoto(false)}
+      <img src={`/tiles/${k}.${EXT[ei]}`} key={ei} alt="" onLoad={() => setPhoto(true)}
+           onError={() => { setPhoto(false); if (ei < EXT.length - 1) setEi(ei + 1); }}
            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: photo ? "block" : "none" }} />
     </span>
   );
