@@ -2719,17 +2719,6 @@ export default function ServicesPage({
           onNeed={() => { finishStart(); switchMode("need"); onSignIn && onSignIn(); }}
           onOffer={() => setStart("offer")} />
       )}
-      {!langGate && offerPick && (
-        <OfferTypeGate
-          onBack={() => setOfferPick(false)}
-          onPick={(type) => {
-            try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
-            setOfferType(type);
-            setOfferPick(false);
-            if (type === "sell") { setTab("sell"); } else { setTab("add"); }
-            if (!signedIn) onSignIn && onSignIn();
-          }} />
-      )}
       {!langGate && !signedIn && start === "offer" && (
         <OfferTypeGate
           onBack={() => setStart("role")}
@@ -2793,7 +2782,18 @@ export default function ServicesPage({
         />
       )}
 
-      {tab === "browse" && (
+      {tab === "browse" && offerPick && (
+        <OfferTypeGate inline
+          onBack={() => setOfferPick(false)}
+          onPick={(type) => {
+            try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
+            setOfferType(type);
+            setOfferPick(false);
+            if (type === "sell") { setTab("sell"); } else { setTab("add"); }
+            if (!signedIn) onSignIn && onSignIn();
+          }} />
+      )}
+      {tab === "browse" && !offerPick && (
         <Browse
           api={api} trades={trades} user={user} isAdmin={isAdmin}
           onSignIn={onSignIn}

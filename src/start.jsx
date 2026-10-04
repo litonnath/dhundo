@@ -54,44 +54,50 @@ export function StartGate({ onNeed, onOffer }) {
 }
 
 // Screen 2, for people who offer: what kind of business is it.
-export function OfferTypeGate({ onPick, onBack }) {
+export function OfferTypeGate({ onPick, onBack, inline = false }) {
   const { t } = useI18n();
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
+  useEffect(() => {
+    const on = () => setWide(window.innerWidth >= 600);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
   const types = [
-    ["worker", "construction", "#FFF1E6", "#B45309", t("home_worker"), t("offer_sub_worker")],
-    ["ride", "drivers", "#E8F1FF", "#1D4ED8", t("home_ride"), t("offer_sub_ride")],
-    ["shop", "suppliers", "#EAF7EE", "#15803D", t("home_shop"), t("offer_sub_shop")],
-    ["eat", "food", "#FFF4D6", "#A16207", t("home_eat"), t("offer_sub_eat")],
-    ["sell", "tag", "#F3E8FF", "#7E22CE", t("mk_my_ads"), t("offer_sub_sell")],
+    ["worker", "construction", "#FFF1E6", "#C2410C", "home_worker", "offer_sub_worker"],
+    ["ride", "drivers", "#E8F0FE", "#1D4ED8", "home_ride", "offer_sub_ride"],
+    ["shop", "suppliers", "#E7F5EC", "#15803D", "home_shop", "offer_sub_shop"],
+    ["eat", "food", "#FDF3DC", "#A16207", "home_eat", "offer_sub_eat"],
+    ["sell", "tag", "#F3E8FD", "#7E22CE", "mk_my_ads", "offer_sub_sell"],
   ];
-  return (
-    <div style={shell} role="dialog" aria-modal="true">
-      <div style={wrap}>
-        <button onClick={onBack} style={{
-          display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none",
-          color: T.brandDark, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "6px 0",
-          fontFamily: "inherit", minHeight: 44,
-        }}><Icon name="back" size={18} /> {t("w_back")}</button>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: "4px 0 20px", lineHeight: 1.25, textAlign: "center" }}>{t("offer_title")}</h1>
+  const body = (
+    <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px 120px" : "20px 16px 34px", boxSizing: "border-box" }}>
+      <button onClick={onBack} style={{
+        display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
+        color: T.brandDark, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 40, marginBottom: 6,
+      }}><Icon name="back" size={16} /> {t("w_back")}</button>
+      <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("offer_title")}</h1>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
         {types.map(([key, icon, bg, fg, title, sub]) => (
           <button key={key} onClick={() => onPick(key)} style={{
-            width: "100%", display: "block", padding: 0, marginBottom: 12, overflow: "hidden", textAlign: "left",
+            display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
             borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
           }}>
-            <TileArt k={key} style={{ aspectRatio: "21 / 8" }} />
-            <span style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px 12px" }}>
-              <span style={{ width: 32, height: 32, borderRadius: 9, background: bg, color: fg, flexShrink: 0,
-                             display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={18} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: T.ink }}>{title}</span>
-                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4 }}>{sub}</span>
+            <TileArt k={key} />
+            <span style={{ display: "block", padding: "11px 13px 13px" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: bg, color: fg, flexShrink: 0,
+                               display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={16} /></span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(title)}</span>
               </span>
-              <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+              <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 6 }}>{t(sub)}</span>
             </span>
           </button>
         ))}
       </div>
     </div>
   );
+  if (inline) return body;
+  return <div style={shell} role="dialog" aria-modal="true">{body}</div>;
 }
 
 

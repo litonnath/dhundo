@@ -164,7 +164,7 @@ export function TileArt({ k, style }) {
   return (
     <span style={{ display: "block", position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", ...style }} aria-hidden="true">
       <span style={{ position: "absolute", inset: 0, display: "block" }}>
-        {React.cloneElement(SCENES[k] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
+        {React.cloneElement(SCENES[k === "sell" ? "market" : k] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
       </span>
       <img src={`/tiles/${k}.jpg`} alt="" loading="lazy" onLoad={() => setPhoto(true)} onError={() => setPhoto(false)}
            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: photo ? "block" : "none" }} />
