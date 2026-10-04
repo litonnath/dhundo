@@ -2373,7 +2373,7 @@ export function waLink(phone) {
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
   hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, showCredits = false,
-  privacy = null,
+  privacy = null, phoneOk = null, onVerifyPhone = null,
 }) {
   const { t } = useI18n();
   const row = (icon, label, onClick, extra, sub) => (
@@ -2435,6 +2435,15 @@ export function AccountPage({
               {prettyPhone(account.phone)}
             </span>
           </span>
+        </div>
+      )}
+
+      {account && phoneOk === false && (
+        <div style={{ marginBottom: 14, border: `1.5px solid ${T.red}`, background: T.redSoft, borderRadius: 14, padding: "13px 14px" }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.55, marginBottom: 9 }}>
+            {t("pv_account_msg")}
+          </div>
+          {onVerifyPhone && <Btn full onClick={onVerifyPhone}>{t("pv_title")}</Btn>}
         </div>
       )}
 

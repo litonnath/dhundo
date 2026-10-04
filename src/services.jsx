@@ -2294,6 +2294,16 @@ export default function ServicesPage({
   const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [phoneOk, setPhoneOk] = useState(null);
+  useEffect(() => {
+    if (!user || !user.id) { setPhoneOk(null); return undefined; }
+    let alive = true;
+    Promise.resolve(api.phoneVerified()).then((v) => {
+      const val = Array.isArray(v) ? v[0] : v;
+      if (alive) setPhoneOk(val === true ? true : val === false ? false : null);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [user && user.id, verifyOpen, walletOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   // null until it has loaded, which is what keeps the header chip from
   // flashing ₹0 first. Paise, as an integer, all the way to rupees().
   const [walletPaise, setWalletPaise] = useState(null);
@@ -2719,6 +2729,8 @@ export default function ServicesPage({
         <AccountPage
           account={signedIn ? user : null}
           walletPaise={walletPaise}
+          phoneOk={phoneOk}
+          onVerifyPhone={() => setVerifyOpen(true)}
           onOpenWallet={() => setWalletOpen(true)}
           onSignIn={onSignIn}
           onSignOut={onSignOut}
