@@ -38,6 +38,7 @@ import {
 } from "./ui.jsx";
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import { PlaceField } from "./locpicker.jsx";
+import { plateExample } from "./states.js";
 import { useConsent } from "./consent-core.js";
 
 const PHOTO_BUCKET = "services-photos";
@@ -714,7 +715,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
                     ? T.red : undefined,
                 }}
                 value={f.vehicle_number}
-                placeholder="TR 01 AB 1234"
+                placeholder={plateExample(f.state)}
                 autoCapitalize="characters" autoCorrect="off" spellCheck={false}
                 onChange={(e) => set("work", "vehicle_number", e.target.value)}
               />

@@ -24,6 +24,23 @@ export const STATES = [
   "Ladakh", "Lakshadweep", "Puducherry",
 ];
 
+// The two letters at the start of a number plate, per state, used only for
+// the example shown in the vehicle box. Any Indian plate is accepted whatever
+// its letters: this is a hint, not a rule.
+export const RTO_CODE = {
+  "Andhra Pradesh": "AP", "Arunachal Pradesh": "AR", "Assam": "AS", "Bihar": "BR",
+  "Chhattisgarh": "CG", "Goa": "GA", "Gujarat": "GJ", "Haryana": "HR",
+  "Himachal Pradesh": "HP", "Jharkhand": "JH", "Karnataka": "KA", "Kerala": "KL",
+  "Madhya Pradesh": "MP", "Maharashtra": "MH", "Manipur": "MN", "Meghalaya": "ML",
+  "Mizoram": "MZ", "Nagaland": "NL", "Odisha": "OD", "Punjab": "PB", "Rajasthan": "RJ",
+  "Sikkim": "SK", "Tamil Nadu": "TN", "Telangana": "TS", "Tripura": "TR",
+  "Uttar Pradesh": "UP", "Uttarakhand": "UK", "West Bengal": "WB",
+  "Andaman and Nicobar Islands": "AN", "Chandigarh": "CH",
+  "Dadra and Nagar Haveli and Daman and Diu": "DD", "Delhi": "DL",
+  "Jammu and Kashmir": "JK", "Ladakh": "LA", "Lakshadweep": "LD", "Puducherry": "PY",
+};
+export const plateExample = (state) => `${RTO_CODE[state] || "DL"} 01 AB 1234`;
+
 // Where somebody lands before they have picked or been detected anywhere.
 // Tripura, because that is where the directory started and where most
 // listings still are -- not because it is first alphabetically.

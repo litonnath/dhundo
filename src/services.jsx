@@ -36,6 +36,7 @@ import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -1374,7 +1375,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                       borderColor: plateLooksRight(f.vehicle_number) ? undefined : T.red,
                     }}
                     value={f.vehicle_number}
-                    placeholder="TR 01 AB 1234"
+                    placeholder={plateExample((place && place.state) || (lp && lp.state))}
                     autoCapitalize="characters" autoCorrect="off" spellCheck={false}
                     onChange={(e) => set("vehicle_number", e.target.value)}
                   />
