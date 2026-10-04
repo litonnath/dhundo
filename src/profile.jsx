@@ -53,13 +53,19 @@ const field = {
   ...input, minHeight: 52, fontSize: 16, padding: "13px 14px", borderRadius: 11,
 };
 
-function Row({ label, hint, children }) {
+function Row({ label, hint, error, fid, children }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div id={fid ? `fld-${fid}` : undefined} style={{
+      marginBottom: 16,
+      ...(error ? { borderLeft: `3px solid ${T.red}`, paddingLeft: 10 } : {}),
+    }}>
       <label style={{
         display: "block", fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 7,
       }}>{label}</label>
       {children}
+      {error && (
+        <div role="alert" style={{ fontSize: 13.5, color: T.red, fontWeight: 800, marginTop: 6, lineHeight: 1.45 }}>{error}</div>
+      )}
       {hint && (
         <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>{hint}</div>
       )}
@@ -110,6 +116,16 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const [row, setRow] = useState(undefined);   // undefined = loading, null = none
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
+  // An error about one field is shown at that field, and the page goes there.
+  const [fieldErr, setFieldErr] = useState(null);
+  const badField = (key, msg) => {
+    setErr(null); setFieldErr({ key, msg });
+    setTimeout(() => {
+      const el = document.getElementById(`fld-${key}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 60);
+  };
+  const ferr = (key) => (fieldErr && fieldErr.key === key ? fieldErr.msg : null);
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [pickGroup, setPickGroup] = useState(null);
@@ -194,6 +210,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   }
 
   const set = (key, k, v) => {
+    setFieldErr(null);
     setF((p) => ({ ...p, [k]: v }));
     setDirty((d) => ({ ...d, [key]: true }));
     setSavedKey(null);
@@ -221,6 +238,9 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
         setTimeout(() => setSavedKey((k) => (k === key ? null : k)), 4000);
       } else {
         const why = one && one.reason;
+        if (why === "bad_vehicle") return badField("vehicle", t("e_vehicle"));
+        if (why === "phone_taken") return badField("phone", t("e_taken"));
+        if (why === "bad_phone") return badField("phone", t("e_badphone"));
         setErr(
           why === "bad_vehicle" ? t("e_vehicle")
           : why === "phone_taken" ? t("e_taken")
@@ -706,7 +726,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               flag rather than a group name written here -- the same source
               the approval gate reads, so the two cannot disagree. */}
           {row && row.requires_vehicle && (
-            <Row label={t("w3_vehicle")} hint={t("w3_vehicle_hint")}>
+            <Row fid="vehicle" error={ferr("vehicle")} label={t("w3_vehicle")} hint={t("w3_vehicle_hint")}>
               <input
                 style={{
                   ...field, maxWidth: 240, textTransform: "uppercase",
@@ -753,8 +773,9 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           title={t("p_contact")}
           dirty={dirty.contact} saving={savingKey === "contact"} saved={savedKey === "contact"}
           onSave={async () => {
-            if (!f.full_name.trim()) return setErr(t("e_name"));
-            if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
+            setFieldErr(null);
+            if (!f.full_name.trim()) return badField("name", t("e_name"));
+            if (String(f.phone).replace(/\D/g, "").length < 10) return badField("phone", t("e_phone"));
             if (!isAdmin && !(await consent.ask("listing"))) return;
             // An exact spot is saved first, as the listing's position; the
             // rest then follows without moving it.
@@ -783,12 +804,12 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             }}>{t("p_phone_warn")}</div>
           ) : null}
         >
-          <Row label={t("w2_name")}>
+          <Row fid="name" error={ferr("name")} label={t("w2_name")}>
             <input style={field} value={f.full_name}
                    onChange={(e) => set("contact", "full_name", e.target.value)} />
           </Row>
 
-          <Row label={t("w2_phone")} hint={phoneChanged ? null : t("w2_phone_hint")}>
+          <Row fid="phone" error={ferr("phone")} label={t("w2_phone")} hint={phoneChanged ? null : t("w2_phone_hint")}>
             <div style={{ ...field, display: "flex", alignItems: "center", gap: 9, padding: "0 14px" }}>
               <span style={{ fontSize: 16, color: T.inkFaint, fontWeight: 600 }}>+91</span>
               <input value={f.phone} type="tel" inputMode="numeric"

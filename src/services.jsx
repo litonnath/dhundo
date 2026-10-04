@@ -977,13 +977,19 @@ function StepDots({ step }) {
   );
 }
 
-function BigField({ label, hint, children }) {
+function BigField({ label, hint, error, fid, children }) {
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div id={fid ? `fld-${fid}` : undefined} style={{
+      marginBottom: 18,
+      ...(error ? { borderLeft: `3px solid ${T.red}`, paddingLeft: 10 } : {}),
+    }}>
       <label style={{
         display: "block", fontSize: 14.5, fontWeight: 700, color: T.ink, marginBottom: 7,
       }}>{label}</label>
       {children}
+      {error && (
+        <div role="alert" style={{ fontSize: 13.5, color: T.red, fontWeight: 800, marginTop: 6, lineHeight: 1.45 }}>{error}</div>
+      )}
       {hint && (
         <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>{hint}</div>
       )}
@@ -1041,7 +1047,24 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   // home screen's location must not become a shop's by accident.
   const [lp, setLp] = useState(null);
 
-  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const set = (k, v) => { setFieldErr(null); setF((p) => ({ ...p, [k]: v })); };
+  // An error belongs next to the field it is about: shown there, the page
+  // scrolled to it, and the right step opened first when it is on another.
+  const [fieldErr, setFieldErr] = useState(null);
+  const bad = (key, msg, toStep) => {
+    setErr(null);
+    setFieldErr({ key, msg });
+    if (toStep) setStep(toStep);
+    setTimeout(() => {
+      const el = document.getElementById(`fld-${key}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const inp = el.querySelector("input,textarea");
+        if (inp) { try { inp.focus({ preventScroll: true }); } catch (_) {} }
+      }
+    }, 60);
+  };
+  const ferr = (key) => (fieldErr && fieldErr.key === key ? fieldErr.msg : null);
 
   const togglePick = (slug) => {
     setErr(null);
@@ -1078,10 +1101,11 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
 
   const submit = async () => {
     setErr(null);
-    if (!f.full_name.trim()) return setErr(t("e_name"));
-    if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
-    if (!picked.length) return setErr(t("e_category"));
-    if (needsVehicle && !plateLooksRight(f.vehicle_number)) return setErr(t("e_vehicle"));
+    setFieldErr(null);
+    if (!picked.length) return bad("category", t("e_category"), 1);
+    if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"), 1);
+    if (!f.full_name.trim()) return bad("name", t("e_name"), 2);
+    if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"), 2);
     // A listing is stored and shown to other people: a yes first. (An admin
     // adding one for somebody else is not the owner and is not asked.)
     if (!isAdmin && !(await consent.ask("listing"))) return;
@@ -1146,6 +1170,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
         if (onDone) onDone();
       } else {
         const why = r && r.reason;
+        if (why === "bad_vehicle") return bad("vehicle", t("e_vehicle"), 1);
+        if (why === "phone_taken") return bad("phone", t("e_taken"), 2);
+        if (why === "bad_phone") return bad("phone", t("e_badphone"), 2);
         setErr(
           why === "bad_city" ? t("e_city")
           : why === "bad_vehicle" ? t("e_vehicle")
@@ -1368,7 +1395,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                 {t("w1_need_title")}
               </div>
               {needsVehicle && (
-                <BigField label={`${t("w3_vehicle")} *`} hint={t("w3_vehicle_hint")}>
+                <BigField fid="vehicle" error={ferr("vehicle")} label={`${t("w3_vehicle")} *`} hint={t("w3_vehicle_hint")}>
                   <input
                     style={{
                       ...bigInput, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700,
@@ -1394,8 +1421,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
 
           {picked.length > 0 && (
             <Btn full onClick={() => {
-              if (needsVehicle && !plateLooksRight(f.vehicle_number)) return setErr(t("e_vehicle"));
-              setErr(null); setStep(2);
+              if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"));
+              setErr(null); setFieldErr(null); setStep(2);
             }}>
               {t("w_next")}
             </Btn>
@@ -1409,7 +1436,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           <h2 style={title}>{t("w2_title")}</h2>
           <p style={sub}>{t("w2_sub")}</p>
 
-          <BigField label={isSupplier ? t("f_owner") : t("w2_name")}>
+          <BigField fid="name" error={ferr("name")} label={isSupplier ? t("f_owner") : t("w2_name")}>
             <input style={bigInput} value={f.full_name} autoComplete="name"
                    onChange={(e) => set("full_name", e.target.value)} />
           </BigField>
@@ -1421,7 +1448,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             </BigField>
           )}
 
-          <BigField label={t("w2_phone")} hint={t("w2_phone_hint")}>
+          <BigField fid="phone" error={ferr("phone")} label={t("w2_phone")} hint={t("w2_phone_hint")}>
             <div style={{ ...bigInput, display: "flex", alignItems: "center", gap: 9, padding: "0 15px" }}>
               <span style={{ fontSize: 16.5, color: T.inkFaint, fontWeight: 600 }}>+91</span>
               <input value={f.phone} type="tel" inputMode="numeric" autoComplete="tel"
@@ -1436,7 +1463,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
               or use the phone's position, then move the pin to the exact
               door if it is not already there. The state, the PIN code and
               the address all follow from the spot -- none of them is typed. */}
-          <BigField label={t("w2_area")}>
+          <BigField fid="place" error={ferr("place")} label={t("w2_area")}>
             <PlaceField
               value={lp}
               sheetPlace={lp || { state: place.state }}
@@ -1454,10 +1481,10 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           </BigField>
 
           <Btn full onClick={() => {
-            if (!f.full_name.trim()) return setErr(t("e_name"));
-            if (String(f.phone).replace(/\D/g, "").length < 10) return setErr(t("e_phone"));
-            if (!lp || (!lp.area && typeof lp.lat !== "number")) return setErr(t("loc_need"));
-            setErr(null); setStep(3);
+            if (!f.full_name.trim()) return bad("name", t("e_name"));
+            if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"));
+            if (!lp || (!lp.area && typeof lp.lat !== "number")) return bad("place", t("loc_need"));
+            setErr(null); setFieldErr(null); setStep(3);
           }}>{t("w_next")}</Btn>
         </>
       )}
