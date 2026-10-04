@@ -21,3 +21,14 @@ and bottom are trimmed.
 
 Use pictures you own or that are licensed for commercial use, and avoid
 recognisable faces of real people you do not have permission to show.
+
+## Matching the two pictures already added
+
+Add this to the end of every prompt so the set looks like the ride photo:
+"Candid documentary photograph, Agartala India, natural late-afternoon light,
+shallow depth of field, realistic skin and clothing, 16:9, no text, no logos,
+no brand names, no number plates."
+
+Already done: worker.webp and ride.webp. Still to add: shop, eat, market,
+partner, need, offer. Send them to Claude in the chat and they will be
+cropped to 16:9, cleaned of any brand names or plates, shrunk and added.
