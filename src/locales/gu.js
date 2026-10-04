@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "જે વસ્તુ કામની નથી તે વેચો",
   launch_title: "તમે શું શોધી રહ્યા છો?",
   launch_back: "હોમ",
+  need_buy: "કંઈક ખરીદો",
+  need_buy_sub: "સેકન્ડ-હેન્ડ સ્ટોર: તમારી નજીકની વપરાયેલી વસ્તુઓ",
   offer_sell: "કંઈક વેચો",
   menu_title: "મેનૂ",
   nav_home: "હોમ",

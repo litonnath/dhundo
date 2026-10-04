@@ -109,7 +109,7 @@ const TILES = [
   ["ride", "drivers", "#1D4ED8", "#E8F0FE", "home_ride", "offer_sub_ride"],
   ["shop", "suppliers", "#15803D", "#E7F5EC", "home_shop", "offer_sub_shop"],
   ["eat", "food", "#A16207", "#FDF3DC", "home_eat", "offer_sub_eat"],
-  ["market", "tag", "#7E22CE", "#F3E8FD", "mk_tab", "mk_tab_sub"],
+  ["market", "tag", "#7E22CE", "#F3E8FD", "need_buy", "need_buy_sub"],
   ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub"],
 ];
 

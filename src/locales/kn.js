@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "ಬೇಡವಾದ ವಸ್ತುಗಳನ್ನು ಮಾರಿ",
   launch_title: "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
   launch_back: "ಮುಖಪುಟ",
+  need_buy: "ಏನಾದರೂ ಖರೀದಿಸಿ",
+  need_buy_sub: "ಸೆಕೆಂಡ್-ಹ್ಯಾಂಡ್ ಅಂಗಡಿ: ಹತ್ತಿರದ ಬಳಸಿದ ವಸ್ತುಗಳು",
   offer_sell: "ಏನಾದರೂ ಮಾರಿ",
   menu_title: "ಮೆನು",
   nav_home: "ಮುಖಪುಟ",

@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "नको असलेल्या वस्तू विका",
   launch_title: "तुम्ही काय शोधत आहात?",
   launch_back: "होम",
+  need_buy: "काहीतरी खरेदी करा",
+  need_buy_sub: "सेकंड-हँड स्टोअर: जवळच्या वापरलेल्या वस्तू",
   offer_sell: "काहीतरी विका",
   menu_title: "मेनू",
   nav_home: "होम",

@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "ଦରକାର ନଥିବା ଜିନିଷ ବିକନ୍ତୁ",
   launch_title: "ଆପଣ କଣ ଖୋଜୁଛନ୍ତି?",
   launch_back: "ହୋମ୍",
+  need_buy: "କିଛି କିଣନ୍ତୁ",
+  need_buy_sub: "ସେକେଣ୍ଡ-ହ୍ୟାଣ୍ଡ ଦୋକାନ: ପାଖର ବ୍ୟବହୃତ ଜିନିଷ",
   offer_sell: "କିଛି ବିକ୍ରି କରନ୍ତୁ",
   menu_title: "ମେନୁ",
   nav_home: "ହୋମ",
