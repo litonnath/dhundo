@@ -36,7 +36,7 @@ import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
 import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
-import { PrivacyPanel } from "./consent-ui.jsx";
+import { PrivacyLink } from "./consent-ui.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -2410,7 +2410,7 @@ export default function ServicesPage({
           onOpenProfile={() => setTab("profile")}
           onOpenAds={() => setTab("sell")}
           showCredits={inApp}
-          privacy={<PrivacyPanel />}
+          privacy={<PrivacyLink />}
         />
       )}
 

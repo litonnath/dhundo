@@ -168,11 +168,11 @@ export function ConsentProvider({ rpc, signedIn, children }) {
 }
 
 // ------------------------------------------------------ account > privacy
-export function PrivacyPanel() {
+export function PrivacyPanel({ bare = false }) {
   const { t } = useI18n();
   const c = useConsent();
   return (
-    <div style={{
+    <div style={bare ? {} : {
       background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: "16px 16px 12px",
       marginTop: 14,
     }}>
@@ -207,6 +207,53 @@ export function PrivacyPanel() {
         );
       })}
       <p style={{ fontSize: 12.5, color: T.inkFaint, lineHeight: 1.55, margin: "4px 0 2px" }}>{t("cs_wnote")}</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------- the small link
+// Consent is asked where the data is saved: at sign-up, on a listing, on
+// "use my location". This is only the way back -- one quiet link in Account
+// that opens the same answers in a sheet, so taking a yes back is as easy as
+// giving it was, without a page of text sitting in the Account tab.
+export function PrivacyLink() {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ textAlign: "center", marginTop: 18 }}>
+        <button onClick={() => setOpen(true)} style={{
+          background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+          color: T.inkFaint, fontSize: 13, fontWeight: 600, textDecoration: "underline",
+          minHeight: 40, padding: "6px 10px",
+        }}>{t("cs_priv_t")}</button>
+      </div>
+      {open && <PrivacySheet onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function PrivacySheet({ onClose }) {
+  const { t } = useI18n();
+  useDismissable(true, onClose);
+  return (
+    <div
+      role="dialog" aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 330, background: "rgba(15,20,25,0.55)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      <div style={{
+        background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 460,
+        padding: "8px 18px 22px", boxShadow: "0 -10px 40px rgba(0,30,45,0.25)",
+        maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box",
+      }}>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}><CloseButton onClick={onClose} /></div>
+        <PrivacyPanel bare />
+      </div>
     </div>
   );
 }

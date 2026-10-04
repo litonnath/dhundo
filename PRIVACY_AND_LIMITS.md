@@ -21,7 +21,11 @@ Both are removed when the account is deleted.
 * Nothing reads the phone's position on its own any more. A returning visitor
   who already said yes is located on load; everyone else is asked by the card
   on the home screen or by the button that needs it.
-* Account → Privacy lists all six with Allow / Withdraw. Withdrawing
+* Consent is asked where the data is saved (the sign-up box, saving a listing,
+  an item or an address, "use my location", going live). The way back is one
+  small "Privacy and consent" link at the bottom of Account, which opens all six
+  with Allow / Withdraw.
+* (Same list:) Withdrawing
   `location` removes the position from the saved place; withdrawing `live`
   switches "Available now" off and deletes the position on the server.
 * The consent texts name what is stored, who sees it, and the third party
