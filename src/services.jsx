@@ -2543,6 +2543,26 @@ export default function ServicesPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasListing, isAdmin]);
 
+  // THE SWITCH AT THE TOP: "I need" (find help, buy and sell) or "I offer"
+  // (the dashboard, my listing, wallet). It follows the screen: opening a
+  // customer screen makes it "need", opening a business screen makes it
+  // "offer", and the account screens keep whichever was last. Switching
+  // simply opens the first screen of the other half.
+  const [mode, setModeState] = useState(() => {
+    try { return window.localStorage.getItem("dhundo_mode") === "work" ? "offer" : "need"; } catch (_) { return "need"; }
+  });
+  useEffect(() => {
+    const need = ["browse", "market", "sell"];
+    const offer = ["work", "mine", "add"];
+    if (need.includes(tab)) setModeState("need");
+    else if (offer.includes(tab)) setModeState("offer");
+  }, [tab]);
+  const switchMode = (m) => {
+    if (m === mode && (m === "need" ? tab === "browse" : tab === "work")) return;
+    setModeState(m);
+    setTab(m === "need" ? "browse" : "work");
+  };
+
   // The heartbeat runs here, not in the Work screen, so a worker's
   // position keeps going while they look at their listing or wallet.
   const avail = useAvailability(api, signedIn && hasListing && !isAdmin);
@@ -2592,6 +2612,8 @@ export default function ServicesPage({
         isAdmin={isAdmin}
         place={place}
         onOpenLocation={() => setLocOpen(true)}
+        mode={mode}
+        onMode={switchMode}
       />
 
       {outside && (
@@ -2766,7 +2788,8 @@ export default function ServicesPage({
       )}
 
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
-                 signedIn={signedIn} hasListing={hasListing} />
+                 signedIn={signedIn} hasListing={hasListing} mode={mode}
+                 onWallet={signedIn ? () => setWalletOpen(true) : null} />
     </div>
   );
 }

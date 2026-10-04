@@ -1566,7 +1566,7 @@ export function LocationPill({ place, onOpen, compact }) {
 // Two rows on a phone: identity and location on top, navigation below. The
 // single-row version pushed the tabs onto a wrapped third line and left the
 // location squeezed to three characters.
-export function Header({ setTab, isAdmin, tab, place, onOpenLocation }) {
+export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null }) {
   const { t } = useI18n();
   // One row: who we are, where you are, which language. Everything you DO
   // lives in the bottom bar, within reach of a thumb -- two rows of small
@@ -1594,6 +1594,26 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation }) {
         <LanguageSwitch />
       </div>
 
+      {/* TWO HALVES, one switch: somebody who needs something, and somebody
+          who offers it. The last one used is remembered. */}
+      {onMode && mode && (
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 14px 8px" }}>
+          <div role="tablist" style={{
+            display: "flex", background: "#F1F4F6", borderRadius: 12, padding: 3, maxWidth: 360,
+          }}>
+            {[["need", t("mode_need")], ["offer", t("mode_offer")]].map(([m, label]) => (
+              <button key={m} role="tab" aria-selected={mode === m} onClick={() => onMode(m)} style={{
+                flex: 1, border: "none", borderRadius: 9, minHeight: 40, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 14, fontWeight: mode === m ? 800 : 600,
+                background: mode === m ? T.white : "transparent",
+                color: mode === m ? T.brandDark : T.inkSoft,
+                boxShadow: mode === m ? "0 1px 3px rgba(15,20,25,0.15)" : "none",
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* An admin's extra tools, on their own row so nobody else sees them. */}
       {isAdmin && (
         <div style={{
@@ -1615,12 +1635,13 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation }) {
 // every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
 // carries a green dot while the worker is online, so they can see from any
 // screen that customers can still find them.
-export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false }) {
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null }) {
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
     tab === "account" || tab === "profile" ? "account"
     : tab === "market" || tab === "sell" ? "market"
+    : mode === "offer" && (tab === "mine" || tab === "add") ? "mine"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
     : "find";
   const item = (key, icon, label, go, dot) => {
@@ -1657,10 +1678,27 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
       paddingBottom: "env(safe-area-inset-bottom)",
     }}>
       <div style={{ maxWidth: 560, margin: "0 auto", display: "flex" }}>
-        {item("find", "search", t("mode_find"), () => setTab("browse"))}
-        {item("market", "tag", t("mk_tab"), () => setTab("market"))}
-        {item("work", "construction", t("mode_work"), () => setTab("work"), online)}
-        {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+        {mode === "offer" ? (
+          <>
+            {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
+            {item("mine", "edit", t("nav_mine"), () => setTab(hasListing ? "mine" : "add"))}
+            {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
+            {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+          </>
+        ) : mode === "need" ? (
+          <>
+            {item("find", "search", t("mode_find"), () => setTab("browse"))}
+            {item("market", "tag", t("mk_tab"), () => setTab("market"))}
+            {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+          </>
+        ) : (
+          <>
+            {item("find", "search", t("mode_find"), () => setTab("browse"))}
+            {item("market", "tag", t("mk_tab"), () => setTab("market"))}
+            {item("work", "construction", t("mode_work"), () => setTab("work"), online)}
+            {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
+          </>
+        )}
       </div>
     </nav>
   );
