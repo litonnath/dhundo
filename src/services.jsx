@@ -787,7 +787,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
               onWorker={() => { const el = document.getElementById("all-cats"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}
               onRide={() => setGroup("Drivers")}
               onShop={() => setGroup("Suppliers")}
-              onEat={() => setGroup("Food")}
+              onEat={() => setGroup("Eat & Stay")}
               onMarket={onMarket}
             />
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>

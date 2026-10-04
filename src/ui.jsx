@@ -105,6 +105,7 @@ export const GROUPS = {
   "Drivers":         { icon: "drivers",      fg: "#0A6BB5", bg: "#E6F1FC" },
   "Home & Domestic": { icon: "home",         fg: "#7A3FB8", bg: "#F2EBFC" },
   "Food":            { icon: "food",         fg: "#B8143C", bg: "#FDE9EE" },
+  "Eat & Stay":      { icon: "food",         fg: "#B45309", bg: "#FFF4D6" },
   "Repairs":         { icon: "repairs",      fg: "#0E7C66", bg: "#E4F6F2" },
   "Vehicle":         { icon: "vehicle",      fg: "#3E4C9A", bg: "#ECEEFB" },
   "Events":          { icon: "events",       fg: "#A8410E", bg: "#FDECE3" },
@@ -115,15 +116,15 @@ export const groupStyle = (g) => GROUPS[g] || GROUPS.Other;
 
 // The database group names are descriptive; some are too long for a tile at
 // 390px. Only the label changes -- filtering still uses the real name.
-const SHORT = { "Home & Domestic": "Home" };
+const SHORT = { "Home & Domestic": "Home", "Eat & Stay": "Eat & Stay" };
 // Group names live in the database in English only (unlike the trades, which
 // carry name_bn). Rather than a migration for eight strings that are pure
 // presentation, they are translated here.
 const GROUP_NAMES = {
-  bn: { "Construction": "নির্মাণ", "Drivers": "ড্রাইভার", "Home & Domestic": "ঘরের কাজ",
+  bn: { "Eat & Stay": "খাওয়া ও থাকা", "Construction": "নির্মাণ", "Drivers": "ড্রাইভার", "Home & Domestic": "ঘরের কাজ",
         "Food": "রান্না", "Repairs": "মেরামত", "Vehicle": "গাড়ি", "Events": "অনুষ্ঠান",
         "Suppliers": "দোকান", "Other": "অন্যান্য" },
-  hi: { "Construction": "निर्माण", "Drivers": "ड्राइवर", "Home & Domestic": "घर का काम",
+  hi: { "Eat & Stay": "खाना और ठहराव", "Construction": "निर्माण", "Drivers": "ड्राइवर", "Home & Domestic": "घर का काम",
         "Food": "खाना", "Repairs": "मरम्मत", "Vehicle": "गाड़ी", "Events": "आयोजन",
         "Suppliers": "दुकान", "Other": "अन्य" },
   mr: { "Construction": "बांधकाम", "Drivers": "ड्रायव्हर", "Home & Domestic": "घरकाम",
