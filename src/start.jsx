@@ -116,12 +116,35 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
     return () => window.removeEventListener("resize", on);
   }, []);
   if (!side) {
+    const cards = [
+      ["need", "mode_need", "start_need_sub", "search", "#1D4ED8", "#E8F0FE", () => setSide("need")],
+      ["offer", "mode_offer", "start_offer_sub", "edit", "#C2410C", "#FFF1E6", onOffer],
+    ];
     return (
-      <div style={{ padding: "30px 16px 120px", boxSizing: "border-box" }}>
-        <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("start_title")}</h1>
-          <BigChoice icon="search" bg="#E8F1FF" fg="#1D4ED8" title={t("mode_need")} sub={t("start_need_sub")} onClick={() => setSide("need")} />
-          <BigChoice icon="construction" bg="#FFF1E6" fg="#B45309" title={t("mode_offer")} sub={t("start_offer_sub")} onClick={onOffer} />
+      <div style={{ minHeight: "calc(100vh - 170px)", display: "flex", flexDirection: "column", justifyContent: "center",
+                    padding: "26px 16px 110px", boxSizing: "border-box" }}>
+        <div style={{ width: "100%", maxWidth: 820, margin: "0 auto" }}>
+          <h1 style={{ fontSize: wide ? 30 : 25, fontWeight: 800, color: T.ink, margin: "0 0 6px", lineHeight: 1.25, textAlign: "center" }}>{t("start_title")}</h1>
+          <p style={{ fontSize: 14.5, color: T.inkSoft, margin: "0 0 20px", textAlign: "center" }}>{t("trust_2_s")}</p>
+          <div style={{ display: "grid", gridTemplateColumns: wide ? "1fr 1fr" : "1fr", gap: 16 }}>
+            {cards.map(([k, title, sub, icon, fg, bg, go]) => (
+              <button key={k} onClick={go} style={{
+                display: "block", padding: 0, overflow: "hidden", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+                borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, boxShadow: "0 6px 20px rgba(15,20,25,0.07)",
+              }}>
+                <TileArt k={k} style={{ aspectRatio: wide ? "16 / 9" : "21 / 9" }} />
+                <span style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px 16px" }}>
+                  <span style={{ width: 44, height: 44, borderRadius: 12, background: bg, color: fg, flexShrink: 0,
+                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={22} /></span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: T.ink }}>{t(title)}</span>
+                    <span style={{ display: "block", fontSize: 13, color: T.inkSoft, lineHeight: 1.45, marginTop: 2 }}>{t(sub)}</span>
+                  </span>
+                  <Icon name="chev" size={20} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );

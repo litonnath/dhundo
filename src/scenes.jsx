@@ -24,6 +24,35 @@ const Speed = ({ y = 100 }) => (
 );
 
 const SCENES = {
+  need: (
+    <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+      <rect width="320" height="180" fill="#E3EEFF" />
+      <g stroke="#C9DBF7" strokeWidth="2"><path d="M0 40h320M0 90h320M0 140h320M60 0v180M150 0v180M250 0v180" /></g>
+      <path d="M20 160 Q90 110 160 120 T300 60" stroke="#93B4EA" strokeWidth="6" fill="none" strokeLinecap="round" strokeDasharray="2 12" />
+      {[[70,50],[250,110]].map(([x,y],i)=>(<g key={i}><path d={`M${x} ${y+22}s-14-14-14-26a14 14 0 1 1 28 0c0 12-14 26-14 26z`} fill="#EF4444" /><circle cx={x} cy={y-4} r="5" fill="#fff" /></g>))}
+      <rect x="0" y="152" width="320" height="28" fill="#CFE0F8" />
+      <rect x="122" y="104" width="50" height="50" rx="12" fill="#1D4ED8" /><circle cx="147" cy="86" r="14" fill={SKIN} /><path d="M133 84a14 14 0 0 1 28 0c-6-6-22-6-28 0z" fill={INK} />
+      <path d="M164 118 L192 96" stroke="#1D4ED8" strokeWidth="9" strokeLinecap="round" />
+      <rect x="184" y="52" width="46" height="66" rx="8" fill="#111827" /><rect x="188" y="58" width="38" height="54" rx="4" fill="#fff" />
+      <rect x="192" y="64" width="30" height="9" rx="3" fill="#BFDBFE" /><rect x="192" y="77" width="30" height="9" rx="3" fill="#BBF7D0" /><rect x="192" y="90" width="30" height="9" rx="3" fill="#FDE68A" /><circle cx="207" cy="106" r="3" fill="#2563EB" />
+    </svg>
+  ),
+  offer: (
+    <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+      <rect width="320" height="180" fill="#FFEFD9" />
+      <rect x="0" y="152" width="320" height="28" fill="#EBCFA6" />
+      <rect x="50" y="46" width="130" height="14" fill="#EA580C" />
+      {[0,1,2,3].map((i)=>(<path key={i} d={`M${50+i*32.5} 60h32.5v6a16 11 0 0 1 -32.5 0z`} fill={i%2?"#fff":"#F97316"} />))}
+      <rect x="56" y="92" width="118" height="14" rx="4" fill="#92400E" /><rect x="62" y="106" width="106" height="46" fill="#B45309" />
+      <rect x="150" y="68" width="22" height="24" rx="3" fill="#FDE68A" /><rect x="78" y="78" width="30" height="14" rx="3" fill="#F59E0B" />
+      <rect x="104" y="62" width="40" height="22" rx="4" fill="#fff" stroke="#EA580C" strokeWidth="2" />
+      <text x="124" y="78" fontSize="13" fontWeight="800" fill="#EA580C" textAnchor="middle" fontFamily="sans-serif">OPEN</text>
+      <rect x="206" y="108" width="46" height="46" rx="12" fill="#16A34A" /><circle cx="229" cy="90" r="14" fill={SKIN2} /><path d="M215 90a14 14 0 0 1 28 0z" fill="#451A03" />
+      <path d="M208 120 L190 104" stroke="#16A34A" strokeWidth="9" strokeLinecap="round" />
+      <circle cx="278" cy="60" r="16" fill="#16A34A" /><text x="278" y="66" fontSize="17" fontWeight="800" fill="#fff" textAnchor="middle" fontFamily="sans-serif">₹</text>
+      <circle cx="292" cy="98" r="9" fill="#F59E0B" opacity="0.9" />
+    </svg>
+  ),
   ride: (
     <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
       <defs><linearGradient id="sk1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#BFD9FF" /><stop offset="1" stopColor="#EAF3FF" /></linearGradient></defs>
