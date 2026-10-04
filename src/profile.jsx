@@ -359,6 +359,8 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   if (!f.day_rate_min && !f.day_rate_max) todo.push({ key: "work", label: t("todo_rate") });
   if (!f.locality) todo.push({ key: "contact", label: t("todo_area") });
 
+  const isSupplierTrade = (trades.find((x) => x.slug === f.trade_slug) || {}).kind === "supplier";
+
   const jump = (key) => {
     const el = document.getElementById("sec-" + key);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -626,10 +628,16 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           title={t("p_work")}
           dirty={dirty.work} saving={savingKey === "work"} saved={savedKey === "work"}
           onSave={() => {
-            // Nothing is saved while a required number is missing or wrong.
+            // Nothing is saved while a required item is missing or wrong.
             if (row && row.requires_vehicle && !plateLooksRight(f.vehicle_number)) {
               return badField("vehicle", t("e_vehicle"));
             }
+            if (!isSupplierTrade) {
+              const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
+              if (!(lo > 0) || !(hi > 0) || hi < lo) return badField("rate", t("e_rate"));
+              if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return badField("years", t("e_years"));
+            }
+            if (!String(f.about || "").trim() || String(f.about).trim() === "-") return badField("about", t("e_about"));
             return save("work", {
             p_trade_slug: f.trade_slug,
             p_other_trades: f.other_trades,
@@ -748,7 +756,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             </Row>
           )}
 
-          <Row label={t("w3_rate")}>
+          <Row fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}{!isSupplierTrade && <ReqTag />}</>}>
             <div style={{ display: "flex", gap: 9 }}>
               <input style={{ ...field, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
                      placeholder={t("w3_rate_from")}
@@ -759,13 +767,13 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             </div>
           </Row>
 
-          <Row label={t("w3_years")}>
+          <Row fid="years" error={ferr("years")} label={<>{t("w3_years")}{!isSupplierTrade && <ReqTag />}</>}>
             <input style={{ ...field, maxWidth: 160 }} inputMode="numeric"
                    value={f.years_experience}
                    onChange={(e) => set("work", "years_experience", e.target.value)} />
           </Row>
 
-          <Row label={t("w3_about")}>
+          <Row fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
             <textarea style={{ ...field, minHeight: 90, resize: "vertical" }} value={f.about}
                       placeholder={t("w3_about_ph")}
                       onChange={(e) => set("work", "about", e.target.value)} />
@@ -782,6 +790,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             setFieldErr(null);
             if (!f.full_name.trim()) return badField("name", t("e_name"));
             if (String(f.phone).replace(/\D/g, "").length < 10) return badField("phone", t("e_phone"));
+            if (!f.locality && !(f.pos && typeof f.pos.lat === "number")) return badField("place", t("loc_need"));
             if (!isAdmin && !(await consent.ask("listing"))) return;
             // An exact spot is saved first, as the listing's position; the
             // rest then follows without moving it.
@@ -829,7 +838,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           {/* ONE QUESTION: where. Type a road, a shop or a village and tap it,
               or use the phone's position, then move the pin to the exact
               door. State, PIN code and address follow from the spot. */}
-          <Row label={t("w2_area")}>
+          <Row fid="place" error={ferr("place")} label={<>{t("w2_area")}<ReqTag /></>}>
             <PlaceField
               value={f.locality ? { area: f.locality, state: f.state, pin: f.pincode, exact: f.pos ? f.pos.exact : undefined } : null}
               sheetPlace={{ state: f.state, area: f.locality }}

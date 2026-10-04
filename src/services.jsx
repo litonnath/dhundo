@@ -1122,6 +1122,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
     if (needsId && !idPath) return bad("id", t("e_id_required"), 1);
     if (!f.full_name.trim()) return bad("name", t("e_name"), 2);
     if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"), 2);
+    if (!lp || (!lp.area && typeof lp.lat !== "number")) return bad("place", t("loc_need"), 2);
+    if (!isSupplier) {
+      const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
+      if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"), 3);
+      if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"), 3);
+    }
+    if (!f.about.trim()) return bad("about", t("e_about"), 3);
     // A listing is stored and shown to other people: a yes first. (An admin
     // adding one for somebody else is not the owner and is not asked.)
     if (!isAdmin && !(await consent.ask("listing"))) return;
@@ -1476,7 +1483,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           <h2 style={title}>{t("w2_title")}</h2>
           <p style={sub}>{t("w2_sub")}</p>
 
-          <BigField fid="name" error={ferr("name")} label={isSupplier ? t("f_owner") : t("w2_name")}>
+          <BigField fid="name" error={ferr("name")} label={<>{isSupplier ? t("f_owner") : t("w2_name")}<ReqTag /></>}>
             <input style={bigInput} value={f.full_name} autoComplete="name"
                    onChange={(e) => set("full_name", e.target.value)} />
           </BigField>
@@ -1488,7 +1495,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             </BigField>
           )}
 
-          <BigField fid="phone" error={ferr("phone")} label={t("w2_phone")} hint={t("w2_phone_hint")}>
+          <BigField fid="phone" error={ferr("phone")} label={<>{t("w2_phone")}<ReqTag /></>} hint={t("w2_phone_hint")}>
             <div style={{ ...bigInput, display: "flex", alignItems: "center", gap: 9, padding: "0 15px" }}>
               <span style={{ fontSize: 16.5, color: T.inkFaint, fontWeight: 600 }}>+91</span>
               <input value={f.phone} type="tel" inputMode="numeric" autoComplete="tel"
@@ -1503,7 +1510,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
               or use the phone's position, then move the pin to the exact
               door if it is not already there. The state, the PIN code and
               the address all follow from the spot -- none of them is typed. */}
-          <BigField fid="place" error={ferr("place")} label={t("w2_area")}>
+          <BigField fid="place" error={ferr("place")} label={<>{t("w2_area")}<ReqTag /></>}>
             <PlaceField
               value={lp}
               sheetPlace={lp || { state: place.state }}
@@ -1532,15 +1539,15 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
       {/* --------------------------------------------------- 3. optional */}
       {step === 3 && (
         <>
-          <h2 style={title}>{t("w3_title")}</h2>
+          <h2 style={title}>{t("w3_title_req")}</h2>
           {/* "All optional" stops being true the moment a driver is on this
               step, and a promise the form then breaks is worse than no
               promise at all. */}
-          <p style={sub}>{t("w3_sub")}</p>
+          <p style={sub}>{t("w3_sub_req")}</p>
 
           {!isSupplier && (
             <>
-              <BigField label={t("w3_rate")}>
+              <BigField fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}<ReqTag /></>}>
                 <div style={{ display: "flex", gap: 9 }}>
                   <input style={{ ...bigInput, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
                          placeholder={t("w3_rate_from")}
@@ -1551,7 +1558,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                 </div>
               </BigField>
 
-              <BigField label={t("w3_years")}>
+              <BigField fid="years" error={ferr("years")} label={<>{t("w3_years")}<ReqTag /></>}>
                 <input style={bigInput} inputMode="numeric" value={f.years_experience}
                        onChange={(e) => set("years_experience", e.target.value)} />
               </BigField>
@@ -1572,7 +1579,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                    onChange={(e) => set("landmark", e.target.value)} />
           </BigField>
 
-          <BigField label={t("w3_about")}>
+          <BigField fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
             <textarea style={{ ...bigInput, minHeight: 92, resize: "vertical" }} value={f.about}
                       placeholder={t("w3_about_ph")}
                       onChange={(e) => set("about", e.target.value)} />
