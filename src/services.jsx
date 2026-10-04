@@ -805,13 +805,21 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   if (showGrid && section !== "worker" && section !== "ride") {
     return <CustomerLauncher onPick={pickTile} onOffer={onOffer} side={side} setSide={setSide} />;
   }
+  // Worker or Helper: people who come and work. Not drivers (Ride), not
+  // shops or suppliers, not food places or stays.
+  const notWorker = ["Drivers", "Suppliers", "Eat & Stay"];
+  const workerTrades = trades.filter((x) => x.kind !== "supplier" && !notWorker.includes(x.group_name));
+  const workerSlugs = new Set(workerTrades.map((x) => x.slug));
+  const workerGroups = groups.filter((g) => workerTrades.some((x) => x.group_name === g));
+  const liveWorkers = live.filter((x) => workerSlugs.has(x.trade_slug));
   const SECTION = {
     worker: ["home_worker", "construction", "#C2410C", "#FFF1E6"],
     ride: ["home_ride", "drivers", "#1D4ED8", "#E8F0FE"],
     shop: ["home_shop", "suppliers", "#15803D", "#E7F5EC"],
     eat: ["home_eat", "food", "#A16207", "#FDF3DC"],
   }[section] || ["home_worker", "construction", "#C2410C", "#FFF1E6"];
-  const showTiles = !!group && !trade && !allIn && !search.trim() && inGroup.length > 0;
+  const groupTrades = section === "worker" ? inGroup.filter((x) => workerSlugs.has(x.slug)) : inGroup;
+  const showTiles = !!group && !trade && !allIn && !search.trim() && groupTrades.length > 0;
   if (section === "ride" && !group && !trade) {
     return (
       <>
@@ -827,7 +835,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
       </>
     );
   }
-  const workerGroups = groups.filter((g) => !["Drivers", "Suppliers", "Eat & Stay"].includes(g));
 
   return (
     <>
@@ -856,7 +863,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />
-            {live.length > 0 && (
+            {liveWorkers.length > 0 && (
               <div style={{ marginTop: 28 }}>
                 <h2 style={{
                   fontSize: 18, fontWeight: 800, color: T.ink, margin: "0 0 12px",
@@ -870,7 +877,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   </p>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {live.slice(0, 5).map((row) => (
+                  {liveWorkers.slice(0, 5).map((row) => (
                     <ListingCard
                       key={row.id}
                       row={row}
@@ -928,7 +935,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {showTiles && (
               <SubCategories art={section}
                 title={groupLabel(group, lang)} icon={groupStyle(group).icon} fg={groupStyle(group).fg} bg={groupStyle(group).bg}
-                items={inGroup.map((tr) => ({ key: tr.slug, label: tradeName(tr, lang) }))}
+                items={groupTrades.map((tr) => ({ key: tr.slug, label: tradeName(tr, lang) }))}
                 onPick={(slug) => setTrade(slug)}
                 onAll={() => setAllIn(true)} allLabel={t("all")} />
             )}
