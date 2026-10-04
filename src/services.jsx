@@ -39,7 +39,7 @@ import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i1
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
-import { StartGate, OfferTypeGate } from "./start.jsx";
+import { StartGate, OfferTypeGate, CustomerLauncher } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -434,6 +434,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
+  // Which front tile this person entered: null shows the six tiles.
+  const [section, setSection] = useState(null);
   const [trade, setTrade] = useState(null);
   const [search, setSearch] = useState("");
   // Read the phone's position (asks first, see consent-core.js) and look
@@ -773,8 +775,31 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     return out;
   }, [trades, lang]);
 
+  const pickTile = (k) => {
+    if (k === "market") { onMarket && onMarket(); return; }
+    if (k === "partner") { onPartner && onPartner(); return; }
+    setSection(k);
+    if (k === "ride") setGroup("Drivers");
+    else if (k === "shop") setGroup("Suppliers");
+    else if (k === "eat") setGroup("Eat & Stay");
+  };
+  const goHome = () => { setSection(null); setGroup(null); setTrade(null); setSearch(""); };
+  // The front: just the tiles. Coming back to "all categories" from any
+  // section other than workers lands here too.
+  if (showGrid && section !== "worker") {
+    return <CustomerLauncher onPick={pickTile} />;
+  }
+  const workerGroups = groups.filter((g) => !["Drivers", "Suppliers", "Eat & Stay"].includes(g));
+
   return (
     <>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0", position: "relative", zIndex: 5 }}>
+        <button onClick={goHome} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`,
+          borderRadius: 20, padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 14, fontWeight: 700, color: T.brandDark,
+        }}><Icon name="back" size={16} /> {t("launch_back")}</button>
+      </div>
       <Hero search={search} setSearch={setSearch} compact={!showGrid} onVoice={(said) => {
         // A trade name, in any language, goes straight to that trade;
         // anything else becomes an ordinary search.
@@ -795,14 +820,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                          locating={geo.state === "locating"}
                          errorKey={geo.state === "error" ? locErrorKey(geo.reason) : null} />
             {!(user && user.id) && <SignupHelp />}
-            <HomeTiles
-              onWorker={() => { const el = document.getElementById("all-cats"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-              onRide={() => setGroup("Drivers")}
-              onShop={() => setGroup("Suppliers")}
-              onEat={() => setGroup("Eat & Stay")}
-              onMarket={onMarket}
-              onPartner={onPartner}
-            />
             <h2 style={{ fontSize: 19, fontWeight: 800, color: T.ink, margin: "0 0 12px" }}>
               {t("what_need")}
             </h2>
@@ -845,7 +862,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             <h2 id="all-cats" style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: "28px 0 12px" }}>
               {t("all_categories")}
             </h2>
-            <CategoryGrid groups={groups} counts={counts} onPick={setGroup} />
+            <CategoryGrid groups={section === "worker" ? workerGroups : groups} counts={counts} onPick={setGroup} />
             <TrustBar />
           </>
         ) : (
