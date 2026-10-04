@@ -689,6 +689,7 @@ export function WalletSheet({ api, phone, onClose }) {
 
   const label = (row) =>
     row.kind === "signup_bonus" ? t("wal_kind_bonus")
+      : row.kind === "listing_bonus" ? t("wal_kind_listing")
       : row.kind === "promo" ? t("wal_kind_promo")
       : row.kind === "refund" ? t("wal_kind_refund")
       : row.kind === "referral" ? t("wal_kind_referral")
