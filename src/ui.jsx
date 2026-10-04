@@ -1815,7 +1815,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm }) {
+                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1844,8 +1844,12 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
 
   // Live distances get a decimal under 10 km: "1.4 km" is the whole point
   // of knowing where an auto is now, and rounding it to "1 km" hides it.
+  // The search has no distance for a listing it found without a position
+  // (everybody in the state, when nobody is within reach): the straight line
+  // measured on the phone from the position it may use stands in, as "about".
+  const fromPhone = (row.distance_km === null || row.distance_km === undefined) && typeof lineKm === "number";
   const km = row.distance_km === null || row.distance_km === undefined
-    ? null : Number(row.distance_km);
+    ? (fromPhone ? lineKm : null) : Number(row.distance_km);
   const distance =
     typeof km === "number" && !Number.isNaN(km)
       ? (km < (row.available_now ? 0.3 : 1)
@@ -1862,10 +1866,12 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
   const cityShown = row.city === "Agartala" && row.pincode && !/^7990/.test(String(row.pincode)) ? "" : row.city;
   const roadText = typeof roadKm === "number"
     ? `${roadKm < 10 ? roadKm.toFixed(1) : Math.round(roadKm)} km \u00b7 ${t("dist_road")}` : null;
+  const approx = fromPhone;
   const distanceText = roadText
     ? (posExact === false ? `\u2248 ${roadText} \u00b7 ${t("dist_area")}` : roadText)
     : distance && posExact === false && !row.available_now
-      ? `\u2248 ${distance} \u00b7 ${t("dist_area")}` : distance;
+      ? `\u2248 ${distance} \u00b7 ${t("dist_area")}`
+      : (distance && approx ? `\u2248 ${distance}` : distance);
 
   const liveMins = row.available_now && row.live_seen_at
     ? Math.max(0, Math.round((Date.now() - new Date(row.live_seen_at)) / 60000))

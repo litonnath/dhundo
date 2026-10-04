@@ -28,7 +28,7 @@ import {
   plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances } from "./regions.js";
+import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances, lineDistances } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
@@ -586,6 +586,21 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   }, [live, list, pinRows, api]);
   const posExactOf = (row) => (exactSet === null ? undefined : exactSet.has(row.id));
 
+  // Straight-line distance for listings the search could not measure.
+  const [line, setLine] = useState({});
+  useEffect(() => {
+    if (!place || typeof place.lat !== "number") return;
+    const missing = [...live, ...pinRows, ...list]
+      .filter((r) => r.id && (r.distance_km === null || r.distance_km === undefined) && line[r.id] === undefined)
+      .map((r) => r.id).slice(0, 25);
+    if (!missing.length) return;
+    let alive = true;
+    lineDistances({ lat: place.lat, lng: place.lng }, [...new Set(missing)]).then((r) => {
+      if (alive && r) setLine((p) => ({ ...p, ...r }));
+    });
+    return () => { alive = false; };
+  }, [live, list, pinRows, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Real road distance (Google Routes, through the road-distance function)
   // for the first listings on screen, once the person has a position.
   const [road, setRoad] = useState({});
@@ -737,7 +752,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
                       directions={dirs[row.id]} origin={place}
-                      posExact={posExactOf(row)} roadKm={road[row.id]}
+                      posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -897,7 +912,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
                   directions={dirs[row.id]} origin={place}
-                  posExact={posExactOf(row)} roadKm={road[row.id]}
+                  posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}

@@ -1080,3 +1080,37 @@ export async function roadDistances(origin, ids) {
   }
   return Object.keys(km).length ? { km, exact } : null;
 }
+
+
+// STRAIGHT-LINE DISTANCE measured on the phone from the positions it may use
+// (services_public_positions, sql/108). It fills the gap when the search found
+// a listing without measuring it, which happens when nobody is within reach
+// and the whole state is shown by name. Rounded positions make it approximate.
+const lineCache = new Map();
+export async function lineDistances(origin, ids) {
+  if (!origin || typeof origin.lat !== "number" || !ids || !ids.length) return null;
+  const out = {};
+  const need = [];
+  ids.forEach((id) => {
+    const hit = lineCache.get(id);
+    if (hit) out[id] = hit; else need.push(id);
+  });
+  if (need.length) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_public_positions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ p_ids: need.slice(0, 25) }),
+      });
+      const pos = res.ok ? await res.json() : [];
+      (Array.isArray(pos) ? pos : []).forEach((r) => { lineCache.set(r.id, { lat: r.lat, lng: r.lng }); out[r.id] = { lat: r.lat, lng: r.lng }; });
+    } catch (_) { /* no estimate */ }
+  }
+  const R = 6371, rad = Math.PI / 180, km = {};
+  Object.entries(out).forEach(([id, p]) => {
+    const h = Math.sin(((p.lat - origin.lat) * rad) / 2) ** 2 +
+      Math.cos(origin.lat * rad) * Math.cos(p.lat * rad) * Math.sin(((p.lng - origin.lng) * rad) / 2) ** 2;
+    km[id] = Math.round(2 * R * Math.asin(Math.sqrt(h)) * 10) / 10;
+  });
+  return Object.keys(km).length ? km : null;
+}
