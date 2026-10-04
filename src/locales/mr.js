@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "नको असलेल्या वस्तू विका",
   launch_title: "तुम्ही काय शोधत आहात?",
   launch_back: "होम",
+  ae_captcha: "सुरक्षा तपासणी पूर्ण झाली नाही. कृपया पुन्हा प्रयत्न करा.",
   rd_title: "कुठे जायचे?",
   rd_pick: "पिकअप",
   rd_drop: "गंतव्य",

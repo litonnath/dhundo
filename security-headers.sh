@@ -41,7 +41,7 @@ restore() {
   exit 1
 }
 
-CSP="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://tile.googleapis.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com https://overpass-api.de https://overpass.kumi.systems https://photon.komoot.io https://nominatim.openstreetmap.org; script-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+CSP="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://*.hcaptcha.com https://tile.googleapis.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com https://overpass-api.de https://overpass.kumi.systems https://photon.komoot.io https://nominatim.openstreetmap.org; script-src 'self' https://challenges.cloudflare.com https://js.hcaptcha.com https://*.hcaptcha.com; frame-src https://challenges.cloudflare.com https://*.hcaptcha.com; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
 cat > "$SNIPPET" <<EOF
 # Written by security-headers.sh. Included inside this site's server blocks.

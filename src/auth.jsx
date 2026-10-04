@@ -94,6 +94,8 @@ function makeSession(tokens, account) {
   };
 }
 
+import { captchaToken } from "./captcha.js";
+
 function makeClient(SUPABASE_URL, SUPABASE_ANON_KEY) {
   const base = {
     apikey: SUPABASE_ANON_KEY,
@@ -141,11 +143,14 @@ export async function signUpWithPhone(cfg, { phone, name, password }) {
   if (!/^\d{6}$/.test(String(password || ""))) throw new Error("BAD_PIN");
   if (!String(name || "").trim()) throw new Error("NAME_REQUIRED");
 
-  const up = await gotrue("signup", { email: authEmail(phone), password });
+  const ct = await captchaToken(cfg);
+  const up = await gotrue("signup", { email: authEmail(phone), password,
+    ...(ct ? { gotrue_meta_security: { captcha_token: ct } } : {}) });
 
   if (!up.ok) {
     // The sign-up service has its own limit per address; say so plainly.
     if (up.status === 429) throw new Error("RATE_LIMITED");
+    if (up.data && up.data.error_code === "captcha_failed") throw new Error("CAPTCHA");
     const msg = String((up.data && (up.data.msg || up.data.error_description || up.data.message)) || "");
     // GoTrue says "User already registered". In this app that sentence is
     // meaningless -- the person typed a phone number, not an email.
@@ -185,13 +190,16 @@ export async function signInWithPhone(cfg, { phone, password }) {
 
   if (!isValidPhone(phone)) throw new Error("BAD_PHONE");
 
+  const ct = await captchaToken(cfg);
   const tk = await gotrue("token?grant_type=password", {
     email: authEmail(phone),
     password,
+    ...(ct ? { gotrue_meta_security: { captcha_token: ct } } : {}),
   });
 
   if (!tk.ok || !tk.data || !tk.data.access_token) {
     if (tk.status === 429) throw new Error("RATE_LIMITED");
+    if (tk.data && tk.data.error_code === "captcha_failed") throw new Error("CAPTCHA");
     const msg = String((tk.data && (tk.data.error_description || tk.data.msg)) || "");
     if (/confirm/i.test(msg)) throw new Error("CONFIRM_EMAIL_IS_ON");
     // GoTrue deliberately does not say whether it was the number or the

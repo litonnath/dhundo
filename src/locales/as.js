@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "নালাগিলে জিনিস বিক্ৰী কৰক",
   launch_title: "আপুনি কি বিচাৰি আছে?",
   launch_back: "হোম",
+  ae_captcha: "সুৰক্ষা পৰীক্ষা সফল নহ’ল। আকৌ চেষ্টা কৰক।",
   rd_title: "ক’লৈ যাব?",
   rd_pick: "পিকআপ",
   rd_drop: "গন্তব্য",

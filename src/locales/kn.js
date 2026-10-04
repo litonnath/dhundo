@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ಬೇಡವಾದ ವಸ್ತುಗಳನ್ನು ಮಾರಿ",
   launch_title: "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
   launch_back: "ಮುಖಪುಟ",
+  ae_captcha: "ಭದ್ರತಾ ಪರಿಶೀಲನೆ ವಿಫಲವಾಯಿತು. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   rd_title: "ಎಲ್ಲಿಗೆ?",
   rd_pick: "ಪಿಕಪ್",
   rd_drop: "ಗಮ್ಯಸ್ಥಾನ",

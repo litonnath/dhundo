@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ଦରକାର ନଥିବା ଜିନିଷ ବିକନ୍ତୁ",
   launch_title: "ଆପଣ କଣ ଖୋଜୁଛନ୍ତି?",
   launch_back: "ହୋମ୍",
+  ae_captcha: "ସୁରକ୍ଷା ଯାଞ୍ଚ ସଫଳ ହେଲା ନାହିଁ। ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
   rd_title: "କେଉଁଠିକି ଯିବେ?",
   rd_pick: "ପିକଅପ୍",
   rd_drop: "ଗନ୍ତବ୍ୟ",

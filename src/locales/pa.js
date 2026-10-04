@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ਜੋ ਚੀਜ਼ਾਂ ਕੰਮ ਦੀਆਂ ਨਹੀਂ ਉਹ ਵੇਚੋ",
   launch_title: "ਤੁਸੀਂ ਕੀ ਲੱਭ ਰਹੇ ਹੋ?",
   launch_back: "ਹੋਮ",
+  ae_captcha: "ਸੁਰੱਖਿਆ ਜਾਂਚ ਪਾਸ ਨਹੀਂ ਹੋਈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   rd_title: "ਕਿੱਥੇ ਜਾਣਾ ਹੈ?",
   rd_pick: "ਪਿਕਅੱਪ",
   rd_drop: "ਮੰਜ਼ਿਲ",
