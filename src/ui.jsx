@@ -1640,6 +1640,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
   const workTabs = ["work", "mine"];
   const current =
     tab === "account" || tab === "profile" ? "account"
+    : mode === "offer" && tab === "sell" ? "sell"
     : tab === "market" || tab === "sell" ? "market"
     : mode === "offer" && (tab === "mine" || tab === "add") ? "mine"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
@@ -1682,6 +1683,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
           <>
             {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
             {item("mine", "edit", t("nav_mine"), () => setTab(hasListing ? "mine" : "add"))}
+            {item("sell", "tag", t("mk_my_ads"), () => setTab("sell"))}
             {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
           </>

@@ -2552,8 +2552,8 @@ export default function ServicesPage({
     try { return window.localStorage.getItem("dhundo_mode") === "work" ? "offer" : "need"; } catch (_) { return "need"; }
   });
   useEffect(() => {
-    const need = ["browse", "market", "sell"];
-    const offer = ["work", "mine", "add"];
+    const need = ["browse", "market"];
+    const offer = ["work", "mine", "add", "sell"];
     if (need.includes(tab)) setModeState("need");
     else if (offer.includes(tab)) setModeState("offer");
   }, [tab]);
