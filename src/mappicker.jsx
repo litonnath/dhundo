@@ -214,6 +214,69 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [point.lat, point.lng, ready]);
 
+  // SHOPS, RESTAURANTS, CLINICS ON THE MAP. Satellite photos carry no names,
+  // so the named places OpenStreetMap holds inside the view are drawn on top
+  // as small labelled dots once the map is zoomed in far enough to read
+  // them. Only what people have mapped can show: where nobody has added a
+  // shop yet there is nothing to draw, and that is a gap in the data, not in
+  // the app.
+  const poiLayer = useRef(null);
+  const poiKey = useRef("");
+  useEffect(() => {
+    const L = LRef.current, map = mapRef.current;
+    if (!ready || !L || !map) return undefined;
+    if (!poiLayer.current) poiLayer.current = L.layerGroup().addTo(map);
+    let ctrl = null, timer = null;
+    const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const draw = (els) => {
+      poiLayer.current.clearLayers();
+      els.forEach((e) => {
+        const la = e.lat != null ? e.lat : e.center && e.center.lat;
+        const lo = e.lon != null ? e.lon : e.center && e.center.lon;
+        const name = e.tags && (e.tags["name:en"] || e.tags.name);
+        if (typeof la !== "number" || typeof lo !== "number" || !name) return;
+        L.marker([la, lo], {
+          interactive: false, keyboard: false,
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="transform:translate(-4px,-4px);white-space:nowrap;font:700 11px system-ui,sans-serif;` +
+              `color:#fff;text-shadow:0 0 3px #000,0 0 3px #000,0 0 2px #000;display:flex;align-items:center;gap:4px">` +
+              `<span style="width:8px;height:8px;border-radius:50%;background:#FFB300;border:1.5px solid #fff;flex:none"></span>${esc(name)}</div>`,
+            iconSize: [0, 0],
+          }),
+        }).addTo(poiLayer.current);
+      });
+    };
+    const load = () => {
+      if (map.getZoom() < 16) { poiLayer.current.clearLayers(); poiKey.current = ""; return; }
+      const b = map.getBounds();
+      const bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map((n) => n.toFixed(4)).join(",");
+      if (bb === poiKey.current) return;
+      poiKey.current = bb;
+      if (ctrl) ctrl.abort();
+      ctrl = new AbortController();
+      const q = `[out:json][timeout:12];(nwr["name"]["shop"](${bb});nwr["name"]["amenity"](${bb});` +
+        `nwr["name"]["tourism"](${bb});nwr["name"]["office"](${bb});nwr["name"]["craft"](${bb}););out center 80;`;
+      const tryHost = async (host) => {
+        const r = await fetch(`${host}?data=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        if (!r.ok) throw new Error("overpass " + r.status);
+        return r.json();
+      };
+      tryHost("https://overpass-api.de/api/interpreter")
+        .catch((e) => { if (ctrl.signal.aborted) throw e; return tryHost("https://overpass.kumi.systems/api/interpreter"); })
+        .then((j) => { if (!ctrl.signal.aborted) draw((j && j.elements) || []); })
+        .catch(() => { poiKey.current = ""; });
+    };
+    const onMove = () => { clearTimeout(timer); timer = setTimeout(load, 700); };
+    map.on("moveend", onMove);
+    onMove();
+    return () => {
+      clearTimeout(timer); if (ctrl) ctrl.abort();
+      map.off("moveend", onMove);
+      if (poiLayer.current) { poiLayer.current.clearLayers(); }
+    };
+  }, [ready]);
+
   const useDeviceFix = async () => {
     if (!navigator.geolocation) return;
     // The phone's position is read only after a yes.

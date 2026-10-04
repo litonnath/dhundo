@@ -495,6 +495,12 @@ export async function pinLookup(pin) {
 // from the place table when one is close (a post office only when very
 // close, its position being rougher), otherwise what the map service said.
 export function bestNearName(near, fallback) {
+  // A village on record right under the point wins; otherwise the name the
+  // map itself gave this spot (Deocheera must not become Panisagar just
+  // because Panisagar is the nearest row we hold); then the nearest row.
+  const under = near.find((r) => r.source !== "post" && r.km <= 0.8);
+  if (under) return under.place;
+  if (fallback) return fallback;
   const map = near.find((r) => r.source !== "post" && r.km <= 2.5);
   if (map) return map.place;
   const any = near.find((r) => r.km <= 1.2);
