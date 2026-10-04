@@ -166,6 +166,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     itemReveal: (id) => rpc("services_item_reveal", { p_id: id }, true),
     itemReport: (id, reason, note) =>
       rpc("services_item_report", { p_id: id, p_reason: reason, p_note: note || null }, true),
+    adminWithdrawals: (status) => rpc("services_admin_withdrawals", { p_status: status || null }, true),
+    adminWithdrawalSet: (id, status, note) =>
+      rpc("services_admin_withdrawal_set", { p_id: id, p_status: status, p_note: note || null }, true),
     adminItems: (filter) => rpc("services_admin_items", { p_filter: filter || "reported", p_limit: 100 }, true),
     adminItemAction: (id, action) => rpc("services_admin_item_action", { p_id: id, p_action: action }, true),
     selfRegister: (p) => rpc("services_self_register", p, true),
@@ -1902,6 +1905,70 @@ function UnblockBox({ api }) {
   );
 }
 
+function AdminWithdrawals({ api }) {
+  const [list, setList] = useState([]);
+  const [status, setStatus] = useState("requested");
+  const [busyId, setBusyId] = useState(null);
+  const [notes, setNotes] = useState({});
+  const [msg, setMsg] = useState("");
+  const load = useCallback(() => {
+    api.adminWithdrawals(status).then((r) => setList(many(r))).catch(() => setList([]));
+  }, [api, status]);
+  useEffect(() => { load(); }, [load]);
+  const rs = (p) => `\u20b9${(Number(p) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const act = async (id, s) => {
+    if (s === "rejected" && !(notes[id] || "").trim()) { setMsg("Write the reason first."); return; }
+    setBusyId(id); setMsg("");
+    try {
+      const r = one(await api.adminWithdrawalSet(id, s, notes[id]));
+      if (!r || !r.ok) setMsg(`Not done: ${(r && r.reason) || "error"}`);
+      load();
+    } catch (e) { setMsg((e && e.message) || "Failed"); }
+    finally { setBusyId(null); }
+  };
+  return (
+    <div style={{ marginTop: 26 }}>
+      <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 4px" }}>Withdrawal requests</h2>
+      <div style={{ fontSize: 13, color: T.inkFaint, marginBottom: 10, lineHeight: 1.5 }}>
+        Pay the amount to the UPI ID in your own UPI app, then press Mark paid (add the UTR as the note).
+        Reject sends the money back to their wallet; keep the reason as a note for your own records.
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {["requested", "paid", "rejected"].map((k) => (
+          <Btn key={k} kind={status === k ? "primary" : "ghost"}
+               style={{ padding: "8px 14px", minHeight: 38, fontSize: 13.5 }}
+               onClick={() => setStatus(k)}>{k}</Btn>
+        ))}
+      </div>
+      {msg && <div style={{ fontSize: 13, color: T.red, marginBottom: 8 }}>{msg}</div>}
+      {list.length === 0 ? (
+        <div style={{ fontSize: 14, color: T.inkFaint }}>None.</div>
+      ) : list.map((w) => (
+        <div key={w.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{rs(w.amount_paise)} → {w.upi_id}</div>
+          <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>
+            {w.full_name || "—"} · {w.phone || "—"} · {Number(w.listings) || 0} approved listing(s) · {new Date(w.created_at).toLocaleString("en-IN")}
+          </div>
+          {w.note && <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>Note: {w.note}</div>}
+          {w.status === "requested" && (
+            <>
+              <input value={notes[w.id] || ""} maxLength={120}
+                     onChange={(e) => setNotes((n) => ({ ...n, [w.id]: e.target.value }))}
+                     placeholder="UTR number, or the reason if rejecting"
+                     style={{ ...input, marginTop: 8, minHeight: 42 }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <Btn disabled={busyId === w.id} onClick={() => act(w.id, "paid")}>Mark paid</Btn>
+                <Btn kind="ghost" style={{ color: T.red }} disabled={busyId === w.id}
+                     onClick={() => act(w.id, "rejected")}>Reject</Btn>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdminList({ api, trades, reloadKey }) {
   const [status, setStatus] = useState("pending");
   const [list, setList] = useState([]);
@@ -2407,6 +2474,7 @@ export default function ServicesPage({
             <>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
               <AdminList api={api} trades={trades} reloadKey={reloadKey} />
+              <AdminWithdrawals api={api} />
               <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />
             </>
           )}
