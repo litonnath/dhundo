@@ -26,7 +26,7 @@ import { useMyLocation, locErrorKey } from "./device.jsx";
 import MapPicker from "./mappicker.jsx";
 import {
   searchAnywhere, reverseLookup, placeCoords, nearestPlaces, bestNearName,
-  snapToKnown, pinForPlace,
+  snapToKnown, pinForPlace, warmPlaceSearch,
 } from "./regions.js";
 
 // Everything known about a point: the address, the state, the village, the
@@ -85,6 +85,9 @@ export function LocationSheet({ place, onChange, onClose }) {
   const [chosenQ, setChosenQ] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Warm the place index while the person is still reading the sheet.
+  useEffect(() => { warmPlaceSearch(state0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Searching: one request per pause in typing, never one per keystroke.
   useEffect(() => {

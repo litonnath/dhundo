@@ -260,6 +260,28 @@ async function searchDb(state, q, signal) {
 // The same, saying whether the table could be asked at all: a timeout is not
 // "no such place", and the person should not be told it is.
 async function searchDbX(state, q, signal) {
+  const first = await searchDbOnce(state, q, signal);
+  // A timeout on the first read of an index that is not in memory yet is
+  // common and the same search a moment later is instant, so one more try.
+  if (first.failed && !(signal && signal.aborted) && (first.status === 0 || first.status >= 500)) {
+    await new Promise((r) => setTimeout(r, 500));
+    if (signal && signal.aborted) return first;
+    return searchDbOnce(state, q, signal);
+  }
+  return first;
+}
+
+// Asked once per state per visit, when the location sheet opens: it reads the
+// index into memory, so the first real search is not the one that pays.
+const warmed = new Set();
+export function warmPlaceSearch(state) {
+  const k = state || "";
+  if (warmed.has(k)) return;
+  warmed.add(k);
+  searchDbOnce(state, "ti").catch(() => {});
+}
+
+async function searchDbOnce(state, q, signal) {
   const call = (fn) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
     signal,
@@ -272,7 +294,9 @@ async function searchDbX(state, q, signal) {
   });
   try {
     let res = await call("services_search_places");
-    if (!res.ok) res = await call("services_search_regions");
+    // The older function only when the new one is not installed (404). A
+    // timeout is not a reason to ask the slower of the two as well.
+    if (res.status === 404) res = await call("services_search_regions");
     if (!res.ok) return { rows: [], failed: true, status: res.status };
     const rows = await res.json();
     if (!Array.isArray(rows)) return { rows: [], failed: true, status: 0 };

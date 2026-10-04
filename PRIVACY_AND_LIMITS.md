@@ -112,3 +112,14 @@ seconds (OpenStreetMap asks for about one request a second).
   come from OpenStreetMap, so a road or shop nobody has mapped does not appear.
 * The service worker leaves `/geo/` alone, so searches are not stored in the
   phone's cache.
+
+## Place search speed
+
+* `sql/95_search_speed.sql`: prefix indexes and an index-range search, about 1 ms
+  on 2.4 million places (it timed out at 3 s before).
+* `sql/96_prewarm.sql` (optional): reads those indexes into memory.
+* `sql/97_api_timeout.sql`: the database cancels a request after 10 seconds for
+  signed-out and signed-in people (Supabase sets 3 and 8). This is slack for the
+  first, cold search; it applies to every request the app makes.
+* The app retries one failed search once, asks the older slower search only when
+  the new one is not installed, and warms the index when the location sheet opens.
