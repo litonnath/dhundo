@@ -660,14 +660,22 @@ function InvitePanel({ api }) {
   );
 }
 
+const WD_MIN = 50000; // paise: Rs 500, the same figure sql/103 enforces
+
 export function WalletSheet({ api, phone, onClose }) {
   const { t, lang } = useI18n();
   useDismissable(true, onClose);
   const [state, setState] = React.useState({ loading: true, paise: 0, rows: [], failed: false });
   const [withdraw, setWithdraw] = React.useState(false);
+  const [wd, setWd] = React.useState({ upi: "", busy: false, err: "", sent: false });
+  const [open, setOpen] = React.useState([]);
+  const [reload, setReload] = React.useState(0);
 
   React.useEffect(() => {
     let alive = true;
+    Promise.resolve(api.myWithdrawals ? api.myWithdrawals() : [])
+      .then((w) => { if (alive) setOpen((Array.isArray(w) ? w : []).filter((x) => x.status === "requested")); })
+      .catch(() => {});
     Promise.all([api.walletBalance(), api.walletHistory(50)])
       .then(([b, h]) => {
         if (!alive) return;
@@ -676,7 +684,25 @@ export function WalletSheet({ api, phone, onClose }) {
       })
       .catch(() => { if (alive) setState({ loading: false, paise: 0, rows: [], failed: true }); });
     return () => { alive = false; };
-  }, [api]);
+  }, [api, reload]);
+
+  const sendWithdraw = async () => {
+    setWd((x) => ({ ...x, busy: true, err: "" }));
+    try {
+      const r = await api.withdraw(wd.upi.trim());
+      const x = Array.isArray(r) ? r[0] : r;
+      if (x && x.ok) {
+        setWd({ upi: "", busy: false, err: "", sent: true });
+        setWithdraw(false);
+        setReload((n) => n + 1);
+      } else {
+        const k = x && x.reason;
+        setWd((y) => ({ ...y, busy: false, err: k === "bad_upi" ? t("wal_wd_bad_upi") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
+      }
+    } catch (e) {
+      setWd((y) => ({ ...y, busy: false, err: (e && e.message) || t("e_gone") }));
+    }
+  };
 
   const when = (iso) => {
     try {
@@ -693,6 +719,7 @@ export function WalletSheet({ api, phone, onClose }) {
       : row.kind === "promo" ? t("wal_kind_promo")
       : row.kind === "refund" ? t("wal_kind_refund")
       : row.kind === "referral" ? t("wal_kind_referral")
+      : row.kind === "withdrawal" ? t("wal_kind_withdrawal")
       : t("wal_kind_adjustment");
 
   return (
@@ -764,33 +791,29 @@ export function WalletSheet({ api, phone, onClose }) {
             Until 2 exists there is no debit path anywhere in the database,
             which is what makes this button safe to show. */}
         <div style={{ marginTop: 14 }}>
-          {!withdraw ? (
-            <Btn full kind="ghost" onClick={() => setWithdraw(true)}>
-              {t("wal_withdraw")}
-            </Btn>
+          {state.loading ? null : state.paise < WD_MIN ? (
+            <Notice tone="info">
+              {t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", rupees(WD_MIN - state.paise))}
+            </Notice>
+          ) : !withdraw ? (
+            <Btn full onClick={() => setWithdraw(true)}>{t("wal_withdraw")}</Btn>
           ) : (
-            <div style={{
-              border: `1px solid ${T.line}`, borderRadius: 14, padding: "15px 14px",
-            }}>
+            <div style={{ border: `1px solid ${T.line}`, borderRadius: 14, padding: "15px 14px" }}>
               <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, marginBottom: 4 }}>
-                {t("wal_wd_title")}
+                {t("wal_wd_title")} · {rupees(state.paise)}
               </div>
-              <div style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.6, marginBottom: 12 }}>
-                {t("wal_wd_body").replace("{phone}", phone ? prettyPhone(phone) : "")}
+              <div style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.6, marginBottom: 10 }}>
+                {t("wal_wd_body")}
               </div>
-
-              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                <input
-                  style={{ ...input, flex: 1, letterSpacing: 3, fontSize: 16 }}
-                  inputMode="numeric" maxLength={6} placeholder="••••••"
-                  disabled aria-label={t("wal_wd_code")}
-                />
-                <Btn onClick={() => {}} disabled>{t("wal_wd_send")}</Btn>
-              </div>
-
-              {/* The honest part. */}
-              <Notice tone="info">{t("wal_wd_soon")}</Notice>
-
+              <input
+                style={{ ...input, marginBottom: 10 }} value={wd.upi} autoCapitalize="none" autoCorrect="off"
+                onChange={(e) => setWd((x) => ({ ...x, upi: e.target.value, err: "" }))}
+                placeholder={t("wal_wd_upi_ph")} aria-label={t("wal_wd_upi_ph")} maxLength={70}
+              />
+              {wd.err && <Notice tone="bad">{wd.err}</Notice>}
+              <Btn full disabled={wd.busy || wd.upi.trim().length < 5} onClick={sendWithdraw}>
+                {wd.busy ? "…" : t("wal_wd_req").replace("{a}", rupees(state.paise))}
+              </Btn>
               <button onClick={() => setWithdraw(false)} style={{
                 background: "none", border: "none", cursor: "pointer", color: T.brandDark,
                 fontWeight: 700, fontSize: 13.5, minHeight: 44, fontFamily: "inherit",
@@ -798,6 +821,14 @@ export function WalletSheet({ api, phone, onClose }) {
               }}>{t("w_back")}</button>
             </div>
           )}
+          {wd.sent && <div style={{ marginTop: 10 }}><Notice tone="info">{t("wal_wd_sent")}</Notice></div>}
+          {open.map((w) => (
+            <div key={w.id} style={{ marginTop: 10 }}>
+              <Notice tone="info">
+                {t("wal_wd_pending").replace("{a}", rupees(w.amount_paise)).replace("{u}", w.upi_id)}
+              </Notice>
+            </div>
+          ))}
         </div>
 
         <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft,

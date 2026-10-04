@@ -289,6 +289,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
+    withdraw: (upi) => rpc("services_withdraw_request", { p_upi: upi }, true),
+    myWithdrawals: () => rpc("services_my_withdrawals", {}, true),
     walletHistory: (limit = 50) =>
       rpc("services_wallet_history", { p_limit: limit }, true),
 
