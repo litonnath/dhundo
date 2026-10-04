@@ -5,13 +5,13 @@
 -- and laptop shares ONE count. When the month's allowance is used the app
 -- stops asking Google and draws the free map instead.
 --
--- To change the allowance: update services_gmap_cap set cap = 8000;
+-- To change the allowance: update services_gmap_cap set cap = 6000;
 -- ===========================================================================
 create table if not exists public.services_gmap_cap (
   id   boolean primary key default true check (id),
-  cap  int not null default 8000
+  cap  int not null default 6000
 );
-insert into public.services_gmap_cap (id, cap) values (true, 8000) on conflict do nothing;
+insert into public.services_gmap_cap (id, cap) values (true, 6000) on conflict do nothing;
 
 create table if not exists public.services_gmap_usage (
   month text primary key,
@@ -40,7 +40,7 @@ begin
     on conflict (month) do nothing;
   update public.services_gmap_usage
      set loads = loads + 1
-   where month = v_month and loads < coalesce(v_cap, 8000)
+   where month = v_month and loads < coalesce(v_cap, 6000)
    returning loads into v_used;
   if v_used is null then
     select loads into v_used from public.services_gmap_usage where month = v_month;
