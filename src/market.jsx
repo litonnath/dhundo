@@ -230,14 +230,16 @@ export function MarketPage({ api, place, state, onOpenItem, onSell }) {
       <div style={{ background: `linear-gradient(160deg, ${T.brandDark}, ${T.brandDeep})`, color: "#fff" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "18px 16px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 23, fontWeight: 900, margin: 0, flex: 1 }}>🛍️ {t("mk_tab")}</h1>
+            <h1 style={{ fontSize: 23, fontWeight: 900, margin: 0, flex: 1 }}>{t("need_buy")}</h1>
+            {onSell && (
             <button onClick={onSell} style={{
               display: "inline-flex", alignItems: "center", gap: 6, background: T.accent, color: "#fff",
               border: "none", borderRadius: 24, padding: "10px 16px", fontSize: 15, fontWeight: 900,
               cursor: "pointer", fontFamily: "inherit", minHeight: 44, boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
             }}><Icon name="plus" size={18} /> {t("mk_sell_btn")}</button>
+            )}
           </div>
-          <p style={{ fontSize: 14, opacity: 0.85, margin: "4px 0 14px" }}>{t("mk_tab_sub")}</p>
+          <p style={{ fontSize: 14, opacity: 0.85, margin: "4px 0 14px" }}>{t("need_buy_sub")}</p>
           <div style={{
             display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 14,
             padding: "6px 6px 6px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
@@ -333,7 +335,7 @@ export function MarketHome({ api, place, state, query = "", category: initialCat
           <div style={{ fontSize: 40 }}>{cat ? catOf(cat).emoji : "🛍️"}</div>
           <div style={{ fontSize: 17, fontWeight: 800, marginTop: 6 }}>{t("mk_empty")}</div>
           <p style={{ fontSize: 14, color: T.inkSoft, margin: "6px 0 16px", lineHeight: 1.55 }}>{t("mk_empty_sub")}</p>
-          <Btn onClick={onSell}><Icon name="tag" size={18} /> {t("mk_sell_title")}</Btn>
+          {onSell && <Btn onClick={onSell}><Icon name="tag" size={18} /> {t("mk_sell_title")}</Btn>}
         </div>
       ) : (
         <>

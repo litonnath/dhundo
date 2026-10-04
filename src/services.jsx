@@ -41,6 +41,7 @@ import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
+import { StoreHome, OwnerFood } from "./food.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
@@ -323,6 +324,20 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     ridesNearby: () => rpc("services_rides_nearby", {}, true),
     rideAccept: (id) => rpc("services_ride_accept", { p_ride: id }, true),
     myRide: () => rpc("services_my_ride", {}, true),
+    menuGet: (workerId) => rpc("services_menu_get", { p_worker: workerId }),
+    myMenu: () => rpc("services_my_menu", {}, true),
+    menuSave: (m) => rpc("services_menu_save", {
+      p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
+      p_price_rupees: m.price, p_veg: m.veg, p_available: m.available,
+    }, true),
+    menuDelete: (id) => rpc("services_menu_delete", { p_id: id }, true),
+    setAccepting: (on) => rpc("services_set_accepting", { p_on: !!on }, true),
+    orderPlace: (workerId, lines, mode, address, lat, lng, note) => rpc("services_order_place", {
+      p_worker: workerId, p_lines: lines, p_mode: mode, p_address: address || null,
+      p_lat: typeof lat === "number" ? lat : null, p_lng: typeof lng === "number" ? lng : null, p_note: note || null,
+    }, true),
+    myOrders: () => rpc("services_my_orders", {}, true),
+    orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
     rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
     bookingRequest: (worker, period, start, note) =>
       rpc("services_booking_request", { p_worker: worker, p_period: period, p_start: start, p_note: note || null }, true),
@@ -796,13 +811,11 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     if (k === "market") { onMarket && onMarket(); return; }
     if (k === "partner") { onPartner && onPartner(); return; }
     setSection(k);
-    if (k === "shop") setGroup("Suppliers");
-    else if (k === "eat") setGroup("Eat & Stay");
   };
   const goHome = () => { setSection(null); setGroup(null); setTrade(null); setAllIn(false); setSearch(""); };
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
-  if (showGrid && section !== "worker" && section !== "ride") {
+  if (showGrid && section !== "worker" && section !== "ride" && section !== "shop" && section !== "eat") {
     return <CustomerLauncher onPick={pickTile} onOffer={onOffer} side={side} setSide={setSide} />;
   }
   // Worker or Helper: people who come and work. Not drivers (Ride), not
@@ -820,6 +833,36 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   }[section] || ["home_worker", "construction", "#C2410C", "#FFF1E6"];
   const groupTrades = section === "worker" ? inGroup.filter((x) => workerSlugs.has(x.slug)) : inGroup;
   const showTiles = !!group && !trade && !allIn && !search.trim() && groupTrades.length > 0;
+  if (section === "shop" || section === "eat") {
+    const renderEmpty = (row) => (
+      <ListingCard
+        row={row}
+        rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+        tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
+        trade={trades.find((x) => x.slug === row.trade_slug)}
+        canCall={!!(user && user.id)}
+        revealing={revealing === row.id}
+        revealed={revealed[row.id]}
+        directions={dirs[row.id]} origin={place}
+        posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
+        onCall={handleCall}
+        otherLabels={tradeLabels}
+      />
+    );
+    return (
+      <>
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 0" }}>
+          <button onClick={goHome} style={{
+            display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`,
+            borderRadius: 20, padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+            fontSize: 14, fontWeight: 700, color: T.brandDark,
+          }}><Icon name="back" size={16} /> {t("launch_back")}</button>
+        </div>
+        <StoreHome kind={section} api={api} trades={trades} place={place} user={user} onSignIn={onSignIn}
+                   renderEmpty={renderEmpty} />
+      </>
+    );
+  }
   if (section === "ride" && !group && !trade) {
     return (
       <>
@@ -2845,7 +2888,7 @@ export default function ServicesPage({
       {tab === "market" && (
         <MarketPage api={api} place={place} state={state}
                     onOpenItem={(it) => setItemOpen({ id: it.id, km: it.distance_km })}
-                    onSell={() => setTab("sell")} />
+                    />
       )}
 
       {tab === "sell" && (
@@ -2875,7 +2918,7 @@ export default function ServicesPage({
             if (!signedIn || !hasListing || isAdmin) return null;
             if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} /><RiderJobs api={api} online={avail.online} /></>;
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
-              return <ShopJobs api={api} hasListing={hasListing} />;
+              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return null;
           })()}
           avail={avail} signedIn={signedIn} hasListing={hasListing}

@@ -1667,7 +1667,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
           <>
             {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
             {item("mine", "edit", t("nav_mine"), () => setTab(hasListing ? "mine" : "add"))}
-            {item("sell", "tag", t("mk_my_ads"), () => setTab("sell"))}
+            {item("sell", "tag", t("offer_sell"), () => setTab("sell"))}
             {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
           </>
