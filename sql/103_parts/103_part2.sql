@@ -1,8 +1,8 @@
 -- ===========================================================================
 -- 103_part2.sql -- run after 103_part1.sql. The admin function that marks a
 -- withdrawal paid or rejected (a rejected one is returned to the wallet).
---   select * from services_admin_withdrawal_set('<id>', 'paid', 'UTR 1234');
---   select * from services_admin_withdrawal_set('<id>', 'rejected', 'reason');
+--   select * from services_admin_withdrawal_set(<id>, paid, UTR 1234);
+--   select * from services_admin_withdrawal_set(<id>, rejected, reason);
 -- ===========================================================================
 create or replace function public.services_admin_withdrawal_set(p_id uuid, p_status text, p_note text default null)
 returns table (ok boolean, reason text)

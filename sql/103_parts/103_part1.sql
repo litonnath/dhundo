@@ -12,10 +12,10 @@
 --   * UPI id must look like name@bank
 --   * 5 requests a day per account at most
 --
--- Paying:   select * from services_withdrawals where status = 'requested';
+-- Paying:   select * from services_withdrawals where status = requested;
 --           (pay by UPI, then)
---           select * from services_admin_withdrawal_set('<id>', 'paid', 'UTR 1234');
--- Refusing: select * from services_admin_withdrawal_set('<id>', 'rejected', 'reason');
+--           select * from services_admin_withdrawal_set(<id>, paid, UTR 1234);
+-- Refusing: select * from services_admin_withdrawal_set(<id>, rejected, reason);
 -- The reason is shown to the person next to their request.
 -- ===========================================================================
 do $fn$
