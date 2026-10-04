@@ -58,3 +58,16 @@ add_header Strict-Transport-Security "max-age=31536000" always;
 add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://tile.googleapis.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com https://overpass-api.de https://overpass.kumi.systems https://photon.komoot.io https://nominatim.openstreetmap.org; script-src 'self'; frame-ancestors 'none'" always;
 ```
 Test in a private window after adding; if the map or a font stops loading, the browser console names the blocked address.
+
+---
+## Fixes added after the review (run, then tick)
+| # | What was done | You must |
+|---|---|---|
+| 1 | sql/110_parts/110_part1 and 110_part2: contact reveal limit is now 15 an hour, and can require a checked phone | Run 110 part 1 and 2. After the SMS provider works and people have checked their phones, run: `update services_settings set value = 'on' where name = 'reveal_needs_phone';` (it is OFF until then so calling does not stop working) |
+| 2 (part) | sql/110_part3: a withdrawal cannot be marked paid for 24 hours; the admin screen data flags a UPI id never paid before (part 6) | Run part 3 and part 6. In Supabase, Authentication, set sign-in rate limits low, and turn on CAPTCHA for sign-up and sign-in; if you are on the Pro plan, add the password-attempt hook to lock an account after 10 wrong PINs. I cannot set these from the code |
+| 3 | Not fixed in code. Needs a second factor for admins | In Supabase, Authentication, MFA: switch on. Tell me and I will add the admin screen that asks for the code and make admin functions require it |
+| 4 | Not fixable from here | Run `select pg_get_functiondef('public.services_is_admin'::regproc);` in the SQL editor and send me the result |
+| 5 | sql/110_part4: new or changed listing photo and avatar addresses must be in your photo storage | Run part 4. Optional extra lock: set storage_prefix as shown in the file |
+| 6 | security-headers.sh | On the server: `cd ~/services-app && sudo bash security-headers.sh`. It starts in report-only mode; use the site, check the browser console, then `sudo CSP_ENFORCE=1 bash security-headers.sh` |
+| 7 | sql/110_part5: the Google allowance also has a daily cap (a twentieth of the month) | Run part 5. Also set daily quotas in Google Cloud |
+| 8 | sql/110_part4: anonymous timeout lowered from 10 to 6 seconds | Run part 4 |

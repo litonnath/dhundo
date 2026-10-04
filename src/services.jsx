@@ -685,7 +685,9 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
         try { window.location.href = `tel:${String(r.phone).replace(/\s/g, "")}`; } catch (_) {}
       }
       else setNote(
-        r && r.reason === "rate_limited"
+        r && r.reason === "phone_not_verified"
+          ? t("pv_banner")
+          : r && r.reason === "rate_limited"
           ? t("e_rate")
           : r && r.reason === "sign_in_required"
           ? t("e_signin")
