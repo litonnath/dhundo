@@ -2,6 +2,7 @@
 -- 117_part5.sql -- saving a menu item now takes a photo address.
 -- ===========================================================================
 drop function if exists public.services_menu_save(uuid, text, text, text, int, boolean, boolean);
+drop function if exists public.services_menu_save(uuid, text, text, text, int, boolean, boolean, text);
 create function public.services_menu_save(
   p_id uuid, p_category text, p_name text, p_about text,
   p_price_rupees int, p_veg boolean, p_available boolean, p_photo text default null)
