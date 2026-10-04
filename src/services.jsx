@@ -852,7 +852,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
-            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "21 / 8", marginBottom: 14 }} />
+            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "21 / 8", maxHeight: 190, marginBottom: 14 }} />
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />

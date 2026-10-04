@@ -195,7 +195,7 @@ export function SubCategories({ title, icon, fg, bg, items, onPick, onAll, allLa
   const { t } = useI18n();
   return (
     <div>
-      {art && <TileArt k={art} style={{ borderRadius: 14, aspectRatio: "21 / 8", marginBottom: 14 }} />}
+      {art && <TileArt k={art} style={{ borderRadius: 14, aspectRatio: "21 / 8", maxHeight: 190, marginBottom: 14 }} />}
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>
       <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
