@@ -34,7 +34,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import {
   T, Icon, Btn, Chip, Notice, input, ConfirmDelete,
   groupStyle, groupLabel,
-  plateLooksRight,
+  plateLooksRight, ReqTag,
 } from "./ui.jsx";
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import { PlaceField } from "./locpicker.jsx";
@@ -726,7 +726,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               flag rather than a group name written here -- the same source
               the approval gate reads, so the two cannot disagree. */}
           {row && row.requires_vehicle && (
-            <Row fid="vehicle" error={ferr("vehicle")} label={t("w3_vehicle")} hint={t("w3_vehicle_hint")}>
+            <Row fid="vehicle" error={ferr("vehicle")} label={<>{t("w3_vehicle")}<ReqTag /></>} hint={t("w3_vehicle_hint")}>
               <input
                 style={{
                   ...field, maxWidth: 240, textTransform: "uppercase",
@@ -905,7 +905,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
         <div id="sec-id">
           {/* "(optional)" is a lie for a cook or a driver, and it sat directly
               above a red notice saying so. The label follows the trade. */}
-          <Section title={row.requires_id && !row.verified ? t("adm_id_title") : t("p_id")}>
+          <Section title={row.requires_id && !row.verified ? <>{t("adm_id_title")}<ReqTag /></> : t("p_id")}>
             {/* For a cook or a driver this is not optional any more, and
                 the screen has to say so plainly rather than letting somebody
                 discover it when an admin refuses them. */}

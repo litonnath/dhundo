@@ -25,7 +25,7 @@ import {
   T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
   ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea,
   groupStyle, groupLabel, WalletSheet,
-  plateLooksRight, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
+  plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
   BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
 } from "./ui.jsx";
 import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances } from "./regions.js";
@@ -1395,7 +1395,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                 {t("w1_need_title")}
               </div>
               {needsVehicle && (
-                <BigField fid="vehicle" error={ferr("vehicle")} label={`${t("w3_vehicle")} *`} hint={t("w3_vehicle_hint")}>
+                <BigField fid="vehicle" error={ferr("vehicle")} label={<>{t("w3_vehicle")}<ReqTag /></>} hint={t("w3_vehicle_hint")}>
                   <input
                     style={{
                       ...bigInput, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700,
@@ -1413,7 +1413,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
               )}
               {needsId && (
                 <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55 }}>
-                  <b style={{ color: T.red }}>{t("req_missing")}</b> · {t("w1_need_id")}
+                  <b style={{ color: T.red }}>{t("req_missing")}</b> <ReqTag /> {t("w1_need_id")}
                 </div>
               )}
             </div>
@@ -1720,7 +1720,7 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
             <Field label={t("adm_f_phone")}>{d.phone}</Field>
             {d.business_name && <Field label={t("w2_shop")}>{d.business_name}</Field>}
             {d.requires_vehicle && (
-              <Field label={t("w3_vehicle")}>
+              <Field label={<>{t("w3_vehicle")}<ReqTag /></>}>
                 <span style={{ fontWeight: 800, letterSpacing: 1 }}>{d.vehicle_number}</span>
                 {/* An owner and his driver legitimately share a car. Five
                     listings on one plate is a different story, so the number
@@ -1787,7 +1787,7 @@ function AdminReview({ api, trades, workerId, onClose, onChanged }) {
               border: `1px solid ${T.line}`, background: T.paper,
             }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
-                {t("adm_id_title")}
+                {t("adm_id_title")}{d.requires_id && <ReqTag />}
               </div>
               {!d.has_id_doc ? (
                 <div style={{ fontSize: 13, color: T.inkFaint, lineHeight: 1.6 }}>

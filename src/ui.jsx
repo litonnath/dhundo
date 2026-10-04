@@ -286,6 +286,19 @@ export function Chip({ active, children, onClick }) {
   );
 }
 
+// The small red "Required" next to a label, used wherever the vehicle number
+// or the ID photo is asked for, so the same thing looks the same everywhere.
+export function ReqTag() {
+  const { t } = useI18n();
+  return (
+    <span style={{
+      display: "inline-block", marginLeft: 7, fontSize: 11, fontWeight: 800, color: T.red,
+      background: T.redSoft, border: `1px solid ${T.red}`, borderRadius: 10, padding: "1px 7px",
+      verticalAlign: "middle", whiteSpace: "nowrap",
+    }}>{t("req_tag")}</span>
+  );
+}
+
 export function Notice({ tone = "info", children }) {
   const t = {
     info: { bg: T.brandSoft, bd: "rgba(0,119,163,0.25)", fg: T.brandDeep },
