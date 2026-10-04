@@ -874,7 +874,7 @@ export function placeIsCoherent(p) {
 // allowance is used up, the count could not be read -- means "draw the free
 // map instead".
 // ---------------------------------------------------------------------------
-export async function takeGoogleMap() {
+export async function takeGoogleMap(kind = "tiles") {
   const key = CFG.GOOGLE_MAPS_KEY;
   if (!key || /YOUR/i.test(key)) return false;
   try {
@@ -884,7 +884,7 @@ export async function takeGoogleMap() {
         "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: "{}",
+      body: JSON.stringify({ p_kind: kind }),
     });
     if (!res.ok) return false;
     const j = await res.json();
@@ -910,4 +910,69 @@ export function googleTileUrl(kind, store) {
       .catch(() => null);
   }
   return store[kind];
+}
+
+
+// ---------------------------------------------------------------------------
+// GOOGLE ADDRESS AND NEARBY PLACES FOR A SAVED PIN
+// Asked once when a pin is saved (not while the map is dragged), each kind
+// against its own monthly allowance (sql/100). The key must also allow
+// "Geocoding API" and "Places API (New)". Null on any failure -- the caller
+// then uses the free OpenStreetMap lookup.
+// ---------------------------------------------------------------------------
+export async function googleDescribe(lat, lng) {
+  const key = CFG.GOOGLE_MAPS_KEY;
+  if (!key || /YOUR/i.test(key) || typeof lat !== "number") return null;
+  const out = { address: null, area: null, state: null, places: [] };
+  const [geo, near] = await Promise.all([
+    (async () => {
+      if (!(await takeGoogleMap("geocode"))) return null;
+      const r = await fetch("https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
+        `${lat},${lng}&language=en&region=in&key=${key}`);
+      const j = r.ok ? await r.json() : null;
+      return j && j.status === "OK" ? j.results : null;
+    })().catch(() => null),
+    (async () => {
+      if (!(await takeGoogleMap("nearby"))) return null;
+      const r = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json", "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "places.displayName,places.location,places.primaryTypeDisplayName",
+        },
+        body: JSON.stringify({
+          maxResultCount: 8, rankPreference: "DISTANCE", languageCode: "en", regionCode: "IN",
+          locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 300 } },
+        }),
+      });
+      const j = r.ok ? await r.json() : null;
+      return j && j.places ? j.places : null;
+    })().catch(() => null),
+  ]);
+  if (geo && geo.length) {
+    const comp = (type) => {
+      for (const res of geo) {
+        const c = (res.address_components || []).find((x) => x.types.includes(type));
+        if (c) return c.long_name;
+      }
+      return null;
+    };
+    const road = comp("route");
+    const area = comp("sublocality_level_1") || comp("sublocality") || comp("neighborhood") || comp("locality");
+    const town = comp("locality");
+    const district = comp("administrative_area_level_3") || comp("administrative_area_level_2");
+    const st = comp("administrative_area_level_1");
+    out.state = st ? normalizeState(st) : null;
+    out.area = area || town || null;
+    out.address = {
+      line: uniqueJoin([comp("premise"), road, area, town, district]) || null,
+      postcode: validPin(comp("postal_code")), road: road || null,
+    };
+  }
+  if (near) {
+    out.places = near.map((p) => ({
+      name: p.displayName && p.displayName.text, type: p.primaryTypeDisplayName && p.primaryTypeDisplayName.text,
+    })).filter((p) => p.name);
+  }
+  return out.address || out.places.length ? out : null;
 }

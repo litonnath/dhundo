@@ -422,7 +422,7 @@ export default function MapPicker({ start, state, onCancel, onConfirm }) {
         )}
 
         {ready && (
-          <div style={{ position: "absolute", left: 12, right: 150, top: 12, zIndex: 500 }}>
+          <div style={{ position: "absolute", left: 62, right: 150, top: 12, zIndex: 500 }}>
             <input
               value={sq} onChange={(e) => setSq(e.target.value)}
               placeholder={t("map_search_ph")} aria-label={t("map_search_ph")}

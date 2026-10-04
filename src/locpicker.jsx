@@ -26,7 +26,7 @@ import { useMyLocation, locErrorKey } from "./device.jsx";
 import MapPicker from "./mappicker.jsx";
 import {
   searchAnywhere, reverseLookup, placeCoords, nearestPlaces, bestNearName,
-  snapToKnown, pinForPlace, warmPlaceSearch, geoJson,
+  snapToKnown, pinForPlace, warmPlaceSearch, geoJson, googleDescribe,
 } from "./regions.js";
 
 const metresBetween = (aLat, aLng, bLat, bLng) => {
@@ -57,10 +57,14 @@ async function nearestLandmark(lat, lng) {
 // Everything known about a point: the address, the state, the village, the
 // PIN. Used for the phone's position, for a pin moved on the map, and for the
 // phone position the page reads on its own for somebody who already said yes.
-export async function describePoint({ lat, lng, state, address, area, accuracy }) {
+export async function describePoint({ lat, lng, state, address, area, accuracy, google: exactGoogle = false }) {
   let addr = address || null;
   let ar = area || null;
   let st = state || null;
+  // Google first (its address and shop names are the fuller ones); the free
+  // map service when Google is not set up, used up, or has nothing here.
+  const g = exactGoogle ? await googleDescribe(lat, lng).catch(() => null) : null;
+  if (g && g.address) { addr = g.address; ar = g.area || ar; st = g.state || st; }
   if (!addr) {
     const rev = await reverseLookup(lat, lng).catch(() => null);
     if (rev) { addr = rev.address; ar = rev.area || ar; st = rev.state || st; }
@@ -76,7 +80,8 @@ export async function describePoint({ lat, lng, state, address, area, accuracy }
   // How far the spot is from the middle of the village it is named after:
   // the proof that it is where it was placed, not the village centre.
   const centre = close.find((r) => r.place === named);
-  const landmark = await nearestLandmark(lat, lng);
+  const gPlaces = (g && g.places) || [];
+  const landmark = gPlaces.length ? gPlaces[0].name : await nearestLandmark(lat, lng);
   const base = (addr && addr.line) || named;
   return {
     title: base,
@@ -90,6 +95,7 @@ export async function describePoint({ lat, lng, state, address, area, accuracy }
     nearby: close.filter((r) => typeof r.km === "number" && r.km <= 6).slice(0, 6)
       .map((r) => ({ place: r.place, district: r.district, km: r.km })),
     landmark,
+    places: gPlaces.slice(0, 6),
     centreKm: centre && typeof centre.km === "number" ? centre.km : null,
     pin: (pinR && pinR.pincode) || "", town: (pinR && pinR.place) || "",
     accuracy: typeof accuracy === "number" ? Math.round(accuracy) : null,
@@ -199,7 +205,7 @@ export function LocationSheet({ place, onChange, onClose }) {
     setBusy(true);
     const d = await describePoint({
       lat: got.lat, lng: got.lng, state: got.state || state0,
-      address: got.address, area: got.area, accuracy: got.accuracy,
+      address: got.address, area: got.area, accuracy: got.accuracy, google: true,
     });
     setChosen({ ...d, source: "device" });
     setChosenQ(q);
@@ -209,7 +215,7 @@ export function LocationSheet({ place, onChange, onClose }) {
   const onPin = async (pt) => {
     setMapOpen(false);
     setBusy(true);
-    const d = await describePoint({ lat: pt.lat, lng: pt.lng, state: (chosen && chosen.state) || state0 });
+    const d = await describePoint({ lat: pt.lat, lng: pt.lng, state: (chosen && chosen.state) || state0, google: true });
     setChosen({ ...d, source: "picked" });
     setChosenQ(q);
     setBusy(false);
@@ -362,6 +368,12 @@ export function LocationSheet({ place, onChange, onClose }) {
             {chosen.exact && typeof chosen.centreKm === "number" && chosen.area && (
               <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 8, lineHeight: 1.5 }}>
                 {t("loc_pin_off").replace("{d}", fmtKm(chosen.centreKm)).replace("{a}", chosen.area)}
+              </div>
+            )}
+            {chosen.places && chosen.places.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12.5, color: T.inkSoft, lineHeight: 1.6 }}>
+                <b>{t("map_near")}:</b>{" "}
+                {chosen.places.map((p) => (p.type ? `${p.name} (${p.type})` : p.name)).join(" · ")}
               </div>
             )}
             {chosen.exact && (
