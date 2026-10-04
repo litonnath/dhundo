@@ -2244,22 +2244,40 @@ export default function ServicesPage({
     try { window.localStorage.setItem("dhundo_place", JSON.stringify(place)); } catch (_) {}
   }, [place]);
 
-  // The location saved in Edit profile is the person own, and is where a
-  // signed-in search starts from, unless they have picked another place from
-  // the header on this device. It is separate from where a listing works.
+  // ONE LOCATION FOR THE PERSON, everywhere except a listing. Set it on the
+  // landing screen and it is saved to their profile; set it in Edit profile
+  // and the landing screen follows; sign in on another phone and it is there.
+  // A listing keeps its own location, always separate.
+  const saveHome = useCallback(async (p) => {
+    if (!user || !user.id || !p || typeof p.lat !== "number" || !STATES.includes(p.state)) return;
+    // Storing an address is a yes first (asked once, remembered).
+    if (!(await consent.ask("profile"))) return;
+    try {
+      const cur = (await api.myProfile()) || {};
+      await api.updateMyProfile({
+        full_name: cur.full_name || (user && user.full_name) || "", email: cur.email || "",
+        address: p.address || "", city: p.area || "", state: p.state, pincode: p.pin || "",
+      });
+      await api.setHome(p.lat, p.lng, !!p.exact);
+    } catch (_) { /* the screen already shows it; saving it is a convenience */ }
+  }, [api, user && user.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!user || !user.id) return undefined;
     let alive = true;
     api.myProfile().then((p) => {
-      if (!alive || !p || typeof p.home_lat !== "number" || typeof p.home_lng !== "number") return;
-      let manual = false;
-      try { manual = window.localStorage.getItem("dhundo_place_manual") === "1"; } catch (_) {}
-      if (manual || !STATES.includes(p.state)) return;
-      setPlace({
-        area: p.city || "", state: p.state, lat: p.home_lat, lng: p.home_lng,
-        pin: /^\d{6}$/.test(String(p.pincode || "")) ? String(p.pincode) : undefined,
-        address: p.address || undefined, exact: p.home_exact === true ? true : undefined,
-      });
+      if (!alive || !p) return;
+      if (typeof p.home_lat === "number" && typeof p.home_lng === "number" && STATES.includes(p.state)) {
+        // The saved profile location wins: it is the one every device shares.
+        setPlace({
+          area: p.city || "", state: p.state, lat: p.home_lat, lng: p.home_lng,
+          pin: /^\d{6}$/.test(String(p.pincode || "")) ? String(p.pincode) : undefined,
+          address: p.address || undefined, exact: p.home_exact === true ? true : undefined,
+        });
+      } else if (typeof place.lat === "number" && consent.has("profile")) {
+        // Set before signing in: carried into the new account.
+        saveHome(place);
+      }
     }).catch(() => {});
     return () => { alive = false; };
   }, [user && user.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2459,10 +2477,7 @@ export default function ServicesPage({
       {locOpen && (
         <LocationSheet
           place={place}
-          onChange={(p) => {
-            try { window.localStorage.setItem("dhundo_place_manual", "1"); } catch (_) {}
-            setPlace(p); setOutside(null);
-          }}
+          onChange={(p) => { setPlace(p); setOutside(null); saveHome(p); }}
           onClose={() => setLocOpen(false)}
         />
       )}
@@ -2586,7 +2601,8 @@ export default function ServicesPage({
       )}
 
       {tab === "profile" && signedIn && (
-        <ProfilePage api={api} account={user} hasListing={hasListing} PlaceFieldComp={PlaceField}
+        <ProfilePage api={api} account={user} hasListing={hasListing} PlaceFieldComp={PlaceField} currentPlace={place}
+                     onLocation={(p) => setPlace((cur) => ({ ...cur, ...p, source: "picked" }))}
                      onBack={() => setTab("account")}
                      onList={() => setTab(hasListing ? "mine" : "add")}
                      onSaved={(p) => onProfileSaved && onProfileSaved(p)} />

@@ -2443,7 +2443,7 @@ export function AccountPage({
 // The person, not their work. Name, email, address -- for the account.
 // Customers never see it; what they see is the listing. The phone is the
 // sign-in number, shown but not editable here.
-export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved, PlaceFieldComp = null }) {
+export function ProfilePage({ api, account, hasListing = false, onBack, onList, onSaved, PlaceFieldComp = null, currentPlace = null, onLocation = null }) {
   const { t } = useI18n();
   const consent = useConsent();
   const [f, setF] = useState({
@@ -2467,6 +2467,13 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         state: p.state || "", pincode: p.pincode || "",
       });
       if (typeof p.home_lat === "number") setHome({ lat: p.home_lat, lng: p.home_lng, exact: p.home_exact === true });
+      else if (currentPlace && typeof currentPlace.lat === "number") {
+        // Nothing saved yet: start from the location already set on the
+        // landing screen, so it is not asked for twice.
+        setF((x) => ({ ...x, city: x.city || currentPlace.area || "", state: x.state || currentPlace.state || "",
+          pincode: x.pincode || currentPlace.pin || "", address: x.address || currentPlace.address || "" }));
+        setHome({ lat: currentPlace.lat, lng: currentPlace.lng, exact: currentPlace.exact === true });
+      }
     }).catch(() => {}).finally(() => live && setLoaded(true));
     return () => { live = false; };
     // Once, on opening. Saving the name renews the session and with it
@@ -2485,8 +2492,8 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         try { await api.setHome(home ? home.lat : null, home ? home.lng : null, home ? home.exact : false); } catch (_) {}
       }
       if (r && r.ok) {
-        // A saved profile position becomes the starting point for searches.
-        try { window.localStorage.removeItem("dhundo_place_manual"); } catch (_) {}
+        // Saving a profile location moves the landing screen to it too.
+        if (onLocation && home) onLocation({ lat: home.lat, lng: home.lng, exact: home.exact, area: f.city, state: f.state, pin: f.pincode, address: f.address });
         setMsg({ tone: "good", text: t("p_saved") });
         onSaved && onSaved(r.profile);
       } else {
