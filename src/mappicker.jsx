@@ -39,7 +39,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent } from "./consent-core.js";
-import { geoJson } from "./regions.js";
+import { geoJson, takeGoogleMap, googleTileUrl } from "./regions.js";
 
 // THREE WAYS TO SEE THE GROUND, in the order they are tried.
 //   sat     satellite photographs (Esri World Imagery) with place names on top.
@@ -99,6 +99,9 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     return "sat";
   });
   const [backup, setBackup] = useState(false);
+  // null until asked; "google" while this month's allowance lasts; then "free".
+  const [gate, setGate] = useState(null);
+  const gsess = useRef({});
   const [near, setNear] = useState([]);
   const LRef = useRef(null);
   const setLayer = (v) => {
@@ -160,28 +163,58 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
   // to the next provider by itself when the first one is not loading (a
   // blocked server, a network that refuses it): six failures and not one tile
   // is how a blank grey map is told from a slow one.
+  // One Google session is counted per opening of the map (sql/99), against a
+  // monthly allowance; past it, or with no key, the free layers below are used.
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    takeGoogleMap().then((ok) => { if (alive) setGate(ok ? "google" : "free"); });
+    return () => { alive = false; };
+  }, [ready]);
+
   useEffect(() => {
     const L = LRef.current, map = mapRef.current;
-    if (!ready || !L || !map) return undefined;
-    const spec = TILES[layer];
-    const parts = [L.tileLayer(spec.url, {
-      maxZoom: 19, maxNativeZoom: spec.native, subdomains: spec.sub || "abc", attribution: spec.attrib,
-    })];
-    (spec.overlays || []).forEach((o) => parts.push(L.tileLayer(o.url, { maxZoom: 19, maxNativeZoom: o.native })));
-    let good = 0, bad = 0, moved = false;
-    parts[0].on("tileload", () => { good += 1; });
-    parts[0].on("tileerror", () => {
-      bad += 1;
-      if (!moved && good === 0 && bad >= 6) {
-        moved = true;
+    if (!ready || !L || !map || gate === null) return undefined;
+    let parts = [];
+    let dead = false;
+    const arm = (first, withFallback) => {
+      let good = 0, bad = 0, moved = false;
+      first.on("tileload", () => { good += 1; });
+      first.on("tileerror", () => {
+        bad += 1;
+        if (!moved && good === 0 && bad >= 6) { moved = true; withFallback(); }
+      });
+    };
+    const drawFree = () => {
+      const spec = TILES[layer === "google" ? "sat" : layer];
+      const base = L.tileLayer(spec.url, {
+        maxZoom: 19, maxNativeZoom: spec.native, subdomains: spec.sub || "abc", attribution: spec.attrib,
+      });
+      parts = [base];
+      (spec.overlays || []).forEach((o) => parts.push(L.tileLayer(o.url, { maxZoom: 19, maxNativeZoom: o.native })));
+      arm(base, () => {
         const next = ORDER[(ORDER.indexOf(layer) + 1) % ORDER.length];
         if (next !== "sat") { setBackup(true); setLayerState(next); }
         else setBackup(false);
-      }
-    });
-    parts.forEach((x) => x.addTo(map));
-    return () => { parts.forEach((x) => { try { map.removeLayer(x); } catch (_) {} }); };
-  }, [layer, ready]);
+      });
+      parts.forEach((x) => x.addTo(map));
+    };
+    if (gate === "google" && (layer === "sat" || layer === "street")) {
+      googleTileUrl(layer === "sat" ? "sat" : "road", gsess.current).then((url) => {
+        if (dead) return;
+        if (!url) { setGate("free"); return; }
+        const g = L.tileLayer(url, {
+          maxZoom: 21, maxNativeZoom: 20, attribution: "&copy; Google",
+        });
+        parts = [g];
+        arm(g, () => setGate("free"));
+        g.addTo(map);
+      });
+    } else {
+      drawFree();
+    }
+    return () => { dead = true; parts.forEach((x) => { try { map.removeLayer(x); } catch (_) {} }); };
+  }, [layer, ready, gate]);
 
   // WHAT IS NEAR THE PIN: the closest named things the map knows -- a shop, a
   // school, a road, a river -- so the pin can be checked against something
@@ -224,7 +257,7 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
   const poiKey = useRef("");
   useEffect(() => {
     const L = LRef.current, map = mapRef.current;
-    if (!ready || !L || !map) return undefined;
+    if (!ready || !L || !map || gate !== "free") return undefined;
     if (!poiLayer.current) poiLayer.current = L.layerGroup().addTo(map);
     let ctrl = null, timer = null;
     const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -275,7 +308,7 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
       map.off("moveend", onMove);
       if (poiLayer.current) { poiLayer.current.clearLayers(); }
     };
-  }, [ready]);
+  }, [ready, gate]);
 
   const useDeviceFix = async () => {
     if (!navigator.geolocation) return;

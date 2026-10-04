@@ -212,6 +212,7 @@ export function snapToKnown(state, detected) {
 // local list stays rather than being replaced by this.
 // ===========================================================================
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import * as CFG from "./config.js";
 import { STATE_CENTERS, normalizeState } from "./states.js";
 import { hasIndic, variants } from "./translit.js";
 
@@ -862,4 +863,51 @@ export function placeIsCoherent(p) {
   const dLat = (p.lat - c[0]) * rad, dLng = (p.lng - c[1]) * rad;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(c[0] * rad) * Math.cos(p.lat * rad) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h)) <= 800;
+}
+
+
+// ---------------------------------------------------------------------------
+// GOOGLE MAP TILES, WITH A MONTHLY ALLOWANCE
+// Needs GOOGLE_MAPS_KEY in src/config.js (the key must be restricted to this
+// site in Google Cloud). One call here = one Google session, counted in the
+// database (sql/99) so every device shares one count. False -- no key, the
+// allowance is used up, the count could not be read -- means "draw the free
+// map instead".
+// ---------------------------------------------------------------------------
+export async function takeGoogleMap() {
+  const key = CFG.GOOGLE_MAPS_KEY;
+  if (!key || /YOUR/i.test(key)) return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_gmap_take`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: "{}",
+    });
+    if (!res.ok) return false;
+    const j = await res.json();
+    return !!(j && j.ok);
+  } catch (_) {
+    return false;
+  }
+}
+
+// kind: "sat" (photographs with road and place names) or "road". The tile
+// session is made once per kind and kept in `store`.
+export function googleTileUrl(kind, store) {
+  const key = CFG.GOOGLE_MAPS_KEY;
+  if (!store[kind]) {
+    const body = kind === "sat"
+      ? { mapType: "satellite", language: "en-IN", region: "IN", layerTypes: ["layerRoadmap"] }
+      : { mapType: "roadmap", language: "en-IN", region: "IN" };
+    store[kind] = fetch(`https://tile.googleapis.com/v1/createSession?key=${key}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }).then((r) => (r.ok ? r.json() : null))
+      .then((j) => (j && j.session
+        ? `https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${j.session}&key=${key}` : null))
+      .catch(() => null);
+  }
+  return store[kind];
 }
