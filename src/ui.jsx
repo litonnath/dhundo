@@ -1802,7 +1802,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel, directions, origin }) {
+                              otherLabels, trade, nearLabel, directions, origin, posExact }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1840,6 +1840,10 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           : t("dist_km").replace("{n}", String(row.available_now && km < 10
               ? km.toFixed(1) : Math.round(km))))
       : null;
+  // A listing whose position is only the middle of its PIN code or village
+  // gets an honest "about" and "area" on its distance.
+  const distanceText = distance && posExact === false && !row.available_now
+    ? `\u2248 ${distance} \u00b7 ${t("dist_area")}` : distance;
 
   const liveMins = row.available_now && row.live_seen_at
     ? Math.max(0, Math.round((Date.now() - new Date(row.live_seen_at)) / 60000))
@@ -1993,7 +1997,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
             ) : distance && (
               <>
                 {dot}
-                <span style={{ fontWeight: 700, color: T.brandDark }}>{distance}</span>
+                <span style={{ fontWeight: 700, color: T.brandDark }}>{distanceText}</span>
               </>
             )}
           </div>

@@ -323,11 +323,15 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   // tick everything off and then be refused with no idea why.
   const todo = [];
   const gaps = (row && row.gaps) || [];
-  if (gaps.includes("vehicle_number")) {
-    todo.push({ key: "work", label: t("todo_vehicle"), blocking: true });
-  }
-  if (gaps.includes("id_doc")) {
-    todo.push({ key: "id", label: t("todo_id"), blocking: true });
+  // What the approval gate will refuse for is shown first, in red, apart from
+  // the nice-to-haves, so nobody has to hunt for the reason they are not live.
+  const blockers = [];
+  if (gaps.includes("vehicle_number")) blockers.push({ key: "work", label: t("todo_vehicle") });
+  if (gaps.includes("id_doc")) blockers.push({ key: "id", label: t("todo_id") });
+  // A position that is only the middle of a PIN code, village or city makes
+  // every distance to this listing approximate; an exact pin fixes that.
+  if (row.loc_source !== undefined && !["device", "picked"].includes(row.loc_source || "")) {
+    todo.push({ key: "contact", label: t("todo_pin") });
   }
   if (!f.avatar_url) todo.push({ key: "face", label: t("todo_face") });
   if (!f.photos.length) todo.push({ key: "photos", label: t("todo_photos") });
@@ -422,6 +426,35 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
 
       {msg && <Notice tone="good">{msg}</Notice>}
       {err && <Notice tone="bad">{err}</Notice>}
+
+      {/* ------------------------------------------------------- missing */}
+      {blockers.length > 0 && (
+        <div style={{
+          background: T.redSoft, border: `1.5px solid ${T.red}`, borderRadius: 16,
+          padding: "14px 16px", marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.red, marginBottom: 8 }}>
+            {t("req_title")}
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {blockers.map((item) => (
+              <button key={item.key + item.label} onClick={() => jump(item.key)} style={{
+                display: "flex", alignItems: "center", gap: 10, width: "100%",
+                padding: "13px 14px", borderRadius: 11, minHeight: 52, cursor: "pointer",
+                border: `1px solid ${T.red}`, background: T.white, color: T.ink, textAlign: "left",
+                fontSize: 14.5, fontWeight: 700, fontFamily: "inherit",
+              }}>
+                <span style={{ color: T.red, display: "inline-flex" }}><Icon name="alert" size={18} /></span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, color: T.red, whiteSpace: "nowrap",
+                  background: T.redSoft, padding: "3px 8px", borderRadius: 10,
+                }}>{t("req_missing")}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* --------------------------------------------------------- to-do */}
       {todo.length > 0 && (

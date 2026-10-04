@@ -292,6 +292,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
+    exactPositions: (ids) =>
+      rpc("services_exact_positions", { p_ids: ids }, false),
     myData: () => rpc("services_my_data", {}, true),
     setNominee: (name, phone) => rpc("services_set_nominee", { p_name: name, p_phone: phone }, true),
     privacyRequest: (kind, body) => rpc("services_privacy_request", { p_kind: kind, p_body: body }, true),
@@ -565,6 +567,22 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const shown = (onlyLive ? live : [...live, ...list.filter((r) => !liveIds.has(r.id))])
     .filter((r) => !pinIds.has(r.id) && inRadius(r));
 
+  // Which of these listings have an exact position: the rest show an
+  // approximate distance, and the card says so.
+  const [exactSet, setExactSet] = useState(null);
+  const askedExact = useRef(new Set());
+  useEffect(() => {
+    const ids = [...new Set([...live, ...list, ...pinRows].map((r) => r.id))]
+      .filter((id) => id && !askedExact.current.has(id)).slice(0, 150);
+    if (!ids.length) return;
+    ids.forEach((id) => askedExact.current.add(id));
+    api.exactPositions(ids).then((r) => {
+      const got = new Set((Array.isArray(r) ? r : []).map((x) => x.id));
+      setExactSet((prev) => new Set([...(prev || []), ...got]));
+    }).catch(() => { ids.forEach((id) => askedExact.current.delete(id)); });
+  }, [live, list, pinRows, api]);
+  const posExactOf = (row) => (exactSet === null ? undefined : exactSet.has(row.id));
+
   // Same PIN code or same town: said in words instead of a distance. Inside
   // one town the positions are often rough, and "18 km" from Panisagar to
   // Panisagar is wrong. Someone available NOW keeps their live distance --
@@ -698,6 +716,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       revealing={revealing === row.id}
                       revealed={revealed[row.id]}
                       directions={dirs[row.id]} origin={place}
+                      posExact={posExactOf(row)}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -857,6 +876,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealing={revealing === row.id}
                   revealed={revealed[row.id]}
                   directions={dirs[row.id]} origin={place}
+                  posExact={posExactOf(row)}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}
@@ -1020,6 +1040,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   const needsVehicle = picked.some(
     (slug) => (trades.find((x) => x.slug === slug) || {}).requires_vehicle
   );
+  // Cooks, drivers and domestic help are asked for an ID photo; the flag is
+  // the database's (services_trades.requires_id), the group names are the
+  // fallback for a trades list that does not carry it yet.
+  const needsId = picked.some((slug) => {
+    const x = trades.find((y) => y.slug === slug) || {};
+    return x.requires_id === undefined ? ["Drivers", "Home & Domestic"].includes(x.group_name) : !!x.requires_id;
+  });
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
 
   const groups = useMemo(() => {
@@ -1311,8 +1338,44 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             </>
           )}
 
+          {picked.length > 0 && (needsVehicle || needsId) && (
+            <div style={{
+              background: T.redSoft, border: `1.5px solid ${T.red}`, borderRadius: 14,
+              padding: "14px 15px", marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: T.red, marginBottom: 8 }}>
+                {t("w1_need_title")}
+              </div>
+              {needsVehicle && (
+                <BigField label={`${t("w3_vehicle")} *`} hint={t("w3_vehicle_hint")}>
+                  <input
+                    style={{
+                      ...bigInput, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700,
+                      borderColor: plateLooksRight(f.vehicle_number) ? undefined : T.red,
+                    }}
+                    value={f.vehicle_number}
+                    placeholder="TR 01 AB 1234"
+                    autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+                    onChange={(e) => set("vehicle_number", e.target.value)}
+                  />
+                  {!plateLooksRight(f.vehicle_number) && (
+                    <div style={{ color: T.red, fontSize: 12.5, fontWeight: 800, marginTop: 5 }}>{t("req_missing")}</div>
+                  )}
+                </BigField>
+              )}
+              {needsId && (
+                <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55 }}>
+                  <b style={{ color: T.red }}>{t("req_missing")}</b> · {t("w1_need_id")}
+                </div>
+              )}
+            </div>
+          )}
+
           {picked.length > 0 && (
-            <Btn full onClick={() => { setErr(null); setStep(2); }}>
+            <Btn full onClick={() => {
+              if (needsVehicle && !plateLooksRight(f.vehicle_number)) return setErr(t("e_vehicle"));
+              setErr(null); setStep(2);
+            }}>
               {t("w_next")}
             </Btn>
           )}
@@ -1385,7 +1448,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           {/* "All optional" stops being true the moment a driver is on this
               step, and a promise the form then breaks is worse than no
               promise at all. */}
-          <p style={sub}>{t(needsVehicle ? "w3_sub_vehicle" : "w3_sub")}</p>
+          <p style={sub}>{t("w3_sub")}</p>
 
           {!isSupplier && (
             <>
@@ -1405,31 +1468,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                        onChange={(e) => set("years_experience", e.target.value)} />
               </BigField>
             </>
-          )}
-
-          {/* The one REQUIRED field on an otherwise optional step, and only
-              for the trades that drive. The person who gets into the car
-              needs to know it is the right car, so this is not decoration:
-              it is shown to them with the phone number when they call. */}
-          {needsVehicle && (
-            <BigField label={t("w3_vehicle")} hint={t("w3_vehicle_hint")}>
-              <input
-                style={{
-                  ...bigInput, textTransform: "uppercase", letterSpacing: 1.5,
-                  fontWeight: 700,
-                  // Red only once they have typed enough to be wrong, not
-                  // the moment the field appears.
-                  borderColor: f.vehicle_number && !plateLooksRight(f.vehicle_number)
-                    ? T.red : undefined,
-                }}
-                value={f.vehicle_number}
-                placeholder="TR 01 AB 1234"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                onChange={(e) => set("vehicle_number", e.target.value)}
-              />
-            </BigField>
           )}
 
           {/* Optional, and on the optional step on purpose. Asking for a
