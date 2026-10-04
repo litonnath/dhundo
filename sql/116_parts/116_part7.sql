@@ -3,7 +3,8 @@
 -- to the customer once the order is accepted; the owner sees the customer
 -- name and number, since the customer chose to order.
 -- ===========================================================================
-create or replace function public.services_my_orders()
+drop function if exists public.services_my_orders();
+create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
                other_name text, other_phone text, address_text text, note text,
                lines jsonb, created_at timestamptz)

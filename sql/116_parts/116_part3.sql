@@ -2,7 +2,8 @@
 -- 116_part3.sql -- anyone can read a menu. The owner reads, saves, deletes
 -- items and switches orders on and off.
 -- ===========================================================================
-create or replace function public.services_menu_get(p_worker uuid)
+drop function if exists public.services_menu_get(uuid);
+create function public.services_menu_get(p_worker uuid)
 returns table (id uuid, category text, name text, about text, price_paise int,
                veg boolean, accepting boolean)
 language sql
@@ -19,7 +20,8 @@ $fn$;
 revoke all on function public.services_menu_get(uuid) from public;
 grant execute on function public.services_menu_get(uuid) to anon, authenticated;
 
-create or replace function public.services_my_menu()
+drop function if exists public.services_my_menu();
+create function public.services_my_menu()
 returns table (id uuid, category text, name text, about text, price_paise int,
                veg boolean, available boolean, accepting boolean)
 language sql
