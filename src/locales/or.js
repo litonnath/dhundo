@@ -551,7 +551,6 @@ export default {
   ow_save: "ସଞ୍ଚୟ",
   ow_delete: "ମୁଛନ୍ତୁ",
   ow_edit: "ସମ୍ପାଦନା",
-  ae_captcha: "ସୁରକ୍ଷା ଯାଞ୍ଚ ସଫଳ ହେଲା ନାହିଁ। ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
   rd_title: "କେଉଁଠିକି ଯିବେ?",
   rd_pick: "ପିକଅପ୍",
   rd_drop: "ଗନ୍ତବ୍ୟ",

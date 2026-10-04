@@ -551,7 +551,6 @@ export default {
   ow_save: "ਸੇਵ ਕਰੋ",
   ow_delete: "ਮਿਟਾਓ",
   ow_edit: "ਬਦਲੋ",
-  ae_captcha: "ਸੁਰੱਖਿਆ ਜਾਂਚ ਪਾਸ ਨਹੀਂ ਹੋਈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   rd_title: "ਕਿੱਥੇ ਜਾਣਾ ਹੈ?",
   rd_pick: "ਪਿਕਅੱਪ",
   rd_drop: "ਮੰਜ਼ਿਲ",

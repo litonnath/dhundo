@@ -551,7 +551,6 @@ export default {
   ow_save: "ಉಳಿಸಿ",
   ow_delete: "ಅಳಿಸಿ",
   ow_edit: "ತಿದ್ದಿ",
-  ae_captcha: "ಭದ್ರತಾ ಪರಿಶೀಲನೆ ವಿಫಲವಾಯಿತು. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   rd_title: "ಎಲ್ಲಿಗೆ?",
   rd_pick: "ಪಿಕಪ್",
   rd_drop: "ಗಮ್ಯಸ್ಥಾನ",

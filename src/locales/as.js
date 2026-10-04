@@ -551,7 +551,6 @@ export default {
   ow_save: "সংৰক্ষণ",
   ow_delete: "মচক",
   ow_edit: "সম্পাদনা",
-  ae_captcha: "সুৰক্ষা পৰীক্ষা সফল নহ’ল। আকৌ চেষ্টা কৰক।",
   rd_title: "ক’লৈ যাব?",
   rd_pick: "পিকআপ",
   rd_drop: "গন্তব্য",

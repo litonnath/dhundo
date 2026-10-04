@@ -551,7 +551,6 @@ export default {
   ow_save: "जतन करा",
   ow_delete: "हटवा",
   ow_edit: "बदला",
-  ae_captcha: "सुरक्षा तपासणी पूर्ण झाली नाही. कृपया पुन्हा प्रयत्न करा.",
   rd_title: "कुठे जायचे?",
   rd_pick: "पिकअप",
   rd_drop: "गंतव्य",

@@ -44,9 +44,7 @@ import {
 } from "./auth.jsx";
 import { cleanCode, codeLooksRight, pendingCode, rememberCode } from "./referral.js";
 
-import * as CONF from "./config.js";
-const CFG = { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY,
-              captchaKey: CONF.CAPTCHA_SITE_KEY || "", captchaProvider: CONF.CAPTCHA_PROVIDER || "turnstile" };
+const CFG = { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY };
 
 const INK = "#0F1419";
 // Taken from the logo, like the rest of the app. These were left at the old
@@ -103,7 +101,6 @@ function messageFor(code, t) {
     case "ACCOUNT_BLOCKED":     return t("ae_blocked");
     case "CONFIRM_EMAIL_IS_ON": return t("ae_confirm");
     case "RATE_LIMITED":        return t("rl_msg");
-    case "CAPTCHA":             return t("ae_captcha");
     default:                    return t("ae_failed");
   }
 }

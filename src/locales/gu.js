@@ -551,7 +551,6 @@ export default {
   ow_save: "સાચવો",
   ow_delete: "કાઢી નાખો",
   ow_edit: "સુધારો",
-  ae_captcha: "સુરક્ષા ચકાસણી પાસ થઈ નથી. ફરી પ્રયાસ કરો.",
   rd_title: "ક્યાં જવું છે?",
   rd_pick: "પિકઅપ",
   rd_drop: "ગંતવ્ય",
