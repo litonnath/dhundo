@@ -9,7 +9,7 @@ number has been checked with a code sent by SMS. Sign-in stays phone + PIN.
    your message template with the provider (they guide you; allow a few days).
 2. Supabase dashboard: Authentication, Providers, Phone. Switch it on and enter the provider details. Switch on
    "Confirm phone". Under Rate Limits keep SMS per hour low (for example 30).
-3. Run sql/109_parts/109_part1.sql then 109_part2.sql in the SQL editor.
+3. Run sql/109_parts/109_part1.sql, 109_part2.sql, 109_part3.sql and 109_part4.sql in that order, each as its own query.
 4. Deploy the app (npm run deploy).
 
 ## How it works
