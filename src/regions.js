@@ -976,3 +976,38 @@ export async function googleDescribe(lat, lng) {
   }
   return out.address || out.places.length ? out : null;
 }
+
+
+// Google place search for the box on the map: run when Enter is pressed (not
+// on every letter, which is what makes search the costly Google call), biased
+// to where the map is looking. Own allowance, kind "search" (sql/101).
+export async function googleSearch(query, lat, lng) {
+  const key = CFG.GOOGLE_MAPS_KEY;
+  const q = String(query || "").trim();
+  if (!key || /YOUR/i.test(key) || q.length < 3) return [];
+  if (!(await takeGoogleMap("search"))) return [];
+  try {
+    const body = { textQuery: q, languageCode: "en", regionCode: "IN", pageSize: 6 };
+    if (typeof lat === "number") {
+      body.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 50000 } };
+    }
+    const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return ((j && j.places) || []).map((p) => ({
+      title: (p.displayName && p.displayName.text) || "",
+      line: p.formattedAddress || "",
+      lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
+      kind: "poi", source: "google",
+    })).filter((x) => x.title && typeof x.lat === "number");
+  } catch (_) {
+    return [];
+  }
+}

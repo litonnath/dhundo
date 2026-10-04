@@ -39,7 +39,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent } from "./consent-core.js";
-import { geoJson, takeGoogleMap, googleTileUrl, searchAnywhere, placeCoords } from "./regions.js";
+import { geoJson, takeGoogleMap, googleTileUrl, searchAnywhere, placeCoords, googleSearch } from "./regions.js";
 
 // THREE WAYS TO SEE THE GROUND, in the order they are tried.
 //   sat     satellite photographs (Esri World Imagery) with place names on top.
@@ -330,6 +330,16 @@ export default function MapPicker({ start, state, onCancel, onConfirm }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sq]);
 
+  // Enter asks Google; what it finds goes above the free results.
+  const askGoogle = async () => {
+    const q = sq.trim();
+    if (q.length < 3) return;
+    setSbusy(true);
+    const rows = await googleSearch(q, point.lat, point.lng);
+    setSbusy(false);
+    if (rows.length) setSrows((cur) => [...rows, ...cur.filter((c) => c.source !== "google")].slice(0, 8));
+  };
+
   const goTo = async (r) => {
     let { lat, lng } = r;
     if (typeof lat !== "number") {
@@ -425,6 +435,7 @@ export default function MapPicker({ start, state, onCancel, onConfirm }) {
           <div style={{ position: "absolute", left: 62, right: 150, top: 12, zIndex: 500 }}>
             <input
               value={sq} onChange={(e) => setSq(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") askGoogle(); }} enterKeyHint="search"
               placeholder={t("map_search_ph")} aria-label={t("map_search_ph")}
               style={{
                 width: "100%", boxSizing: "border-box", minHeight: 42, borderRadius: 10,
