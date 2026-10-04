@@ -15,7 +15,7 @@
 // during a bad minute keeps serving it -- and with it, the chunk hashes from
 // that build -- long after the source is fixed. That is how a fault that no
 // longer exists in the code keeps appearing in somebody's browser.
-const CACHE = "services-shell-v3";
+const CACHE = "services-shell-v4";
 const SHELL = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {
@@ -75,4 +75,24 @@ self.addEventListener("fetch", (e) => {
         })
       )
   );
+});
+
+// Alerts when the app is closed. The server sends the words already in the
+// person's language: { title, body, url }.
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = {}; }
+  e.waitUntil(self.registration.showNotification(d.title || "Dhundo", {
+    body: d.body || "", icon: "/icon-192.png", badge: "/icon-192.png",
+    tag: d.tag || "dhundo", data: { url: d.url || "/" },
+  }));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if ("focus" in c) return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });

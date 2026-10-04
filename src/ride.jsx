@@ -8,6 +8,7 @@ import { T, Btn, Icon, Notice, input } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
+import { AlertsCard } from "./alerts.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -98,6 +99,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
           <div style={{ fontSize: 13, fontWeight: 800, color: accepted ? T.green : T.brandDark, marginBottom: 6 }}>
             {accepted ? t("rd_found") : t("rd_searching")}
           </div>
+          {!accepted && <AlertsCard api={api} compact />}
           {accepted ? (
             <>
               <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
@@ -251,6 +253,7 @@ export function RideRequests({ api, online }) {
           </div>
         </div>
       ))}
+      <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>
       {msg && <Notice tone="bad">{msg}</Notice>}
       {!online ? (

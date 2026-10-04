@@ -328,8 +328,17 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     myMenu: () => rpc("services_my_menu", {}, true),
     menuSave: (m) => rpc("services_menu_save", {
       p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
-      p_price_rupees: m.price, p_veg: m.veg, p_available: m.available,
+      p_price_rupees: m.price, p_veg: m.veg, p_available: m.available, p_photo: m.photo || null,
     }, true),
+    storeInfos: (ids) => rpc("services_store_infos", { p_ids: ids }),
+    myStore: () => rpc("services_my_store", {}, true),
+    setStore: (o) => rpc("services_set_store", {
+      p_open: o.open || null, p_close: o.close || null, p_mins: o.mins || null, p_auto_rider: o.autoRider,
+    }, true),
+    pushSubscribe: (endpoint, p256dh, auth, lang) => rpc("services_push_subscribe", {
+      p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_lang: lang,
+    }, true),
+    pushUnsubscribe: (endpoint) => rpc("services_push_unsubscribe", { p_endpoint: endpoint }, true),
     menuDelete: (id) => rpc("services_menu_delete", { p_id: id }, true),
     setAccepting: (on) => rpc("services_set_accepting", { p_on: !!on }, true),
     orderPlace: (workerId, lines, mode, address, lat, lng, note) => rpc("services_order_place", {
@@ -2832,7 +2841,7 @@ export default function ServicesPage({
       )}
 
       {menuOpen && (
-        <MenuSheet mode={mode} onMode={switchMode} signedIn={signedIn}
+        <MenuSheet api={api} mode={mode} onMode={switchMode} signedIn={signedIn}
                    onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
                    onClose={() => setMenuOpen(false)} />
       )}

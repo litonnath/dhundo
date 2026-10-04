@@ -1,5 +1,6 @@
 -- ===========================================================================
--- 116_part6.sql -- a customer places an order. The total is worked out here
+-- 117_part6.sql -- placing an order is refused outside the opening hours.
+-- A customer places an order. The total is worked out here
 -- from the menu prices, never taken from the phone.
 -- p_lines is a JSON list of objects, each with an id and a qty
 -- ===========================================================================
@@ -29,7 +30,8 @@ begin
     return;
   end if;
   if not exists (select 1 from public.services_workers w
-                  where w.id = p_worker and w.status = 'approved' and w.accepting_orders
+                  where w.id = p_worker and w.status = 'approved'
+                    and public.services_is_open_now(w.open_time, w.close_time, w.accepting_orders)
                     and w.user_id <> v_me) then
     return query select false, 'closed'::text, null::uuid, null::int;
     return;
@@ -58,4 +60,4 @@ $fn$;
 revoke all on function public.services_order_place(uuid, jsonb, text, text, double precision, double precision, text) from public, anon, authenticated;
 grant execute on function public.services_order_place(uuid, jsonb, text, text, double precision, double precision, text) to authenticated;
 
-select 'part 6 of 8 done' as "116_part6";
+select 'part 6 of 9 done' as "117_part6";

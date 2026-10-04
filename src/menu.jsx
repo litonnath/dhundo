@@ -9,8 +9,9 @@ import { T, Icon, CloseButton, useDismissable } from "./ui.jsx";
 import { CONTACT } from "./brand.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useInstallPrompt, isInstalledApp } from "./device.jsx";
+import { AlertsCard } from "./alerts.jsx";
 
-export function MenuSheet({ mode, onMode, onInstall, onAccount, signedIn, onClose }) {
+export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, onClose }) {
   const { t } = useI18n();
   const { isIos, installed } = useInstallPrompt();
   useDismissable(true, onClose);
@@ -63,6 +64,7 @@ export function MenuSheet({ mode, onMode, onInstall, onAccount, signedIn, onClos
           ))}
         </div>
 
+        {signedIn && <AlertsCard api={api} compact />}
         {row("user", signedIn ? t("nav_account") : t("nav_signin"), null, () => { onAccount(); onClose(); })}
         {canInstall && row("download", t("install_app"), t("install_sub"), () => { onClose(); onInstall(); })}
         {help && row("help", t("sh_title"), t("sh_menu_sub"), null, help)}

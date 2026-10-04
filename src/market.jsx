@@ -52,7 +52,7 @@ function distLabel(t, km) {
 // A phone photo is 3-5 MB. Shrunk to 1280 px on the long side as JPEG it is
 // about 200 KB and looks the same on a phone screen -- the difference
 // between an upload that finishes on 3G and one that does not.
-async function shrink(file) {
+export async function shrink(file) {
   if (!file || !/^image\//.test(file.type) || file.type === "image/gif") return file;
   try {
     const bmp = await createImageBitmap(file);

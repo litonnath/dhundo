@@ -8,6 +8,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle } from "./ui.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
+import { shrink } from "./market.jsx";
+import { AlertsCard } from "./alerts.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -26,6 +28,28 @@ function VegMark({ veg }) {
   );
 }
 
+const fmtTime = (t) => {
+  if (!t) return "";
+  const [h, m] = String(t).split(":").map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+};
+// "Open · 30 min", "Closed · opens 9:00 AM" under a name.
+function OpenLine({ info, t }) {
+  if (!info) return null;
+  const parts = [];
+  parts.push(info.open_now
+    ? <span key="o" style={{ color: GREEN, fontWeight: 800 }}>{t("st_open")}</span>
+    : <span key="o" style={{ color: RED, fontWeight: 800 }}>{t("st_closed")}</span>);
+  if (!info.open_now && info.open_time) parts.push(<span key="h">{String(t("st_opens")).replace("{t}", fmtTime(info.open_time))}</span>);
+  if (info.open_now && info.close_time) parts.push(<span key="c">{String(t("st_until")).replace("{t}", fmtTime(info.close_time))}</span>);
+  if (info.delivery_mins) parts.push(<span key="d">{String(t("st_mins")).replace("{n}", info.delivery_mins)}</span>);
+  return (
+    <span style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", fontSize: 13, color: T.inkSoft, marginTop: 3 }}>
+      {parts.map((x, i) => <React.Fragment key={i}>{i > 0 && <span>·</span>}{x}</React.Fragment>)}
+    </span>
+  );
+}
+
 const statusColor = { placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
 
 // ============================================================ CUSTOMER HOME
@@ -38,6 +62,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null);
   const [ordersOpen, setOrdersOpen] = useState(false);
+  const [infos, setInfos] = useState({});
 
   const kinds = useMemo(() => trades.filter((x) =>
     eat ? x.group_name === "Eat & Stay" : (x.kind === "supplier" || x.group_name === "Suppliers") && x.group_name !== "Eat & Stay"), [trades, eat]);
@@ -50,12 +75,24 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     api.browse({
       trade: chip, group: eat && !chip ? "Eat & Stay" : null, kind: eat ? null : "supplier",
       state: place && place.state, lat: place && place.lat, lng: place && place.lng, limit: 40,
-    }).then((r) => { if (alive) { setRows(many(r).filter((x) => slugs.has(x.trade_slug))); setLoading(false); } })
+    }).then((r) => {
+      if (!alive) return;
+      const list = many(r).filter((x) => slugs.has(x.trade_slug));
+      setRows(list); setLoading(false);
+      if (list.length) {
+        api.storeInfos(list.map((x) => x.id)).then((inf) => {
+          if (!alive) return;
+          const o = {}; many(inf).forEach((i) => { o[i.id] = i; }); setInfos(o);
+        }).catch(() => {});
+      }
+    })
       .catch(() => { if (alive) { setRows([]); setLoading(false); } });
     return () => { alive = false; };
   }, [api, chip, eat, slugs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const shown = rows.filter((r) => !q.trim() || String(r.display_name || "").toLowerCase().includes(q.trim().toLowerCase()));
+  const shown = rows
+    .filter((r) => !q.trim() || String(r.display_name || "").toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 130px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
@@ -94,10 +131,11 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
             <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>
               {[r.trade_name, r.locality || r.area || r.city].filter(Boolean).join(" · ")}
             </span>
+            <OpenLine info={infos[r.id]} t={t} />
           </span>
         </button>
       ))}
-      {open && <StorePage api={api} row={open} eat={eat} place={place} user={user} onSignIn={onSignIn}
+      {open && <StorePage api={api} row={open} eat={eat} info={infos[open.id]} place={place} user={user} onSignIn={onSignIn}
                           renderEmpty={renderEmpty} onClose={() => setOpen(null)} onOrdered={() => setOrdersOpen(true)} />}
       {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
     </div>
@@ -114,7 +152,7 @@ function Cover({ row, eat, height }) {
 }
 
 // ====================================================== STORE PAGE (menu)
-function StorePage({ api, row, eat, place, user, onSignIn, renderEmpty, onClose, onOrdered }) {
+function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, onClose, onOrdered }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [menu, setMenu] = useState(null);
@@ -127,7 +165,7 @@ function StorePage({ api, row, eat, place, user, onSignIn, renderEmpty, onClose,
     return () => { alive = false; };
   }, [api, row.id]);
 
-  const accepting = !menu || menu.length === 0 || menu[0].accepting !== false;
+  const accepting = (!menu || menu.length === 0 || menu[0].accepting !== false) && !(info && info.open_now === false);
   const byCat = useMemo(() => {
     const o = {};
     (menu || []).forEach((m) => { (o[m.category] = o[m.category] || []).push(m); });
@@ -154,6 +192,7 @@ function StorePage({ api, row, eat, place, user, onSignIn, renderEmpty, onClose,
             {[row.trade_name, row.locality || row.area || row.city].filter(Boolean).join(" · ")}
             {row.distance_km != null ? ` · ${String(t("st_away")).replace("{n}", row.distance_km)}` : ""}
           </div>
+          {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
           {!accepting && <div style={{ marginBottom: 12 }}><Notice tone="bad">{t("st_closed_err")}</Notice></div>}
         </div>
 
@@ -176,7 +215,10 @@ function StorePage({ api, row, eat, place, user, onSignIn, renderEmpty, onClose,
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 3 }}>{rupees(m.price_paise)}</span>
                     {m.about && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 3, lineHeight: 1.45 }}>{m.about}</span>}
                   </span>
-                  <Stepper qty={cart[m.id] || 0} disabled={!accepting} onAdd={() => setQty(m.id, 1)} onMinus={() => setQty(m.id, -1)} label={t("st_add")} />
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                    {m.photo_url && <span style={{ width: 92, height: 92, borderRadius: 12, background: `center/cover url(${m.photo_url}) ${T.line}` }} />}
+                    <Stepper qty={cart[m.id] || 0} disabled={!accepting} onAdd={() => setQty(m.id, 1)} onMinus={() => setQty(m.id, -1)} label={t("st_add")} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -194,7 +236,7 @@ function StorePage({ api, row, eat, place, user, onSignIn, renderEmpty, onClose,
         </div>
       )}
       {cartOpen && (
-        <CartSheet api={api} row={row} eat={eat} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
+        <CartSheet api={api} row={row} eat={eat} info={info} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
                    onSignIn={onSignIn} onClose={() => setCartOpen(false)}
                    onDone={() => { setCartOpen(false); setCart({}); onClose(); onOrdered && onOrdered(); }} />
       )}
@@ -222,7 +264,7 @@ function Stepper({ qty, onAdd, onMinus, disabled, label }) {
 }
 
 // ============================================================ CART / ORDER
-function CartSheet({ api, row, eat, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
+function CartSheet({ api, row, eat, info, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [mode, setMode] = useState("delivery");
@@ -280,6 +322,9 @@ function CartSheet({ api, row, eat, lines, cart, setQty, total, place, user, onS
         )}
         <input style={{ ...input, marginBottom: 8 }} value={note} maxLength={300} placeholder={t("st_note")} aria-label={t("st_note")}
                onChange={(e) => setNote(e.target.value)} />
+        {mode === "delivery" && info && info.delivery_mins && (
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: T.brandDark, margin: "0 0 8px" }}>{String(t("st_mins")).replace("{n}", info.delivery_mins)}</p>
+        )}
         <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("st_pay_note")}</p>
         {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
         <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? `${t("st_place")} · ${rupees(total)}` : t("nav_signin")}</Btn>
@@ -306,6 +351,7 @@ export function MyOrdersSheet({ api, onClose }) {
           <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0 }}>{t("st_orders")}</h1>
           <CloseButton onClick={onClose} />
         </div>
+        <AlertsCard api={api} compact />
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : orders.map((o) => (
           <div key={o.id} style={card}>
             <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
@@ -315,6 +361,13 @@ export function MyOrdersSheet({ api, onClose }) {
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {t(o.mode === "pickup" ? "st_pickup" : "st_delivery")}</div>
             {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ color: T.brandDark, fontWeight: 700, fontSize: 14 }}>{o.other_phone}</a>}
+            {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
+              <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
+            )}
+            {o.rider_name && (
+              <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}{" "}
+                {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{o.rider_phone}</a>}</div>
+            )}
             {o.status === "placed" && (
               <div><button onClick={() => cancel(o)} style={{ background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("st_cancel")}</button></div>
             )}
@@ -334,6 +387,49 @@ function Lines({ lines }) {
 }
 
 // ================================================================ OWNER
+function StoreSettings({ api, shop }) {
+  const { t } = useI18n();
+  const [f, setF] = useState(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    api.myStore().then((r) => {
+      const x = one(r) || {};
+      setF({ open: (x.open_time || "").slice(0, 5), close: (x.close_time || "").slice(0, 5),
+             mins: x.delivery_mins ? String(x.delivery_mins) : "", autoRider: x.auto_rider !== false });
+    }).catch(() => setF({ open: "", close: "", mins: "", autoRider: true }));
+  }, [api]);
+  if (!f) return null;
+  const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
+  const save = async () => {
+    try { await api.setStore({ open: f.open || null, close: f.close || null, mins: f.mins ? Number(f.mins) : null, autoRider: f.autoRider }); setSaved(true); } catch (_) {}
+  };
+  const lab = { fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 };
+  return (
+    <div style={card}>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 10 }}>{t("ow_hours")}</div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <label style={{ flex: 1 }}><div style={lab}>{t("ow_open_at")}</div>
+          <input type="time" style={input} value={f.open} onChange={(e) => set("open", e.target.value)} /></label>
+        <label style={{ flex: 1 }}><div style={lab}>{t("ow_close_at")}</div>
+          <input type="time" style={input} value={f.close} onChange={(e) => set("close", e.target.value)} /></label>
+      </div>
+      <label style={{ display: "block", marginBottom: 10 }}><div style={lab}>{t("ow_eta")}</div>
+        <select style={input} value={f.mins} onChange={(e) => set("mins", e.target.value)}>
+          <option value="">—</option>
+          {[15, 30, 45, 60, 90, 120, 180, 240, 480].map((n) => <option key={n} value={n}>{n}</option>)}
+        </select></label>
+      {!shop && (
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", minHeight: 44, marginBottom: 10 }}>
+          <input type="checkbox" checked={f.autoRider} onChange={(e) => set("autoRider", e.target.checked)} style={{ marginTop: 4 }} />
+          <span><span style={{ display: "block", fontSize: 14.5, fontWeight: 700 }}>{t("ow_rider")}</span>
+            <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("ow_rider_sub")}</span></span>
+        </label>
+      )}
+      <Btn kind="ghost" onClick={save}>{saved ? t("ow_store_saved") : t("ow_save")}</Btn>
+    </div>
+  );
+}
+
 export function OwnerFood({ api, shop }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState([]);
@@ -365,6 +461,8 @@ export function OwnerFood({ api, shop }) {
         }}><span style={{ position: "absolute", top: 3, left: accepting ? 25 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
       </div>
 
+      <StoreSettings api={api} shop={shop} />
+      <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
         <div key={o.id} style={{ ...card, border: `1.5px solid ${statusColor[o.status]}` }}>
@@ -394,6 +492,7 @@ export function OwnerFood({ api, shop }) {
       </div>
       {menu.map((m) => (
         <div key={m.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, opacity: m.available ? 1 : 0.55 }}>
+          {m.photo_url && <span style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0, background: `center/cover url(${m.photo_url}) ${T.line}` }} />}
           {!shop && <VegMark veg={m.veg} />}
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 14.5, fontWeight: 700 }}>{m.name}</span>
@@ -413,14 +512,23 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
   const [f, setF] = useState({
     name: item.name || "", price: item.price_paise ? String(Math.round(item.price_paise / 100)) : "",
     category: item.category || "", about: item.about || "", veg: item.veg !== false, available: item.available !== false,
+    photo: item.photo_url || "",
   });
   const [busy, setBusy] = useState(false);
+  const [upBusy, setUpBusy] = useState(false);
+  const pick = async (file) => {
+    if (!file) return;
+    setUpBusy(true); setMsg(null);
+    try { set("photo", await api.uploadPublic("services-photos", await shrink(file))); }
+    catch (_) { setMsg(t("mk_e_upload")); }
+    setUpBusy(false);
+  };
   const [msg, setMsg] = useState(null);
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const save = async () => {
     setBusy(true); setMsg(null);
     try {
-      const r = one(await api.menuSave({ id: item.id || null, category: f.category, name: f.name, about: f.about, price: Number(f.price), veg: f.veg, available: f.available }));
+      const r = one(await api.menuSave({ id: item.id || null, category: f.category, name: f.name, about: f.about, price: Number(f.price), veg: f.veg, available: f.available, photo: f.photo }));
       if (r && r.ok) onSaved(); else setMsg(t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
@@ -434,6 +542,16 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
         <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
           <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0 }}>{item.id ? t("ow_edit") : t("ow_add")}</h1>
           <CloseButton onClick={onClose} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <span style={{ width: 72, height: 72, borderRadius: 12, background: f.photo ? `center/cover url(${f.photo}) ${T.line}` : T.brandSoft,
+                         display: "flex", alignItems: "center", justifyContent: "center", color: T.brandDark }}>
+            {!f.photo && <Icon name="camera" size={26} />}
+          </span>
+          <label style={{ color: T.brandDark, fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+            {upBusy ? t("ow_uploading") : f.photo ? t("ow_photo_change") : t("ow_photo")}
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => pick(e.target.files && e.target.files[0])} />
+          </label>
         </div>
         <input style={{ ...input, ...row }} value={f.name} maxLength={80} placeholder={t("ow_name")} aria-label={t("ow_name")} onChange={(e) => set("name", e.target.value)} />
         <input style={{ ...input, ...row }} value={f.price} inputMode="numeric" maxLength={5} placeholder={t("ow_price")} aria-label={t("ow_price")} onChange={(e) => set("price", e.target.value.replace(/\D/g, ""))} />
