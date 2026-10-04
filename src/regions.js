@@ -254,6 +254,12 @@ const REJECT_VALUES = new Set(["house", "houses", "building", "bus_stop", "shop"
 // services_search_regions does not, which left every place picked from the
 // search without one. The older one is only a fallback until 91 is run.
 async function searchDb(state, q, signal) {
+  return (await searchDbX(state, q, signal)).rows;
+}
+
+// The same, saying whether the table could be asked at all: a timeout is not
+// "no such place", and the person should not be told it is.
+async function searchDbX(state, q, signal) {
   const call = (fn) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
     signal,
@@ -267,13 +273,13 @@ async function searchDb(state, q, signal) {
   try {
     let res = await call("services_search_places");
     if (!res.ok) res = await call("services_search_regions");
-    if (!res.ok) return [];
+    if (!res.ok) return { rows: [], failed: true, status: res.status };
     const rows = await res.json();
-    if (!Array.isArray(rows)) return [];
+    if (!Array.isArray(rows)) return { rows: [], failed: true, status: 0 };
     // One entry per name and district: the map place and the post office
     // of the same village are the same choice. The first, the map one, wins.
     const seen = new Set();
-    return rows.filter((r) => {
+    const out = rows.filter((r) => {
       const k = `${String(r.place || "").toLowerCase()}|${r.district || ""}`;
       if (seen.has(k)) return false;
       seen.add(k);
@@ -289,8 +295,9 @@ async function searchDb(state, q, signal) {
       lat: typeof r.lat === "number" ? r.lat : null,
       lng: typeof r.lng === "number" ? r.lng : null,
     }));
+    return { rows: out, failed: false };
   } catch (_) {
-    return [];
+    return { rows: [], failed: !(signal && signal.aborted), status: 0 };
   }
 }
 
@@ -709,7 +716,7 @@ async function politeNominatim() {
 
 export async function searchAnywhere(query, { state, near, signal } = {}) {
   const q = clean(query);
-  if (q.length < 3) return { rows: [], failed: false, detail: "" };
+  if (q.length < 3) return { rows: [], failed: false, partial: false, detail: "" };
   const key = `${state || ""}|${q.toLowerCase()}`;
   const hit = anyCache.get(key);
   if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.out;
@@ -718,9 +725,12 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
   // 1. Our own table: the villages, with positions.
   const spellings = hasIndic(q) ? variants(q, 4) : [q];
   let mine = [];
+  let ownErr = null;
   for (const sp of spellings) {
     if (clean(sp).length < 3) continue;
-    mine = await searchDb(state, sp, signal);
+    const got = await searchDbX(state, sp, signal);
+    if (got.failed) { ownErr = got.status ? `HTTP ${got.status}` : "unreachable"; break; }
+    mine = got.rows;
     if (mine.length) break;
   }
   const own = mine.slice(0, 6).map((r) => ({
@@ -741,7 +751,7 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
       `api/?q=${encodeURIComponent(sp)}&limit=12&lang=en&lat=${c.lat}&lon=${c.lon}&bbox=${INDIA_BBOX}`, signal);
     remote = (j.features || []).map(fromPhoton).filter(Boolean);
   } catch (e) {
-    if (aborted()) return { rows: [], failed: false, detail: "" };
+    if (aborted()) return { rows: [], failed: false, partial: false, detail: "" };
     photonErr = whyFailed(e);
   }
 
@@ -755,10 +765,16 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
         `&q=${encodeURIComponent(q)}`, signal);
       remote = (Array.isArray(rows) ? rows : []).map(fromNominatim).filter(Boolean);
     } catch (e) {
-      if (aborted()) return { rows: [], failed: false, detail: "" };
+      if (aborted()) return { rows: [], failed: false, partial: false, detail: "" };
       nomErr = whyFailed(e);
     }
   }
+
+  // Places in the state being worked in come before the rest (a Tilhar in
+  // Uttar Pradesh is not what somebody in Tripura typed), then by closeness.
+  const km = (r) => (near && typeof r.lat === "number"
+    ? Math.hypot(r.lat - near.lat, (r.lng - near.lng) * 0.9) : 1e9);
+  remote.sort((a, b) => ((b.state === state) - (a.state === state)) || (km(a) - km(b)));
 
   const seen = new Set();
   const rows = [...own, ...remote].filter((r) => {
@@ -770,12 +786,16 @@ export async function searchAnywhere(query, { state, near, signal } = {}) {
   // "Nothing found" and "could not ask" are different answers: the first is
   // about the place, the second about the connection, and the person should
   // be told which.
-  const failed = !rows.length && !!photonErr && (!triedNom || !!nomErr);
-  const out = {
-    rows, failed,
-    detail: failed ? `photon: ${photonErr}${triedNom ? `, nominatim: ${nomErr || "ok"}` : ""}` : "",
-  };
-  if (!aborted() && !failed) {
+  const failed = !rows.length && (!!ownErr || (!!photonErr && (!triedNom || !!nomErr)));
+  const detail = [
+    ownErr ? `places: ${ownErr}` : "",
+    photonErr ? `photon: ${photonErr}` : "",
+    triedNom && nomErr ? `nominatim: ${nomErr}` : "",
+  ].filter(Boolean).join(", ");
+  // `partial`: our own village list could not be asked, so the rows shown are
+  // only what the map services know.
+  const out = { rows, failed, partial: !!ownErr, detail: failed || ownErr ? detail : "" };
+  if (!aborted() && !failed && !ownErr) {
     anyCache.set(key, { at: Date.now(), out });
     if (anyCache.size > 60) anyCache.delete(anyCache.keys().next().value);
   }

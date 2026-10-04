@@ -80,6 +80,7 @@ export function LocationSheet({ place, onChange, onClose }) {
   // answering "nothing found"): the words say so, and the detail is for
   // whoever has to find out why.
   const [searchDown, setSearchDown] = useState(null);
+  const [partial, setPartial] = useState(false);
   const [chosen, setChosen] = useState(null);
   const [chosenQ, setChosenQ] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
@@ -97,6 +98,7 @@ export function LocationSheet({ place, onChange, onClose }) {
           if (ctrl.signal.aborted) return;
           setRows(out.rows); setSearched(true);
           setSearchDown(out.failed ? (out.detail || "unreachable") : null);
+          setPartial(!!out.partial && !out.failed);
         })
         .finally(() => { if (!ctrl.signal.aborted) setLooking(false); });
     }, 300);
@@ -238,6 +240,11 @@ export function LocationSheet({ place, onChange, onClose }) {
             {!looking && searched && rows.length === 0 && !searchDown && (
               <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, padding: "10px 4px" }}>
                 {t("loc_none")}
+              </div>
+            )}
+            {!looking && partial && !searchDown && rows.length > 0 && (
+              <div style={{ fontSize: 12.5, color: T.inkFaint, lineHeight: 1.5, padding: "8px 4px" }}>
+                {t("loc_partial")}
               </div>
             )}
             {!looking && searchDown && (
