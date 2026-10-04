@@ -16,17 +16,19 @@ shop labels instead. Google counts Map Tiles per tile request (about 30-100 per 
 so 6000 opens stays inside the 700,000 free requests. Check the usage page
 after a month and raise the cap if there is room.
 
-## Road distance on the cards (Routes API)
+## Road distance on the cards (Routes API, from the phone)
 
-Cards show the driving distance, for example "6.4 km · by road". It is computed on the server so other
-peoples positions never reach the phone.
+Cards show the driving distance, for example "6.4 km - by road", asked of Google straight from the phone.
 
-1. Google Cloud: enable **Routes API**. Create a SECOND API key for it. This one is called from the
-   server, so it cannot be restricted by website; restrict it by API (Routes API only) and keep it secret.
-2. Run `sql/107_profile_location.sql` (it adds a monthly allowance, 1500 calls; change it with
-   `update services_gmap_caps set cap = 3000 where kind = 'routes';`).
-3. Deploy the function (Supabase CLI, once per change):
-   `supabase secrets set GOOGLE_ROUTES_KEY=AIza...` then
-   `supabase functions deploy road-distance`
-4. Past the allowance, or if anything fails, cards keep the straight-line distance.
-Check usage: `select * from services_gmap_usage where month like 'routes-%';`
+1. Google Cloud: enable **Routes API** and add it to the SAME website-restricted key as the map
+   (API restrictions: Map Tiles, Geocoding, Places, Routes). No second key and no server function.
+2. Run `sql/107_profile_location.sql` (allowance row, 1500 calls a month) and `sql/108_public_positions.sql`.
+3. Deploy the app.
+
+Privacy: the phone is given only positions that are safe to give. The exact spot of a shop that shows its
+address; the position rounded to about 1 km for everybody else (the card then says area only). Live positions
+are never included.
+
+A key in a browser can be copied by a script that fakes the website name. The monthly counter above only
+counts calls made by the app, so the real limit is on Google's side: in Google Cloud open
+APIs & Services, Routes API, Quotas, and set a daily limit; keep the budget alert on.

@@ -1021,15 +1021,18 @@ export async function googleSearch(query, lat, lng) {
 }
 
 
-// ROAD DISTANCE from the customer to listings, by Google Routes, through the
-// road-distance function (supabase/functions/road-distance). Cached for ten
-// minutes per start point and listing so scrolling or re-searching does not
-// spend the monthly allowance again. Returns {km:{id:number}, exact:{id:bool}}
-// or null when it is not set up, the allowance is used, or anything fails;
-// the cards then keep showing the straight-line distance.
+// ROAD DISTANCE from the customer to listings, asked of Google Routes straight
+// from the phone with the website-restricted key. The phone is only ever
+// given positions that are safe to give (services_public_positions, sql/108):
+// the exact spot of a shop that shows its address, the rounded area for
+// everybody else. Cached ten minutes per start point and listing; each call
+// uses one of the monthly allowance (kind routes). Returns {km, exact} or
+// null when not set up, used up, or anything fails: the cards then keep
+// showing the straight-line distance.
 const roadCache = new Map();
 export async function roadDistances(origin, ids) {
-  if (!origin || typeof origin.lat !== "number" || !ids || !ids.length) return null;
+  const key = CFG.GOOGLE_MAPS_KEY;
+  if (!key || /YOUR/i.test(key) || !origin || typeof origin.lat !== "number" || !ids || !ids.length) return null;
   const tag = `${origin.lat.toFixed(3)},${origin.lng.toFixed(3)}`;
   const km = {}, exact = {};
   const need = [];
@@ -1041,18 +1044,37 @@ export async function roadDistances(origin, ids) {
   });
   if (need.length) {
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/road-distance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ origin: { lat: origin.lat, lng: origin.lng }, ids: need.slice(0, 25) }),
-      });
-      const j = res.ok ? await res.json() : null;
-      if (j && j.ok) {
-        need.slice(0, 25).forEach((id) => {
-          const v = j.km && typeof j.km[id] === "number" ? j.km[id] : null;
-          roadCache.set(`${tag}|${id}`, { at: now, km: v, exact: !!(j.exact && j.exact[id]) });
-          if (v != null) { km[id] = v; exact[id] = !!(j.exact && j.exact[id]); }
+      const batch = need.slice(0, 25);
+      if (await takeGoogleMap("routes")) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/rpc/services_public_positions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ p_ids: batch }),
         });
+        const pos = pr.ok ? await pr.json() : [];
+        if (Array.isArray(pos) && pos.length) {
+          const wp = (la, lo) => ({ waypoint: { location: { latLng: { latitude: la, longitude: lo } } } });
+          const res = await fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json", "X-Goog-Api-Key": key,
+              "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,condition",
+            },
+            body: JSON.stringify({
+              origins: [wp(origin.lat, origin.lng)],
+              destinations: pos.map((r) => wp(r.lat, r.lng)),
+              travelMode: "DRIVE",
+            }),
+          });
+          const matrix = res.ok ? await res.json() : [];
+          (Array.isArray(matrix) ? matrix : []).forEach((m) => {
+            const r = pos[m.destinationIndex];
+            if (!r || m.condition !== "ROUTE_EXISTS" || typeof m.distanceMeters !== "number") return;
+            const v = Math.round(m.distanceMeters / 100) / 10;
+            roadCache.set(`${tag}|${r.id}`, { at: now, km: v, exact: !!r.exact });
+            km[r.id] = v; exact[r.id] = !!r.exact;
+          });
+        }
       }
     } catch (_) { /* straight-line stays */ }
   }
