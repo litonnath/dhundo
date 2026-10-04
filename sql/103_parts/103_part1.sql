@@ -18,11 +18,11 @@
 -- Refusing: select * from services_admin_withdrawal_set('<id>', 'rejected', 'reason');
 -- The reason is shown to the person next to their request.
 -- ===========================================================================
-do $$
+do $fn$
 begin
   if to_regclass('public.services_wallet_entries') is null then raise exception 'Run 66 first.'; end if;
   if to_regprocedure('public.services_rate_guard(text,text,int,int)') is null then raise exception 'Run 93 first.'; end if;
-end $$;
+end $fn$;
 
 alter table public.services_wallet_entries drop constraint if exists services_wallet_kind_known;
 alter table public.services_wallet_entries
@@ -45,12 +45,12 @@ alter table public.services_withdrawals enable row level security;
 revoke all on public.services_withdrawals from public, anon, authenticated;
 
 create or replace function public.services_withdraw_min_paise()
-returns bigint language sql immutable as $$ select 50000::bigint $$;
+returns bigint language sql immutable as $fn$ select 50000::bigint $fn$;
 
 create or replace function public.services_withdraw_request(p_upi text)
 returns table (ok boolean, reason text, amount_paise bigint)
 language plpgsql security definer set search_path to 'public'
-as $$
+as $fn$
 declare
   v_me  uuid := public.services_account_id();
   v_upi text := lower(btrim(coalesce(p_upi, '')));
@@ -77,45 +77,21 @@ begin
   values (v_me, v_bal, v_upi);
   return query select true, 'requested'::text, v_bal;
 end;
-$$;
+$fn$;
 revoke all on function public.services_withdraw_request(text) from public, anon, authenticated;
 grant execute on function public.services_withdraw_request(text) to authenticated;
 
 create or replace function public.services_my_withdrawals()
 returns table (id uuid, amount_paise bigint, upi_id text, status text, note text, created_at timestamptz)
 language sql stable security definer set search_path to 'public'
-as $$
+as $fn$
   select w.id, w.amount_paise, w.upi_id, w.status, w.note, w.created_at
     from public.services_withdrawals w
    where w.account_id = public.services_account_id()
    order by w.created_at desc limit 10;
-$$;
+$fn$;
 revoke all on function public.services_my_withdrawals() from public, anon, authenticated;
 grant execute on function public.services_my_withdrawals() to authenticated;
 
-create or replace function public.services_admin_withdrawal_set(p_id uuid, p_status text, p_note text default null)
-returns table (ok boolean, reason text)
-language plpgsql security definer set search_path to 'public'
-as $$
-declare w record;
-begin
-  if not public.services_is_admin() then return query select false, 'not_admin'::text; return; end if;
-  if p_status not in ('paid', 'rejected') then return query select false, 'bad_status'::text; return; end if;
-  select * into w from public.services_withdrawals where id = p_id for update;
-  if not found then return query select false, 'not_found'::text; return; end if;
-  if w.status <> 'requested' then return query select false, 'already_done'::text; return; end if;
-  update public.services_withdrawals
-     set status = p_status, note = nullif(btrim(coalesce(p_note, '')), ''), processed_at = now()
-   where id = p_id;
-  if p_status = 'rejected' then
-    insert into public.services_wallet_entries (account_id, amount_paise, kind, note)
-    values (w.account_id, w.amount_paise, 'refund', 'Withdrawal returned');
-  end if;
-  return query select true, p_status::text;
-end;
-$$;
-revoke all on function public.services_admin_withdrawal_set(uuid, text, text) from public, anon, authenticated;
-grant execute on function public.services_admin_withdrawal_set(uuid, text, text) to authenticated;
-
 notify pgrst, 'reload schema';
-select 'done' as "103_withdrawals";
+select 'part 1 of 2 done' as "103_part1";
