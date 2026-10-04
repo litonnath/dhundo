@@ -625,7 +625,12 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
         <Section
           title={t("p_work")}
           dirty={dirty.work} saving={savingKey === "work"} saved={savedKey === "work"}
-          onSave={() => save("work", {
+          onSave={() => {
+            // Nothing is saved while a required number is missing or wrong.
+            if (row && row.requires_vehicle && !plateLooksRight(f.vehicle_number)) {
+              return badField("vehicle", t("e_vehicle"));
+            }
+            return save("work", {
             p_trade_slug: f.trade_slug,
             p_other_trades: f.other_trades,
             p_vehicle_number: f.vehicle_number.trim() || null,
@@ -633,7 +638,8 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             p_day_rate_max: num(f.day_rate_max),
             p_years_experience: num(f.years_experience),
             p_about: f.about.trim() || "-",
-          })}
+            });
+          }}
         >
           <Row label={t("p_main_trade")}>
             <div style={{

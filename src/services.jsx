@@ -1051,6 +1051,21 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   // An error belongs next to the field it is about: shown there, the page
   // scrolled to it, and the right step opened first when it is on another.
   const [fieldErr, setFieldErr] = useState(null);
+  // The ID photo is taken in the form itself (a cook or a driver cannot be
+  // listed without one), uploaded to the private bucket now, and attached to
+  // the listing when it is created.
+  const [idPath, setIdPath] = useState("");
+  const [idBusy, setIdBusy] = useState(false);
+  const idInputRef = useRef(null);
+  const uploadId = async (file) => {
+    if (!file) return;
+    // An ID photo is stored: a yes first.
+    if (!(await consent.ask("listing"))) return;
+    setIdBusy(true); setFieldErr(null);
+    try { setIdPath(await api.uploadPrivate("services-ids", file)); }
+    catch (e) { bad("id", e && e.message === "too_large" ? t("p_too_large") : t("p_upload_failed")); }
+    finally { setIdBusy(false); if (idInputRef.current) idInputRef.current.value = ""; }
+  };
   const bad = (key, msg, toStep) => {
     setErr(null);
     setFieldErr({ key, msg });
@@ -1087,7 +1102,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   // Cooks, drivers and domestic help are asked for an ID photo; the flag is
   // the database's (services_trades.requires_id), the group names are the
   // fallback for a trades list that does not carry it yet.
-  const needsId = picked.some((slug) => {
+  const needsId = !isAdmin && picked.some((slug) => {
     const x = trades.find((y) => y.slug === slug) || {};
     return x.requires_id === undefined ? ["Drivers", "Home & Domestic"].includes(x.group_name) : !!x.requires_id;
   });
@@ -1104,6 +1119,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
     setFieldErr(null);
     if (!picked.length) return bad("category", t("e_category"), 1);
     if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"), 1);
+    if (needsId && !idPath) return bad("id", t("e_id_required"), 1);
     if (!f.full_name.trim()) return bad("name", t("e_name"), 2);
     if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"), 2);
     // A listing is stored and shown to other people: a yes first. (An admin
@@ -1139,7 +1155,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
       // fields and is the function the profile screen uses anyway.
       if (r && r.ok && !isAdmin &&
           (picked.length > 1 || f.address_line.trim() || f.landmark.trim()
-           || f.pincode.trim() || f.vehicle_number.trim() || f.city_id)) {
+           || f.pincode.trim() || f.vehicle_number.trim() || f.city_id || idPath)) {
         try {
           await api.updateMyListing({
             // services_self_register takes one trade; the extra ones go in
@@ -1151,6 +1167,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             p_pincode: f.pincode.trim() || null,
             p_vehicle_number: f.vehicle_number.trim() || null,
             p_city_id: f.city_id || null,
+            p_id_doc_path: idPath || null,
           });
         } catch (_) {
           // The listing itself succeeded. Losing an optional address is not
@@ -1193,7 +1210,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
   };
 
   const reset = () => {
-    setDone(null); setPosFailed(false); setStep(1); setGroup(null); setErr(null); setPicked([]);
+    setDone(null); setPosFailed(false); setStep(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
     setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
                    years_experience: "", day_rate_min: "", day_rate_max: "" }));
   };
@@ -1412,9 +1429,31 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
                 </BigField>
               )}
               {needsId && (
-                <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55 }}>
-                  <b style={{ color: T.red }}>{t("req_missing")}</b> <ReqTag /> {t("w1_need_id")}
-                </div>
+                <BigField fid="id" error={ferr("id")} label={<>{t("adm_id_title")}<ReqTag /></>}
+                          hint={t("p_id_which")}>
+                  {idPath ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                                  borderRadius: 11, background: T.brandSoft }}>
+                      <span style={{ color: T.brandDark }}><Icon name="check" size={19} /></span>
+                      <span style={{ flex: 1, fontSize: 14, color: T.brandDeep, fontWeight: 600 }}>{t("p_id_added")}</span>
+                      <button onClick={() => setIdPath("")} style={{
+                        background: "none", border: "none", cursor: "pointer", color: T.red,
+                        fontWeight: 700, fontSize: 13.5, minHeight: 40, fontFamily: "inherit",
+                      }}>{t("p_remove")}</button>
+                    </div>
+                  ) : (
+                    <>
+                      <button type="button" disabled={idBusy} onClick={() => idInputRef.current && idInputRef.current.click()} style={{
+                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+                        padding: "13px 14px", borderRadius: 11, minHeight: 52, border: `1.5px dashed ${T.red}`,
+                        background: T.white, color: T.brandDark, fontSize: 14.5, fontWeight: 700,
+                        cursor: idBusy ? "default" : "pointer", fontFamily: "inherit",
+                      }}>{idBusy ? t("p_uploading") : t("p_id_upload")}</button>
+                      <input ref={idInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                             onChange={(e) => uploadId(e.target.files && e.target.files[0])} />
+                    </>
+                  )}
+                </BigField>
               )}
             </div>
           )}
@@ -1422,6 +1461,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
           {picked.length > 0 && (
             <Btn full onClick={() => {
               if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"));
+              if (needsId && !idPath) return bad("id", t("e_id_required"));
               setErr(null); setFieldErr(null); setStep(2);
             }}>
               {t("w_next")}
