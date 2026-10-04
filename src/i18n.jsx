@@ -2251,9 +2251,24 @@ export const useI18n = () => useContext(Ctx);
 // The other languages borrow the closest one people there can read: Marathi
 // shares Hindi's script, Assamese nearly shares Bengali's, and the rest get
 // English -- which is also how most trade words are said out loud anyway.
+// Names of the Eat and Stay trades in the nine languages the database does not
+// carry (it holds English, Hindi and Bengali). Looked up by trade slug.
+const NEW_TRADE_NAMES = {
+  "restaurant": { as: "ৰেষ্টুৰেণ্ট", gu: "રેસ્ટોરન્ટ", kn: "ರೆಸ್ಟೋರೆಂಟ್", ml: "റെസ്റ്റോറന്റ്", mr: "रेस्टॉरंट", or: "ରେଷ୍ଟୁରାଣ୍ଟ", pa: "ਰੈਸਟੋਰੈਂਟ", ta: "உணவகம்", te: "రెస్టారెంట్" },
+  "dhaba-hotel": { as: "ঢাবা আৰু খাবাৰ হোটেল", gu: "ઢાબા અને ફૂડ હોટેલ", kn: "ಧಾಬಾ ಮತ್ತು ಊಟದ ಹೋಟೆಲ್", ml: "ധാബയും ഭക്ഷണ ഹോട്ടലും", mr: "ढाबा आणि जेवणाचे हॉटेल", or: "ଢାବା ଓ ଖାଦ୍ୟ ହୋଟେଲ", pa: "ਢਾਬਾ ਤੇ ਖਾਣੇ ਦਾ ਹੋਟਲ", ta: "தாபா மற்றும் உணவு விடுதி", te: "ధాబా మరియు భోజన హోటల్" },
+  "tea-snacks": { as: "চাহ আৰু জলপান", gu: "ચા અને નાસ્તો", kn: "ಚಹಾ ಮತ್ತು ತಿಂಡಿ", ml: "ചായക്കടയും ലഘുഭക്ഷണവും", mr: "चहा आणि नाश्ता", or: "ଚା ଓ ଜଳଖିଆ", pa: "ਚਾਹ ਤੇ ਨਾਸ਼ਤਾ", ta: "தேநீர் கடை மற்றும் சிற்றுண்டி", te: "టీ దుకాణం మరియు స్నాక్స్" },
+  "bakery-sweets": { as: "বেকাৰী আৰু মিঠাই", gu: "બેકરી અને મીઠાઈ", kn: "ಬೇಕರಿ ಮತ್ತು ಸಿಹಿ", ml: "ബേക്കറിയും മധുരവും", mr: "बेकरी आणि मिठाई", or: "ବେକେରୀ ଓ ମିଠା", pa: "ਬੇਕਰੀ ਤੇ ਮਠਿਆਈ", ta: "பேக்கரி மற்றும் இனிப்பு", te: "బేకరీ మరియు స్వీట్లు" },
+  "tiffin-home-food": { as: "টিফিন আৰু ঘৰুৱা খাদ্য", gu: "ટિફિન અને ઘરનું જમવાનું", kn: "ಟಿಫಿನ್ ಮತ್ತು ಮನೆ ಊಟ", ml: "ടിഫിനും വീട്ടുഭക്ഷണവും", mr: "टिफिन आणि घरगुती जेवण", or: "ଟିଫିନ ଓ ଘରୋଇ ଖାଦ୍ୟ", pa: "ਟਿਫਿਨ ਤੇ ਘਰ ਦਾ ਖਾਣਾ", ta: "டிபன் மற்றும் வீட்டு உணவு", te: "టిఫిన్ మరియు ఇంటి భోజనం" },
+  "fast-food-biryani": { as: "ফাষ্ট ফুড আৰু বিৰিয়ানী", gu: "ફાસ્ટ ફૂડ અને બિરયાની", kn: "ಫಾಸ್ಟ್ ಫುಡ್ ಮತ್ತು ಬಿರಿಯಾನಿ", ml: "ഫാസ്റ്റ് ഫുഡും ബിരിയാണിയും", mr: "फास्ट फूड आणि बिर्याणी", or: "ଫାଷ୍ଟ ଫୁଡ୍ ଓ ବିରିୟାନି", pa: "ਫਾਸਟ ਫੂਡ ਤੇ ਬਿਰਿਆਨੀ", ta: "துரித உணவு மற்றும் பிரியாணி", te: "ఫాస్ట్ ఫుడ్ మరియు బిర్యానీ" },
+  "catering-service": { as: "কেটাৰিং সেৱা", gu: "કેટરિંગ સેવા", kn: "ಕ್ಯಾಟರಿಂಗ್ ಸೇವೆ", ml: "കാറ്ററിംഗ് സേവനം", mr: "केटरिंग सेवा", or: "କେଟରିଂ ସେବା", pa: "ਕੇਟਰਿੰਗ ਸੇਵਾ", ta: "கேட்டரிங் சேவை", te: "క్యాటరింగ్ సేవ" },
+  "hotel-lodge": { as: "হোটেল আৰু লজ", gu: "હોટેલ અને લૉજ", kn: "ಹೋಟೆಲ್ ಮತ್ತು ಲಾಡ್ಜ್", ml: "ഹോട്ടലും ലോഡ്ജും", mr: "हॉटेल आणि लॉज", or: "ହୋଟେଲ ଓ ଲଜ୍", pa: "ਹੋਟਲ ਤੇ ਲਾਜ", ta: "ஹோட்டல் மற்றும் லாட்ஜ்", te: "హోటల్ మరియు లాడ్జ్" },
+  "homestay-guesthouse": { as: "হোমষ্টে আৰু গেষ্ট হাউচ", gu: "હોમસ્ટે અને ગેસ્ટ હાઉસ", kn: "ಹೋಮ್‌ಸ್ಟೇ ಮತ್ತು ಗೆಸ್ಟ್ ಹೌಸ್", ml: "ഹോംസ്റ്റേയും ഗസ്റ്റ് ഹൗസും", mr: "होमस्टे आणि गेस्ट हाउस", or: "ହୋମଷ୍ଟେ ଓ ଗେଷ୍ଟ ହାଉସ୍", pa: "ਹੋਮਸਟੇ ਤੇ ਗੈਸਟ ਹਾਊਸ", ta: "ஹோம்ஸ்டே மற்றும் விருந்தினர் இல்லம்", te: "హోమ్‌స్టే మరియు గెస్ట్ హౌస్" },
+};
 const TRADE_FALLBACK = { mr: "hi", as: "bn" };
 export function tradeName(trade, lang) {
   if (!trade) return "";
+  const own = NEW_TRADE_NAMES[trade.slug];
+  if (own && own[lang]) return own[lang];
   const l = TRADE_FALLBACK[lang] || lang;
   if (l === "hi" && trade.name_hi) return trade.name_hi;
   if (l === "bn" && trade.name_bn) return trade.name_bn;
