@@ -39,6 +39,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent } from "./consent-core.js";
+import { geoJson } from "./regions.js";
 
 // THREE WAYS TO SEE THE GROUND, in the order they are tried.
 //   sat     satellite photographs (Esri World Imagery) with place names on top.
@@ -53,7 +54,13 @@ import { useConsent } from "./consent-core.js";
 const TILES = {
   sat: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    labels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    // Names drawn over the photographs: roads, then towns, villages and
+    // rivers. (Shops and landmarks are not in these layers; the line under the
+    // map lists the ones nearest the pin.)
+    overlays: [
+      { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", native: 17 },
+      { url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", native: 18 },
+    ],
     native: 18,
     attrib: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
   },
@@ -92,6 +99,7 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     return "sat";
   });
   const [backup, setBackup] = useState(false);
+  const [near, setNear] = useState([]);
   const LRef = useRef(null);
   const setLayer = (v) => {
     setLayerState(v);
@@ -159,7 +167,7 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     const parts = [L.tileLayer(spec.url, {
       maxZoom: 19, maxNativeZoom: spec.native, subdomains: spec.sub || "abc", attribution: spec.attrib,
     })];
-    if (spec.labels) parts.push(L.tileLayer(spec.labels, { maxZoom: 19, maxNativeZoom: 18 }));
+    (spec.overlays || []).forEach((o) => parts.push(L.tileLayer(o.url, { maxZoom: 19, maxNativeZoom: o.native })));
     let good = 0, bad = 0, moved = false;
     parts[0].on("tileload", () => { good += 1; });
     parts[0].on("tileerror", () => {
@@ -174,6 +182,37 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
     parts.forEach((x) => x.addTo(map));
     return () => { parts.forEach((x) => { try { map.removeLayer(x); } catch (_) {} }); };
   }, [layer, ready]);
+
+  // WHAT IS NEAR THE PIN: the closest named things the map knows -- a shop, a
+  // school, a road, a river -- so the pin can be checked against something
+  // real. Asked once the map has stopped moving, and not again for a pin that
+  // has hardly moved.
+  const lastNear = useRef(null);
+  useEffect(() => {
+    if (!ready) return undefined;
+    const last = lastNear.current;
+    if (last && Math.abs(last.lat - point.lat) < 0.00015 && Math.abs(last.lng - point.lng) < 0.00015) return undefined;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      lastNear.current = { lat: point.lat, lng: point.lng };
+      geoJson("photon", `reverse?lat=${point.lat}&lon=${point.lng}&limit=10&lang=en`, ctrl.signal)
+        .then((j) => {
+          const seen = new Set();
+          const names = ((j && j.features) || []).map((f) => {
+            const p = (f && f.properties) || {};
+            return String(p.name || p.street || "").trim();
+          }).filter((x) => {
+            const k = x.toLowerCase();
+            if (!k || seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          }).slice(0, 6);
+          if (!ctrl.signal.aborted) setNear(names);
+        })
+        .catch(() => {});
+    }, 800);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [point.lat, point.lng, ready]);
 
   const useDeviceFix = async () => {
     if (!navigator.geolocation) return;
@@ -292,6 +331,20 @@ export default function MapPicker({ start, onCancel, onConfirm }) {
       </div>
 
       <div style={{ padding: "14px 16px 18px", borderTop: `1px solid ${T.line}`, flexShrink: 0 }}>
+        {near.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase",
+                          letterSpacing: 0.4, marginBottom: 5 }}>{t("map_near")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {near.map((n) => (
+                <span key={n} style={{
+                  padding: "5px 10px", borderRadius: 16, background: T.paper, border: `1px solid ${T.line}`,
+                  fontSize: 12.5, fontWeight: 600, color: T.ink,
+                }}>{n}</span>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, marginBottom: 12 }}>
           {t("map_hint")}
         </div>

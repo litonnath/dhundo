@@ -98,10 +98,13 @@ seconds (OpenStreetMap asks for about one request a second).
   answers JSON and goes direct when it does not, so nothing depends on it. It is
   what fixes "works on a phone, not on a laptop" caused by an ad-blocker, a
   network that blocks the host, or a rate limit shared by one address.
-* **Map** (`src/mappicker.jsx`, `TILES`): satellite imagery with place names
-  (Esri World Imagery) by default, a Map button for OpenStreetMap, and an automatic
+* **Map** (`src/mappicker.jsx`, `TILES`): satellite imagery with road names and
+  town, village and river names over it (Esri World Imagery and reference layers) by default, a Map button for OpenStreetMap, and an automatic
   switch to Carto if the first source loads no tiles at all. Esri's public tile
   service is meant for light use and wants the attribution shown on the map; for
   heavier use put a keyed provider (MapTiler, Mapbox) into `TILES`: one entry.
+* Under the map, "Near here" lists the nearest named places (shops, roads, rivers,
+  schools) for the pin, from Photon's reverse lookup (also behind `/geo/`). Names
+  come from OpenStreetMap, so a road or shop nobody has mapped does not appear.
 * The service worker leaves `/geo/` alone, so searches are not stored in the
   phone's cache.
