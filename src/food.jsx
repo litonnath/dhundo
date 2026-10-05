@@ -12,6 +12,7 @@ import { shrink, ScrollRow } from "./market.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { SubCategories, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
+import { ContactRow, RequestSheet, foodKind } from "./foodkinds.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -227,6 +228,9 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
   const [menu, setMenu] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [reqOpen, setReqOpen] = useState(false);
+  const kind = eat ? foodKind(row.trade_slug) : "plain";
+  const catering = kind === "catering";
 
   useEffect(() => {
     let alive = true;
@@ -263,18 +267,25 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
           </div>
           {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
           {info && info.promo_text && <Promo info={info} />}
-          {!accepting && <div style={{ marginBottom: 12 }}><Notice tone="bad">{t("st_closed_err")}</Notice></div>}
+          <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
+          {(catering || kind === "tiffin") && (
+            <div style={{ marginBottom: 12 }}>
+              <Btn full onClick={() => (user && user.id ? setReqOpen(true) : onSignIn && onSignIn())}>{t(catering ? "fk_cat_btn" : "fk_plan_btn")}</Btn>
+            </div>
+          )}
+          {!accepting && !catering && <div style={{ marginBottom: 12 }}><Notice tone="bad">{t("st_closed_err")}</Notice></div>}
         </div>
 
         <div style={{ padding: "14px 16px" }}>
           {menu === null ? <div style={{ color: T.inkFaint }}>…</div> : menu.length === 0 ? (
+            (catering || kind === "dhaba") ? null : (
             <>
               <Notice tone="info">{t("st_nomenu")}</Notice>
               <div style={{ marginTop: 12 }}>{renderEmpty ? renderEmpty(row) : null}</div>
-            </>
+            </>)
           ) : Object.keys(byCat).map((cat) => (
             <div key={cat} style={{ marginBottom: 18 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 8px", color: T.ink }}>{cat}</h2>
+              <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 8px", color: T.ink }}>{catering && cat === "Menu" ? t("fk_pkgs") : cat}</h2>
               {byCat[cat].map((m) => (
                 <div key={m.id} style={{ ...card, display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ flex: 1, minWidth: 0 }}>
@@ -287,7 +298,7 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
                   </span>
                   <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     {m.photo_url && <span style={{ width: 92, height: 92, borderRadius: 12, background: `center/cover url(${m.photo_url}) ${T.line}` }} />}
-                    <Stepper qty={cart[m.id] || 0} disabled={!accepting} onAdd={() => setQty(m.id, 1)} onMinus={() => setQty(m.id, -1)} label={t("st_add")} />
+                    {!catering && <Stepper qty={cart[m.id] || 0} disabled={!accepting} onAdd={() => setQty(m.id, 1)} onMinus={() => setQty(m.id, -1)} label={t("st_add")} />}
                   </span>
                 </div>
               ))}
@@ -305,8 +316,9 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
           </div>
         </div>
       )}
+      {reqOpen && <RequestSheet api={api} row={row} kind={kind} place={place} onClose={() => setReqOpen(false)} />}
       {cartOpen && (
-        <CartSheet api={api} row={row} eat={eat} info={info} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
+        <CartSheet api={api} row={row} eat={eat} kind={kind} info={info} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
                    onSignIn={onSignIn} onClose={() => setCartOpen(false)}
                    onDone={() => { setCartOpen(false); setCart({}); onClose(); onOrdered && onOrdered(); }} />
       )}
@@ -334,12 +346,13 @@ function Stepper({ qty, onAdd, onMinus, disabled, label }) {
 }
 
 // ============================================================ CART / ORDER
-function CartSheet({ api, row, eat, info, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
+function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [mode, setMode] = useState("delivery");
   const [addr, setAddr] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [note, setNote] = useState("");
+  const [needBy, setNeedBy] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const signedIn = !!(user && user.id);
@@ -351,7 +364,8 @@ function CartSheet({ api, row, eat, info, lines, cart, setQty, total, place, use
     setBusy(true); setMsg(null);
     try {
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
-        mode === "delivery" ? addrText : null, addr && addr.lat, addr && addr.lng, note));
+        mode === "delivery" ? addrText : null, addr && addr.lat, addr && addr.lng,
+        (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note));
       if (r && r.ok) onDone();
       else setMsg(r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
@@ -390,7 +404,14 @@ function CartSheet({ api, row, eat, info, lines, cart, setQty, total, place, use
             <PlaceField value={addr} onChange={setAddr} sheetPlace={addr || place} />
           </div>
         )}
-        <input style={{ ...input, marginBottom: 8 }} value={note} maxLength={300} placeholder={t("st_note")} aria-label={t("st_note")}
+        {kind === "bakery" && (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("fk_needed")}</div>
+            <input type="datetime-local" value={needBy} min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                   onChange={(e) => setNeedBy(e.target.value)} style={{ ...input }} />
+          </div>
+        )}
+        <input style={{ ...input, marginBottom: 8 }} value={note} maxLength={250} placeholder={t("st_note")} aria-label={t("st_note")}
                onChange={(e) => setNote(e.target.value)} />
         {mode === "delivery" && info && info.delivery_mins && (
           <p style={{ fontSize: 13.5, fontWeight: 700, color: T.brandDark, margin: "0 0 8px" }}>{String(t("st_mins")).replace("{n}", info.delivery_mins)}</p>
