@@ -1414,16 +1414,16 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
       // already been rewritten twice in this project, and every rewrite is
       // a chance to drop a column; update_my_listing already accepts these
       // fields and is the function the profile screen uses anyway.
-      if (r && r.ok && !isAdmin &&
-          (picked.length > 1 || f.address_line.trim() || f.landmark.trim()
-           || f.pincode.trim() || f.vehicle_number.trim() || f.city_id || idPath)) {
+      if (r && r.ok && !isAdmin) {
         try {
           await api.updateMyListing({
             // services_self_register takes one trade; the extra ones go in
             // the same follow-up call as the address rather than widening a
             // signature that has already been rewritten twice.
             p_other_trades: picked.length > 1 ? picked.slice(1) : null,
-            p_address_line: f.address_line.trim() || null,
+            // A listing's address is public: the line typed, else the place picked.
+            p_address_line: f.address_line.trim() || (lp && lp.address) || null,
+            p_address_public: true,
             p_landmark: f.landmark.trim() || null,
             p_pincode: f.pincode.trim() || null,
             p_vehicle_number: f.vehicle_number.trim() || null,

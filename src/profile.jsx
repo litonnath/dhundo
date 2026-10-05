@@ -167,7 +167,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             address_line: one.address_line || "",
             landmark: one.landmark || "",
             pincode: one.pincode || "",
-            address_public: !!one.address_public,
+            address_public: one.address_public !== false,
             vehicle_number: one.vehicle_number || "",
             city_id: one.city_id || null,
             city_name: one.city || "",
