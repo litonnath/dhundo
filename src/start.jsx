@@ -220,7 +220,7 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
                 display: "block", padding: 0, overflow: "hidden", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
                 borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, boxShadow: "0 6px 20px rgba(15,20,25,0.07)",
               }}>
-                <TileArt k={k} style={{ aspectRatio: wide ? "16 / 9" : "21 / 9" }} />
+                <TileArt k={k} pos={k === "need" ? "75% center" : "center 35%"} style={{ aspectRatio: wide ? "2 / 1" : "21 / 9" }} />
                 <span style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px 16px" }}>
                   <span style={{ width: 46, height: 46, borderRadius: 12, background: fg, color: "#fff", flexShrink: 0,
                                  display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={22} /></span>
