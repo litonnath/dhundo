@@ -20,6 +20,7 @@
 // ===========================================================================
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Icon, Btn, Notice, SignupHelp } from "./ui.jsx";
+import { SignInGate } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -195,7 +196,15 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
   );
 
   // Not yet a worker: the pitch, and the one step that makes them one.
-  if (!signedIn || !hasListing) {
+  if (!signedIn) {
+    return (
+      <SignInGate art="worker" onSignIn={onSignIn} title={t("wk_title")} text={t("wk_pitch")}
+                  perks={[[t("trust_2_t"), t("trust_2_s")], [t("trust_3_t"), t("trust_3_s")]]}>
+        <SignupHelp style={{ margin: "14px 0 0" }} />
+      </SignInGate>
+    );
+  }
+  if (!hasListing) {
     return wrap(
       <div style={{
         background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22,

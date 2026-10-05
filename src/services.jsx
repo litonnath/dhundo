@@ -43,7 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { MenuSheet } from "./menu.jsx";
-import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton } from "./start.jsx";
+import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -2889,7 +2889,7 @@ export default function ServicesPage({
 
       {tab === "sell" && (
         <SellPage api={api} user={signedIn ? user : null} place={place} onSignIn={onSignIn}
-                  onBack={() => setTab("work")}
+                  onBack={() => { if (signedIn) setTab("work"); else { setOfferPick(true); setTab("browse"); } }}
                   onPickLocation={() => setLocOpen(true)}
                   onOpenItem={(it) => setItemOpen({ id: it.id })}
                   editId={editItem} setEditId={setEditItem} />
@@ -2939,12 +2939,25 @@ export default function ServicesPage({
         </div>
       )}
 
+      {tab === "add" && !signedIn && (
+        <SignInGate art={offerType === "ride" ? "ride" : offerType === "shop" ? "shop" : offerType === "eat" ? "eat" : "worker"}
+                    onBack={() => { setOfferPick(true); setTab("browse"); }} onSignIn={onSignIn}
+                    title={t("add_title")} text={t("add_sub")}
+                    note={offerTrade && trades.find((x) => x.slug === offerTrade) ? (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: T.brandSoft, borderRadius: 10,
+                                    padding: "8px 12px", margin: "0 0 14px", fontWeight: 800, fontSize: 15 }}>
+                        <Icon name="check" size={17} /> {tradeName(trades.find((x) => x.slug === offerTrade), lang)}
+                      </div>
+                    ) : null}
+                    perks={[[t("trust_2_t"), t("trust_2_s")], [t("trust_3_t"), t("trust_3_s")]]} />
+      )}
+
       {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" &&
-       tab !== "market" && tab !== "sell" && (
+       tab !== "market" && tab !== "sell" && !(tab === "add" && !signedIn) && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
           {tab === "add" && (
             <>
-              {!isAdmin && (!signedIn || hasListing) && (
+              {!isAdmin && hasListing && (
                 <div style={{ marginBottom: 14 }}>
                   <HomeButton label={t("w_back")} onClick={() => { setOfferPick(true); setTab("browse"); }} />
                 </div>

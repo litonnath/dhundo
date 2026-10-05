@@ -21,7 +21,7 @@ import { hasIndic, variants } from "./translit.js";
 import { useConsent } from "./consent-core.js";
 import { TileArt } from "./scenes.jsx";
 import { vividFor } from "./tradeicons.js";
-import { HomeButton } from "./start.jsx";
+import { HomeButton, SignInGate } from "./start.jsx";
 
 const NEAR_KM = 30;
 const FAR_KM = 100;
@@ -674,12 +674,11 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
 
   if (!user) {
     return (
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "22px 16px 40px" }}>
-        <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, background: T.brandDark, color: "#fff", alignItems: "center", justifyContent: "center" }}><Icon name="tag" size={32} /></div>
-        <h1 style={{ fontSize: 23, fontWeight: 800, margin: "6px 0" }}>{t("mk_sell_title")}</h1>
-        <p style={{ fontSize: 15, color: T.inkSoft, lineHeight: 1.6 }}>{t("mk_need_signin")}</p>
-        <Btn onClick={onSignIn} style={{ minHeight: 52, fontSize: 16 }}><Icon name="user" size={18} /> {t("nav_signin")}</Btn>
-      </div>
+      <SignInGate art="sell" onBack={onBack} onSignIn={onSignIn}
+                  title={t("mk_sell_title")} text={t("mk_sell_sub")}
+                  perks={[[t("trust_2_t"), t("trust_2_s")], [t("trust_3_t"), t("trust_3_s")]]}>
+        <p style={{ fontSize: 12.5, color: T.inkSoft, margin: "10px 0 0", textAlign: "center" }}>{t("mk_need_signin")}</p>
+      </SignInGate>
     );
   }
 

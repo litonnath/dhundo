@@ -271,6 +271,36 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
   );
 }
 
+// What a signed-out visitor sees on a page that needs an account: a banner,
+// what they get, and one clear Sign in button. Nothing pops up by itself.
+export function SignInGate({ art, title, text, onBack, onSignIn, perks = [], note = null, children = null }) {
+  const { t } = useI18n();
+  return (
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 60px" }}>
+      {onBack && <HomeButton onClick={onBack} label={t("w_back")} />}
+      {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 260, margin: "12px 0 16px" }} />}
+      <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: "20px 20px 22px" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 6px" }}>{title}</h1>
+        {text && <p style={{ fontSize: 15, color: T.inkSoft, lineHeight: 1.6, margin: "0 0 14px" }}>{text}</p>}
+        {note}
+        {perks.map(([a, b]) => (
+          <div key={a} style={{ display: "flex", gap: 12, alignItems: "flex-start", margin: "0 0 12px" }}>
+            <span style={{ width: 36, height: 36, borderRadius: 10, background: "#16A34A", color: "#fff", flexShrink: 0,
+                           display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="check" size={20} /></span>
+            <span><span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink }}>{a}</span>
+                  <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft }}>{b}</span></span>
+          </div>
+        ))}
+        <button onClick={onSignIn} style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", minHeight: 52, marginTop: 8,
+          border: "none", borderRadius: 12, background: T.brand, color: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+        }}><Icon name="user" size={19} /> {t("nav_signin")}</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // A search box with the microphone, like the one on the Worker screen.
 export function SearchBox({ value, onChange, placeholder }) {
   return (
