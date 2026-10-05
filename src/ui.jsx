@@ -27,7 +27,7 @@ import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
 import { tradeKeysFor } from "./tradewords.js";
-import { TradePicture } from "./tradepics.jsx";
+import { tradeIcon, vividFor } from "./tradeicons.js";
 
 export const T = {
   ink: "#0F1419",
@@ -122,6 +122,11 @@ export function Icon({ name, size = 24, style }) {
     heart: <><path {...P} d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" /></>,
     sparkle: <><path {...P} d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" /></>,
     drop: <><path {...P} d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" /></>,
+    bike: <><circle {...P} cx="6" cy="16" r="3.5" /><circle {...P} cx="18" cy="16" r="3.5" /><path {...P} d="M6 16l4-8h5l3 8M10 8L9 5H7M14.5 8L12 16" /></>,
+    tv: <><rect {...P} x="3" y="5" width="18" height="12" rx="1.5" /><path {...P} d="M8 21h8M12 17v4" /></>,
+    sofa: <><path {...P} d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3" /><path {...P} d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z" /><path {...P} d="M6 18v2M18 18v2" /></>,
+    washer: <><rect {...P} x="4" y="3" width="16" height="18" rx="2" /><circle {...P} cx="12" cy="13" r="4.5" /><path {...P} d="M7 6.5h2" /></>,
+    box: <><path {...P} d="M3 8l9-5 9 5v8l-9 5-9-5z" /><path {...P} d="M3 8l9 5 9-5M12 13v8" /></>,
     chev: <><path {...P} d="M7 10l5 5 5-5" /></>,
     user: <><circle {...P} cx="12" cy="8.5" r="3.7" /><path {...P} d="M4.8 20c.7-3.6 3.6-5.6 7.2-5.6s6.5 2 7.2 5.6" /></>,
     crosshair: <><circle {...P} cx="12" cy="12" r="6.5" /><circle {...P} cx="12" cy="12" r="1.8" /><path {...P} d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>,
@@ -1998,12 +2003,16 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
               width: 76, height: 76, overflow: "hidden", borderRadius: 16, background: s.bg,
               border: `1px solid ${T.line}`, boxSizing: "border-box",
             }}>
-              <TradePicture trade={trade || { name_en: row.trade_name }} fallback={
-                <span style={{
-                  width: "100%", height: "100%", display: "flex", alignItems: "center",
-                  justifyContent: "center", color: s.fg,
-                }}><Icon name={s.icon} size={30} /></span>
-              } />
+              {(() => {
+                const tr = trade || { name_en: row.trade_name };
+                const ic = tradeIcon(tr, s.icon);
+                return (
+                  <span style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                                 background: vividFor(tr.slug || tr.name_en || ic), color: "#fff" }}>
+                    <Icon name={ic} size={32} />
+                  </span>
+                );
+              })()}
             </div>
           )}
           {!row.avatar_url && (
@@ -2810,7 +2819,7 @@ export function PopularTrades({ trades, onPick, limit = 8 }) {
             {/* A picture first: somebody who reads little still knows an
                 auto when they see one. */}
             <span style={{ display: "block", width: "100%", aspectRatio: "16 / 10", background: s.bg }}>
-              <TradePicture trade={tr} fallback={icon} />
+              {icon}
             </span>
             <span style={{
               display: "block", padding: "9px 11px 11px", fontSize: 15, fontWeight: 800,

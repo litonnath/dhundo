@@ -1124,7 +1124,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 <>
                   {pinShown.length > 0 && (
                     <>
-                      {heading(<>📮 {t("pin_title").replace("{pin}", pin)}
+                      {heading(<>{t("pin_title").replace("{pin}", pin)}
                         <span style={{ fontWeight: 600, color: T.inkFaint }}>· {pinShown.length}</span></>)}
                       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 22 }}>
                         {pinShown.map(card)}

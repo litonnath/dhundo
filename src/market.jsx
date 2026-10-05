@@ -20,6 +20,7 @@ import { ITEM_CATEGORIES, itemCategoryFor } from "./itemwords.js";
 import { hasIndic, variants } from "./translit.js";
 import { useConsent } from "./consent-core.js";
 import { TileArt } from "./scenes.jsx";
+import { vividFor } from "./tradeicons.js";
 import { HomeButton } from "./start.jsx";
 
 const NEAR_KM = 30;
@@ -103,14 +104,14 @@ function CatChips({ value, onChange, t }) {
         border: `1.5px solid ${on ? T.brandDark : T.line}`,
         background: on ? T.brandSoft : T.white, color: on ? T.brandDeep : T.ink,
       }}>
-        {emoji && <span style={{ fontSize: 17, lineHeight: 1 }}>{emoji}</span>}{label}
+        {emoji && <span style={{ width: 24, height: 24, borderRadius: 7, background: vividFor(emoji), color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon name={emoji} size={15} /></span>}{label}
       </button>
     );
   };
   return (
     <ScrollRow>
       {chip(null, null, t("all"))}
-      {ITEM_CATEGORIES.map((c) => chip(c.key, c.emoji, t("mk_cat_" + c.key)))}
+      {ITEM_CATEGORIES.map((c) => chip(c.key, c.icon, t("mk_cat_" + c.key)))}
     </ScrollRow>
   );
 }
@@ -180,8 +181,11 @@ export function ItemCard({ item, onOpen, showStatus }) {
         background: item.photo ? `center/cover url("${item.photo}") ${T.paper}` : T.paper,
       }}>
         {!item.photo && (
-          <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
-                         justifyContent: "center", fontSize: 44 }}>{c.emoji}</span>
+          <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ width: 72, height: 72, borderRadius: 20, background: vividFor(c.icon), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name={c.icon} size={36} />
+            </span>
+          </span>
         )}
         {item.photo_count > 1 && (
           <span style={{
@@ -245,12 +249,12 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t("need_buy")}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-              {[{ key: null, emoji: "🔎", label: t("st_all") }, ...ITEM_CATEGORIES.map((c) => ({ key: c.key, emoji: c.emoji, label: t("mk_cat_" + c.key) }))].map((c) => (
+              {[{ key: null, icon: "search", label: t("st_all") }, ...ITEM_CATEGORIES.map((c) => ({ key: c.key, icon: c.icon, label: t("mk_cat_" + c.key) }))].map((c) => (
                 <button key={c.key || "all"} onClick={() => setCatPick(c.key)} style={{
                   display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px", minHeight: 62, borderRadius: 12,
                   border: `1px solid ${c.key ? T.line : T.brandDark}`, background: c.key ? T.white : T.brandSoft, cursor: "pointer", fontFamily: "inherit",
                 }}>
-                  <span style={{ width: 38, height: 38, borderRadius: 10, background: "#F3E8FD", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{c.emoji}</span>
+                  <span style={{ width: 42, height: 42, borderRadius: 11, background: c.key ? vividFor(c.icon) : T.brandDark, color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 8px rgba(15,20,25,0.18)" }}><Icon name={c.icon} size={22} /></span>
                   <span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{c.label}</span>
                 </button>
               ))}
@@ -338,7 +342,7 @@ export function MarketHome({ api, place, state, query = "", category: initialCat
           textAlign: "center", padding: "34px 18px", background: T.white, borderRadius: 16,
           border: `1px dashed ${T.line}`,
         }}>
-          <div style={{ fontSize: 40 }}>{cat ? catOf(cat).emoji : "🛍️"}</div>
+          <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, background: vividFor(cat ? catOf(cat).icon : "tag"), color: "#fff", alignItems: "center", justifyContent: "center" }}><Icon name={cat ? catOf(cat).icon : "tag"} size={32} /></div>
           <div style={{ fontSize: 17, fontWeight: 800, marginTop: 6 }}>{t("mk_empty")}</div>
           <p style={{ fontSize: 14, color: T.inkSoft, margin: "6px 0 16px", lineHeight: 1.55 }}>{t("st_none")}</p>
           {onSell && <Btn onClick={onSell}><Icon name="tag" size={18} /> {t("mk_sell_title")}</Btn>}
@@ -423,7 +427,7 @@ export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn
     it.brand && [t("mk_brand"), it.brand],
     it.model_year && [t("mk_year"), String(it.model_year)],
     it.km_driven != null && [t("mk_km"), Number(it.km_driven).toLocaleString("en-IN")],
-    [t("mk_category"), `${c.emoji} ${t("mk_cat_" + c.key)}`],
+    [t("mk_category"), t("mk_cat_" + c.key)],
   ].filter(Boolean) : [];
 
   return (
@@ -449,7 +453,7 @@ export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn
 
       {gone ? (
         <div style={{ maxWidth: 560, margin: "40px auto", padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 42 }}>🛍️</div>
+          <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, background: T.brandDark, color: "#fff", alignItems: "center", justifyContent: "center" }}><Icon name="tag" size={32} /></div>
           <p style={{ fontSize: 16, fontWeight: 700 }}>{t("mk_e_gone")}</p>
           <Btn onClick={onClose}>{t("w_back")}</Btn>
         </div>
@@ -671,7 +675,7 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
   if (!user) {
     return (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "22px 16px 40px" }}>
-        <div style={{ fontSize: 44 }}>🛍️</div>
+        <div style={{ display: "inline-flex", width: 64, height: 64, borderRadius: 18, background: T.brandDark, color: "#fff", alignItems: "center", justifyContent: "center" }}><Icon name="tag" size={32} /></div>
         <h1 style={{ fontSize: 23, fontWeight: 800, margin: "6px 0" }}>{t("mk_sell_title")}</h1>
         <p style={{ fontSize: 15, color: T.inkSoft, lineHeight: 1.6 }}>{t("mk_need_signin")}</p>
         <Btn onClick={onSignIn} style={{ minHeight: 52, fontSize: 16 }}><Icon name="user" size={18} /> {t("nav_signin")}</Btn>
@@ -768,7 +772,7 @@ function MyAdRow({ api, item, onOpen, onEdit, onChanged }) {
       </button>
       <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
         {item.status === "active" && !item.expired && !item.hidden && (
-          <Btn kind="ghost" disabled={busy} onClick={() => act("sold")} style={small}>✓ {t("mk_mark_sold")}</Btn>
+          <Btn kind="ghost" disabled={busy} onClick={() => act("sold")} style={small}>{t("mk_mark_sold")}</Btn>
         )}
         {(item.status === "sold" || item.expired) && !item.hidden && (
           <Btn kind="ghost" disabled={busy} onClick={() => act("active")} style={small}>↻ {t("mk_relist")}</Btn>
@@ -946,7 +950,7 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
               border: `2px solid ${on ? T.brandDark : T.line}`, background: on ? T.brandSoft : T.white,
               display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
               fontSize: 12.5, fontWeight: on ? 800 : 600, color: on ? T.brandDeep : T.ink, lineHeight: 1.2,
-            }}><span style={{ fontSize: 26 }}>{c.emoji}</span>{t("mk_cat_" + c.key)}</button>
+            }}><span style={{ width: 40, height: 40, borderRadius: 11, background: vividFor(c.icon), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={c.icon} size={22} /></span>{t("mk_cat_" + c.key)}</button>
           );
         })}
       </div>
@@ -1056,7 +1060,7 @@ export function AdminAds({ api, onOpenItem }) {
   const small = { minHeight: 36, padding: "0 12px", fontSize: 13, borderRadius: 9 };
   return (
     <div style={{ marginTop: 30 }}>
-      <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 10px" }}>🛍️ {t("mk_adm_title")}</h2>
+      <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 10px" }}>{t("mk_adm_title")}</h2>
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         {tab("reported", t("mk_adm_reported"))}{tab("removed", t("mk_adm_removed"))}{tab("all", t("mk_adm_all"))}
       </div>

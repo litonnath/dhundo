@@ -6,15 +6,15 @@
 // ===========================================================================
 
 export const ITEM_CATEGORIES = [
-  { key: "bikes",       emoji: "🏍️" },
-  { key: "cars",        emoji: "🚗" },
-  { key: "mobiles",     emoji: "📱" },
-  { key: "electronics", emoji: "📺" },
-  { key: "appliances",  emoji: "🧺" },
-  { key: "furniture",   emoji: "🛋️" },
-  { key: "building",    emoji: "🧱" },
-  { key: "tools",       emoji: "🛠️" },
-  { key: "other",       emoji: "📦" },
+  { key: "bikes",       emoji: "🏍️", icon: "bike" },
+  { key: "cars",        emoji: "🚗", icon: "drivers" },
+  { key: "mobiles",     emoji: "📱", icon: "phone" },
+  { key: "electronics", emoji: "📺", icon: "tv" },
+  { key: "appliances",  emoji: "🧺", icon: "washer" },
+  { key: "furniture",   emoji: "🛋️", icon: "sofa" },
+  { key: "building",    emoji: "🧱", icon: "bricks" },
+  { key: "tools",       emoji: "🛠️", icon: "hammer" },
+  { key: "other",       emoji: "📦", icon: "box" },
 ];
 
 export const ITEM_WORDS = {
