@@ -35,12 +35,12 @@ begin
            w.trade_slug::text, t.name_en::text, w.locality::text,
            to_jsonb(w.photos), w.avatar_url::text,
            round(public.services_km(p_lat, p_lng, w.lat, w.lng)::numeric, 1) as distance_km,
-           (select coalesce(jsonb_agg(jsonb_build_object('name', x.name, 'price_paise', x.price_paise, 'photo', x.photo_url)), '[]'::jsonb)
-              from (select m.name, m.price_paise, m.photo_url
+           (select coalesce(jsonb_agg(jsonb_build_object('name', x.name, 'price_paise', x.price_paise, 'photo', x.photo_url, 'veg', x.veg)), '[]'::jsonb)
+              from (select m.name, m.price_paise, m.photo_url, m.veg
                       from public.services_menu_items m
                      where m.worker_id = w.id and m.available
                        and v_q is not null and m.name ilike '%' || v_q || '%'
-                     order by m.name limit 4) x) as items
+                     order by m.name limit 8) x) as items
       from public.services_workers w
       join public.services_trades t on t.slug = w.trade_slug
      where w.status = 'approved'

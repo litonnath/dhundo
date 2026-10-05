@@ -20,6 +20,19 @@ const rupees = (p) => `₹${Math.round(p / 100)}`;
 const card = { background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 };
 const GREEN = "#0F8A3C", RED = "#B91C1C";
 
+// What a typed word most likely means, so the search can offer the right kind
+// of place first. Only a suggestion: the person taps it or ignores it.
+const FOOD_WORDS = [
+  ["bakery-sweets", /cake|pastry|bread|biscuit|cookie|sweet|mithai|mishti|rasgulla|laddu|jalebi|bakery|dessert|ice ?cream/],
+  ["tea-snacks", /tea|chai|coffee|samosa|snack|pakora|pakoda|singara|jhalmuri|puri|chop|tost|toast/],
+  ["fast-food-biryani", /biryani|biriyani|burger|pizza|momo|noodle|chowmein|roll|sandwich|fries|chicken|kebab|pasta|fast ?food/],
+  ["tiffin-home-food", /tiffin|thali|home ?(food|made|cook)|dabba|meal ?plan|roti/],
+  ["catering-service", /cater|party|wedding|function|event|bulk/],
+  ["dhaba-hotel", /dhaba|hotel|rice|bhat|dal|fish|mach|curry|meals?/],
+  ["restaurant", /restaurant|veg|non-?veg|paneer|dosa|idli|chinese|thai|south indian/],
+];
+const suggestKind = (q) => { const s = String(q || "").toLowerCase(); const m = FOOD_WORDS.find(([, re]) => re.test(s)); return m ? m[0] : null; };
+
 function VegMark({ veg }) {
   const c = veg ? GREEN : RED;
   return (
@@ -67,6 +80,8 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const [open, setOpen] = useState(null);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [infos, setInfos] = useState({});
+  const [view, setView] = useState("places");
+  const [vegOnly, setVegOnly] = useState(false);
 
   const kinds = useMemo(() => trades.filter((x) =>
     eat ? x.group_name === "Eat & Stay" : (x.kind === "supplier" || x.group_name === "Suppliers") && x.group_name !== "Eat & Stay"), [trades, eat]);
@@ -107,6 +122,10 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     .filter((r) => near || !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
   const stage1 = !picked && !q.trim();
+  const hint = eat && q.trim().length >= 3 && !chip ? suggestKind(q) : null;
+  const hintKind = hint && kinds.find((x) => x.slug === hint);
+  const dishes = rows.flatMap((r) => (Array.isArray(r.items) ? r.items : []).map((it) => ({ ...it, row: r })))
+    .filter((d) => !vegOnly || d.veg !== false);
   const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
   return (
     <>
@@ -157,7 +176,46 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           {kinds.map((x) => <span key={x.slug} style={{ flexShrink: 0, whiteSpace: "nowrap" }}><Chip active={chip === x.slug} onClick={() => setChip(x.slug)}>{nameOf(x)}</Chip></span>)}
         </ScrollRow>
       </div>
-      {loading ? <div style={{ color: T.inkFaint, padding: 16 }}>…</div> : shown.length === 0 ? (
+      {q.trim() && (
+        <div style={{ margin: "4px 0 10px" }}>
+          {hintKind && (
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: T.inkSoft, marginRight: 8 }}>{t("fs_suggest")}</span>
+              <Chip active={false} onClick={() => setChip(hintKind.slug)}>{nameOf(hintKind)}</Chip>
+            </div>
+          )}
+          {near && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {[["places", "fs_places"], ["dishes", "fs_dishes"]].map(([k, key]) => (
+                <Chip key={k} active={view === k} onClick={() => setView(k)}>{t(key)}</Chip>
+              ))}
+              {eat && <Chip active={vegOnly} onClick={() => setVegOnly((v) => !v)}>{t("fs_veg")}</Chip>}
+            </div>
+          )}
+        </div>
+      )}
+      {near && q.trim() && view === "dishes" ? (
+        loading ? <div style={{ color: T.inkFaint, padding: 16 }}>…</div> : dishes.length === 0 ? (
+          <div style={{ ...card, textAlign: "center", color: T.inkSoft, padding: 28 }}>{t("fs_no_dish")}</div>
+        ) : dishes.map((d, i) => (
+          <button key={i} onClick={() => setOpen(d.row)} style={{
+            display: "flex", gap: 12, width: "100%", textAlign: "left", alignItems: "center", padding: 10, marginBottom: 10,
+            borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            <span style={{ width: 64, height: 64, borderRadius: 10, flexShrink: 0, background: d.photo ? `center/cover url(${d.photo}) ${T.line}` : T.brandSoft }} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {eat && <VegMark veg={d.veg !== false} />}
+                <span style={{ fontSize: 15.5, fontWeight: 800, color: T.ink }}>{d.name}</span>
+              </span>
+              <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>
+                {rupees(d.price_paise)} · {d.row.display_name}{d.row.distance_km != null ? ` · ${String(t("st_away")).replace("{n}", d.row.distance_km)}` : ""}
+              </span>
+              <OpenLine info={infos[d.row.id]} t={t} />
+            </span>
+          </button>
+        ))
+      ) : loading ? <div style={{ color: T.inkFaint, padding: 16 }}>…</div> : shown.length === 0 ? (
         <div style={{ ...card, textAlign: "center", color: T.inkSoft, padding: 28 }}>{t("st_none")}</div>
       ) : shown.map((r) => (
         <button key={r.id} onClick={() => setOpen(r)} style={{
