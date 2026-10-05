@@ -2114,7 +2114,8 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <Icon name="pin" size={14} style={{ color: T.inkFaint }} />
-              {[row.locality, cityShown].filter(Boolean).join(", ") || [row.pincode, row.state].filter(Boolean).join(", ")}
+              {/* address_line only arrives when its owner chose to publish it. */}
+              {row.address_line || [row.locality, cityShown].filter(Boolean).join(", ") || [row.pincode, row.state].filter(Boolean).join(", ")}
             </span>
             {/* The distance in km first, whenever there is one. "Same PIN" or
                 "same town" is only a note beside it, or all there is when no
