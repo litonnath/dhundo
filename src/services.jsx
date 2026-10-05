@@ -43,7 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { MenuSheet } from "./menu.jsx";
-import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories, HomeButton } from "./start.jsx";
+import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -2482,7 +2482,7 @@ export default function ServicesPage({
   // what is offered. Shown once on a new phone, and never to somebody who is
   // already signed in.
   const [start, setStart] = useState(() => {
-    try { return window.localStorage.getItem("dhundo_started") ? null : "role"; } catch (_) { return null; }
+    return null;
   });
   const [offerType, setOfferType] = useState(() => {
     try { return window.localStorage.getItem("dhundo_offer_type") || null; } catch (_) { return null; }
@@ -2802,22 +2802,6 @@ export default function ServicesPage({
       paddingBottom: "calc(72px + env(safe-area-inset-bottom))",
     }}>
       {langGate && <LanguageGate onDone={closeLangGate} />}
-      {!langGate && !signedIn && start === "role" && (
-        <StartGate
-          onNeed={() => { finishStart(); switchMode("need"); onSignIn && onSignIn(); }}
-          onOffer={() => setStart("offer")} />
-      )}
-      {!langGate && !signedIn && start === "offer" && (
-        <OfferTypeGate trades={trades}
-          onBack={() => setStart("role")}
-          onPick={(type, trade) => {
-            try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
-            setOfferType(type); setOfferTrade(trade || null);
-            finishStart();
-            if (type === "sell") { setTab("sell"); } else { setTab("add"); }
-            onSignIn && onSignIn();
-          }} />
-      )}
       <Header
         tab={tab}
         setTab={setTab}
@@ -2878,7 +2862,6 @@ export default function ServicesPage({
             setOfferType(type); setOfferTrade(trade || null);
             setOfferPick(false);
             if (type === "sell") { setTab("sell"); } else { setTab("add"); }
-            if (!signedIn) onSignIn && onSignIn();
           }} />
       )}
       {tab === "browse" && !offerPick && (
@@ -2963,6 +2946,12 @@ export default function ServicesPage({
               </p>
               {!signedIn ? (
                 <>
+                  {offerTrade && (trades.find((x) => x.slug === offerTrade)) && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: T.white, border: `1px solid ${T.line}`,
+                                  borderRadius: 12, padding: "10px 14px", margin: "0 0 14px", fontWeight: 800, fontSize: 16 }}>
+                      <Icon name="check" size={18} /> {tradeName(trades.find((x) => x.slug === offerTrade), lang)}
+                    </div>
+                  )}
                   <Notice tone="info">{t("need_signin")}</Notice>
                   <Btn onClick={onSignIn}>{t("nav_signin")}</Btn>
                 </>

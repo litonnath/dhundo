@@ -119,7 +119,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
             <TileArt k={key} />
             <span style={{ display: "block", padding: "11px 13px 13px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 28, height: 28, borderRadius: 8, background: bg, color: fg, flexShrink: 0,
+                <span style={{ width: 32, height: 32, borderRadius: 9, background: fg, color: "#fff", flexShrink: 0,
                                display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={16} /></span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(title)}</span>
               </span>
@@ -187,7 +187,7 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
               }}>
                 <TileArt k={k} style={{ aspectRatio: wide ? "16 / 9" : "21 / 9" }} />
                 <span style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px 16px" }}>
-                  <span style={{ width: 44, height: 44, borderRadius: 12, background: bg, color: fg, flexShrink: 0,
+                  <span style={{ width: 46, height: 46, borderRadius: 12, background: fg, color: "#fff", flexShrink: 0,
                                  display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={22} /></span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: T.ink }}>{t(title)}</span>
@@ -222,8 +222,8 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
               <TileArt k={art} />
               <span style={{ display: "block", padding: "11px 13px 13px" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, color: fg, background: bg, flexShrink: 0,
-                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={16} /></span>
+                  <span style={{ width: 32, height: 32, borderRadius: 9, color: "#fff", background: fg, flexShrink: 0,
+                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={18} /></span>
                   <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
                 </span>
                 <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 6 }}>{t(sub)}</span>
@@ -238,6 +238,14 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
 
 // One line icon per kind of food place or shop, picked from the English name
 // (the database holds the trades, not their pictures).
+// Strong, saturated colours for the tile icons, picked from the name so a tile
+// keeps its colour. White line icon on a solid square, not a faded tint.
+const VIVID = ["#EA580C", "#2563EB", "#16A34A", "#DC2626", "#7C3AED", "#0D9488", "#D97706", "#DB2777", "#0891B2", "#4F46E5"];
+export const vividFor = (key) => {
+  let h = 0;
+  for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return VIVID[h % VIVID.length];
+};
 const ICON_RULES = [
   [/tea|snack|chai/, "teacup"], [/bakery|sweet|cake|mithai/, "cake"], [/fast food|biryani|burger|pizza|momo|roll/, "burger"],
   [/dhaba|curry|meal/, "pot"], [/tiffin|home food|lunch/, "tiffin"], [/cater/, "cloche"], [/hotel|lodge|resort/, "bed"],
@@ -246,6 +254,11 @@ const ICON_RULES = [
   [/tile|marble|granite/, "tiles"], [/electric|wire|bulb|light/, "bolt"], [/sanitary|plumbing|bath/, "tap"],
   [/ply|timber|wood|door/, "timber"], [/glass|alumin/, "glass"], [/tin|roof/, "sheets"], [/sand|stone|gravel|chips/, "bricks"],
   [/hardware|tool/, "repairs"],
+  [/electrician|wiring/, "bolt"], [/plumber/, "tap"], [/painter|polish/, "roller"], [/carpenter|furniture|wood/, "timber"],
+  [/mason|rajmistri|construction|labour|helper/, "bricks"], [/tailor|barber|salon|beauty/, "scissors"],
+  [/maid|clean|sweep|house\s?keep|domestic|cook|chef/, "broom"], [/garden|plant|farm/, "leaf"],
+  [/photo|camera|video/, "camera"], [/security|guard/, "shield"], [/welder|fitter|mechanic|ac |repair/, "repairs"],
+  [/driver|rider|taxi|auto|toto/, "drivers"], [/event|decor|tent|dj/, "events"],
 ];
 export function tradeIcon(tr, fallback) {
   const k = `${tr.name_en || ""} ${tr.slug || ""}`.toLowerCase();
@@ -295,7 +308,7 @@ export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPic
       {onAll && !needle && (
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", marginBottom: 10 }}>
           <button onClick={onAll} style={tileStyle(T.brandSoft, T.brandDark)}>
-            <span style={iconBox(T.white, T.brandDark)}><Icon name="search" size={20} /></span>
+            <span style={iconBox(T.brandDark, "#fff")}><Icon name="search" size={22} /></span>
             <span style={labelStyle}>{allLabel}</span>
           </button>
         </div>
@@ -306,8 +319,8 @@ export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPic
           <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
             {sec.items.map((it) => (
               <button key={it.key} onClick={() => onPick(it.key)} style={tileStyle(T.white, T.line)}>
-                <span style={iconBox(sec.bg || bg, sec.fg || fg)}>
-                  {it.emoji ? <span style={{ fontSize: 20 }}>{it.emoji}</span> : <Icon name={it.icon || sec.icon || icon} size={20} />}
+                <span style={iconBox(it.emoji ? "#F3E8FD" : vividFor(it.key || it.label), "#fff")}>
+                  {it.emoji ? <span style={{ fontSize: 21 }}>{it.emoji}</span> : <Icon name={it.icon || sec.icon || icon} size={22} />}
                 </span>
                 <span style={labelStyle}>{it.label}</span>
               </button>
@@ -323,7 +336,7 @@ const tileStyle = (bg, line) => ({
   borderRadius: 12, border: `1px solid ${line}`, background: bg, cursor: "pointer", fontFamily: "inherit",
 });
 const iconBox = (bg, fg) => ({
-  width: 38, height: 38, borderRadius: 10, background: bg, color: fg, flexShrink: 0,
+  width: 42, height: 42, borderRadius: 11, background: bg, color: fg, flexShrink: 0, boxShadow: "0 3px 8px rgba(15,20,25,0.18)",
   display: "flex", alignItems: "center", justifyContent: "center",
 });
 const labelStyle = { fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0 };

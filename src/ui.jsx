@@ -109,6 +109,10 @@ export function Icon({ name, size = 24, style }) {
     timber: <><path {...P} d="M3 8h14l4 2v6l-4 2H3z" /><circle {...P} cx="7.5" cy="13" r="2" /></>,
     glass: <><rect {...P} x="5" y="3" width="14" height="18" rx="1" /><path {...P} d="M9 14l6-7M9 18l6-7" /></>,
     sheets: <><path {...P} d="M3 15L8 6h13l-5 9z" /><path {...P} d="M11 6L6 15M16 6l-5 9" /></>,
+    scissors: <><circle {...P} cx="6" cy="6" r="2.6" /><circle {...P} cx="6" cy="18" r="2.6" /><path {...P} d="M8.2 7.6L20 17M8.2 16.4L20 7" /></>,
+    broom: <><path {...P} d="M14 3l3 6" /><path {...P} d="M5 21l2-8 9-4 2 4-8 6z" /><path {...P} d="M8 17l3 2" /></>,
+    leaf: <><path {...P} d="M5 19C5 10 10 5 20 4c0 10-5 15-13 15" /><path {...P} d="M5 19c3-4 6-7 10-9" /></>,
+    hammer: <><path {...P} d="M14 5l5 5-3 3-5-5z" /><path {...P} d="M13 9L4 18l2 2 9-9" /></>,
     chev: <><path {...P} d="M7 10l5 5 5-5" /></>,
     user: <><circle {...P} cx="12" cy="8.5" r="3.7" /><path {...P} d="M4.8 20c.7-3.6 3.6-5.6 7.2-5.6s6.5 2 7.2 5.6" /></>,
     crosshair: <><circle {...P} cx="12" cy="12" r="6.5" /><circle {...P} cx="12" cy="12" r="1.8" /><path {...P} d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>,
@@ -1831,10 +1835,11 @@ export function CategoryGrid({ groups, counts, onPick }) {
             minHeight: 44, fontFamily: "inherit",
           }}>
             <span style={{
-              width: 54, height: 54, borderRadius: "50%", background: s.bg, color: s.fg,
+              width: 56, height: 56, borderRadius: "50%", background: s.fg, color: "#fff",
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              boxShadow: `0 4px 10px ${s.fg}44`,
             }}>
-              <Icon name={s.icon} size={26} />
+              <Icon name={s.icon} size={27} />
             </span>
             <span style={{
               fontSize: 12, fontWeight: 700, color: T.ink, textAlign: "center",
