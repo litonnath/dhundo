@@ -1082,6 +1082,41 @@ export async function roadDistances(origin, ids) {
 }
 
 
+// DISTANCE OF A TRIP between two chosen points, for the fare. Google Routes
+// when it is set up and within the allowance, otherwise the straight line
+// times 1.35 as a fair road estimate. Returns {km, road}.
+const tripCache = new Map();
+export async function tripKm(a, b) {
+  if (!a || !b || typeof a.lat !== "number" || typeof b.lat !== "number") return null;
+  const ck = `${a.lat.toFixed(4)},${a.lng.toFixed(4)}|${b.lat.toFixed(4)},${b.lng.toFixed(4)}`;
+  if (tripCache.has(ck)) return tripCache.get(ck);
+  let out = null;
+  const key = CFG.GOOGLE_MAPS_KEY;
+  if (key && !/YOUR/i.test(key)) {
+    try {
+      if (await takeGoogleMap("routes")) {
+        const wp = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+        const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "routes.distanceMeters" },
+          body: JSON.stringify({ origin: wp(a), destination: wp(b), travelMode: "DRIVE" }),
+        });
+        const j = res.ok ? await res.json() : null;
+        const m = j && j.routes && j.routes[0] && j.routes[0].distanceMeters;
+        if (typeof m === "number") out = { km: Math.max(0.5, Math.round(m / 100) / 10), road: true };
+      }
+    } catch (_) { /* the straight line below */ }
+  }
+  if (!out) {
+    const R = 6371, rad = (x) => (x * Math.PI) / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    out = { km: Math.max(0.5, Math.round(2 * R * Math.asin(Math.sqrt(h)) * 1.35 * 10) / 10), road: false };
+  }
+  tripCache.set(ck, out);
+  return out;
+}
+
 // STRAIGHT-LINE DISTANCE measured on the phone from the positions it may use
 // (services_public_positions, sql/108). It fills the gap when the search found
 // a listing without measuring it, which happens when nobody is within reach

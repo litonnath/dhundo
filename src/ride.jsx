@@ -12,6 +12,7 @@ import { AlertsCard } from "./alerts.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
+import { tripKm } from "./regions.js";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -46,6 +47,15 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const [msg, setMsg] = useState(null);
   const [finished, setFinished] = useState(false);
   const wasActive = useRef(false);
+  const [trip, setTrip] = useState(null);
+  // Distance from the chosen pickup to the destination, for the fare.
+  useEffect(() => {
+    let live = true;
+    setTrip(null);
+    if (hire || !pick || !drop || typeof pick.lat !== "number" || typeof drop.lat !== "number") return undefined;
+    tripKm(pick, drop).then((r) => { if (live) setTrip(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [hire, pick && pick.lat, pick && pick.lng, drop && drop.lat, drop && drop.lng]);
 
   const loadRide = useCallback(async () => {
     if (!signedIn) return;
@@ -75,6 +85,12 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return () => { live = false; };
   }, [api, vehicle, pick && pick.lat, pick && pick.lng]);
 
+  // The fare is worked out, not typed: distance times the usual per-km rate of
+  // the drivers online near the pickup for this kind of vehicle.
+  const rates = online.map((d) => Number(fares[d.id])).filter((n) => n > 0).sort((x, y) => x - y);
+  const perKm = rates.length ? rates[Math.floor(rates.length / 2)] : null;
+  const est = trip && perKm ? Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5) : null;
+
   const here = async () => {
     const got = await geo.detect();
     if (!got || typeof got.lat !== "number") return;
@@ -92,7 +108,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       const r = one(await api.rideRequest(
         { text: placeText(pick), lat: pick.lat, lng: pick.lng },
         hire ? { text: placeText(pick), lat: pick.lat, lng: pick.lng } : { text: placeText(drop), lat: drop.lat, lng: drop.lng },
-        vehicle, fare === "" ? null : Number(fare)));
+        vehicle, est != null ? est : fare === "" ? null : Number(fare)));
       if (r && r.ok) loadRide();
       else setMsg(r && r.reason === "already_open" ? t("rd_open") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
@@ -184,9 +200,17 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           </button>
         ))}
       </div>
-      <input style={{ ...input, marginBottom: 8 }} value={fare} inputMode="numeric" maxLength={5}
-             placeholder={t("rd_offer")} aria-label={t("rd_offer")}
-             onChange={(e) => setFare(e.target.value.replace(/\D/g, ""))} />
+      {est != null ? (
+        <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
+          <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
+        </div>
+      ) : (
+        <input style={{ ...input, marginBottom: 8 }} value={fare} inputMode="numeric" maxLength={5}
+               placeholder={t("rd_offer")} aria-label={t("rd_offer")}
+               onChange={(e) => setFare(e.target.value.replace(/\D/g, ""))} />
+      )}
       <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
@@ -204,6 +228,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           <span style={{ textAlign: "right" }}>
             {d.distance_km != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", d.distance_km)}</span>}
             {fares[d.id] != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.ink }}>{String(t("rs_km_show")).replace("{n}", fares[d.id])}</span>}
+            {trip && fares[d.id] > 0 && <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_trip_fare")).replace("{n}", Math.max(fares[d.id], Math.round((trip.km * fares[d.id]) / 5) * 5))}</span>}
           </span>
         </div>
       ))}
