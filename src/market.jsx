@@ -14,7 +14,7 @@
 //   AdminAds     -- reported ads for the admin
 // ===========================================================================
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable, VoiceButton } from "./ui.jsx";
+import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable, VoiceButton, Hero } from "./ui.jsx";
 import { useI18n, stateName } from "./i18n.jsx";
 import { ITEM_CATEGORIES, itemCategoryFor } from "./itemwords.js";
 import { hasIndic, variants } from "./translit.js";
@@ -233,37 +233,13 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
   const showTiles = catPick === undefined && !q.trim();
   return (
     <div>
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
-        {onBack && <HomeButton onClick={onBack} />}
-        <TileArt k="need-market" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginTop: 10 }} />
-        {onSell && (
-          <button onClick={onSell} style={{
-            display: "inline-flex", alignItems: "center", gap: 6, background: T.accent, color: "#fff", marginTop: 10,
-            border: "none", borderRadius: 24, padding: "10px 16px", fontSize: 15, fontWeight: 900,
-            cursor: "pointer", fontFamily: "inherit", minHeight: 44,
-          }}><Icon name="plus" size={18} /> {t("mk_sell_btn")}</button>
-        )}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 8, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14,
-          padding: "4px 6px 4px 14px", marginTop: 12,
-        }}>
-          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("mk_search_ph")}
-                 aria-label={t("mk_search_ph")} style={{
-            flex: 1, border: "none", outline: "none", fontSize: 16, minHeight: 44, background: "transparent",
-            color: T.ink, fontFamily: "inherit", minWidth: 0,
-          }} />
-          {q && (
-            <button onClick={() => setQ("")} aria-label="Clear" style={{
-              border: "none", background: "none", cursor: "pointer", color: T.inkFaint, width: 36, height: 44,
-            }}><Icon name="close" size={18} /></button>
-          )}
-          <VoiceButton onHeard={setQ} />
-        </div>
-      </div>
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
+      {onBack && <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}><HomeButton onClick={onBack} /></div>}
+      <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!showTiles}
+            title={t("need_buy")} sub={t("need_buy_sub")} placeholder={t("mk_search_ph")} />
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showTiles ? (
           <>
+            <TileArt k="need-market" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginBottom: 16 }} />
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t("need_buy")}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>

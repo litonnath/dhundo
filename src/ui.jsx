@@ -1755,7 +1755,7 @@ export function OutOfArea({ state, showing, onDismiss }) {
 // The area field used to live here beside the search box. It has moved into
 // the header, where it is set once and stays visible -- having it in two
 // places meant two sources of truth for the single most important filter.
-export function Hero({ search, setSearch, onVoice, compact = false }) {
+export function Hero({ search, setSearch, onVoice, compact = false, title = null, sub = null, placeholder = null }) {
   const { t } = useI18n();
   // Compact once somebody is looking at results: the welcome line has done
   // its job, and on a small phone it was pushing the first card off screen.
@@ -1768,11 +1768,11 @@ export function Hero({ search, setSearch, onVoice, compact = false }) {
         <h1 style={{
           color: "#fff", fontSize: "clamp(23px, 5vw, 34px)", fontWeight: 800,
           lineHeight: 1.2, margin: "0 0 9px", letterSpacing: -0.4, maxWidth: 620,
-        }}>{t("hero_title")}</h1>
+        }}>{title || t("hero_title")}</h1>
         <p style={{
           color: "rgba(255,255,255,0.86)", fontSize: "clamp(13.5px, 2.6vw, 16px)",
           lineHeight: 1.6, margin: 0, maxWidth: 560,
-        }}>{t("hero_sub")}</p>
+        }}>{sub || t("hero_sub")}</p>
       </div>
 
       <div style={{
@@ -1785,7 +1785,7 @@ export function Hero({ search, setSearch, onVoice, compact = false }) {
         }}>
           <span style={{ color: T.inkFaint }}><Icon name="search" size={20} /></span>
           <input value={search} onChange={(e) => setSearch(e.target.value)}
-                 placeholder={t("search_ph")}
+                 placeholder={placeholder || t("search_ph")}
                  style={{ ...input, border: "none", padding: "13px 0", background: "transparent",
                           fontSize: 16 }} />
           {onVoice && <VoiceButton onHeard={onVoice} />}

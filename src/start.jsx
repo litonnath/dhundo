@@ -4,7 +4,7 @@
 // remembered, so these show once.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
-import { T, Icon, groupStyle, groupLabel, VoiceButton } from "./ui.jsx";
+import { T, Icon, groupStyle, groupLabel, VoiceButton, Hero } from "./ui.jsx";
 import { useI18n, tradeName } from "./i18n.jsx";
 import { TileArt } from "./scenes.jsx";
 
@@ -57,6 +57,7 @@ export function StartGate({ onNeed, onOffer }) {
 export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
   const { t, lang } = useI18n();
   const [type, setType] = useState(null);
+  const [oq, setOq] = useState("");
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
     const on = () => setWide(window.innerWidth >= 600);
@@ -83,13 +84,25 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     });
     return (
       <SubCategories
-        art={picking} title={t(meta[4])} sub={t("offer_what")} searchPh={t("st_search")}
+        art={picking} title={t(meta[4])} sub={t("offer_what")} query={oq}
         sections={byGroup.map((g) => ({ title: byGroup.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
                                          icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
         onPick={(slug) => onPick(picking, slug)} />
     );
   })();
-  const body = (
+  const meta2 = picking && types.find((x) => x[0] === picking);
+  const body = picking ? (
+    <div style={{ width: "100%" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
+        <button onClick={() => { setType(null); setOq(""); }} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`, borderRadius: 20,
+          padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark,
+        }}><Icon name="back" size={16} /> {t("w_back")}</button>
+      </div>
+      <Hero search={oq} setSearch={setOq} onVoice={setOq} title={t(meta2[4])} sub={t("offer_what")} placeholder={t("st_search")} />
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 120px" }}>{step2}</div>
+    </div>
+  ) : (
     <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px 120px" : "20px 16px 34px", boxSizing: "border-box" }}>
       <button onClick={() => (picking ? setType(null) : onBack())} style={{
         display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
@@ -268,17 +281,17 @@ export function tradesFor(kind, trades) {
 // WHAT DO YOU NEED / WHAT DO YOU OFFER, for the app somebody chose: only that
 // app's own sub-categories, as plain rows with a line icon (or an emoji for
 // the items). No illustrations. Optional banner on top; optional sections.
-export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPick, onAll, allLabel, art, searchPh }) {
+export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPick, onAll, allLabel, art, searchPh, query = null }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
-  const needle = q.trim().toLowerCase();
+  const needle = (query !== null ? query : q).trim().toLowerCase();
   const secs = (sections || [{ items }]).map((sc) => ({ ...sc, items: needle ? sc.items.filter((it) => String(it.label).toLowerCase().includes(needle)) : sc.items })).filter((sc) => sc.items.length);
   return (
     <div>
       {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />}
       {title && <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>}
       {title && <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{sub || t("what_need")}</p>}
-      {searchPh && <SearchBox value={q} onChange={setQ} placeholder={searchPh} />}
+      {searchPh && query === null && <SearchBox value={q} onChange={setQ} placeholder={searchPh} />}
       {onAll && !needle && (
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", marginBottom: 10 }}>
           <button onClick={onAll} style={tileStyle(T.brandSoft, T.brandDark)}>

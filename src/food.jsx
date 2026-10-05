@@ -5,12 +5,12 @@
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero } from "./ui.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink } from "./market.jsx";
 import { AlertsCard } from "./alerts.jsx";
-import { SubCategories, SearchBox, tradeIcon } from "./start.jsx";
+import { SubCategories, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -99,26 +99,30 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const stage1 = !picked && !q.trim();
   const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
+    <>
+    <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!stage1}
+          title={t(eat ? "st_eat_title" : "st_shop_title")} sub={t(eat ? "st_eat_sub" : "st_shop_sub")} placeholder={t("st_search")} />
+    <div style={{ maxWidth: stage1 ? 1000 : 760, margin: "0 auto", padding: "62px 16px 130px" }}>
       {stage1 ? (
-        <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 260, marginBottom: 14 }} />
+        <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginBottom: 16 }} />
       ) : (
         <button onClick={() => { setQ(""); setPicked(false); }} style={{
           display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
-          color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "10px 0 6px", minHeight: 44, fontFamily: "inherit",
+          color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "0 0 8px", minHeight: 40, fontFamily: "inherit",
         }}><Icon name="back" size={17} /> {t(eat ? "st_eat_title" : "st_shop_title")}</button>
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
-        <h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t(eat ? "st_eat_title" : "st_shop_title")}</h1>
-        {user && user.id && (
-          <button onClick={() => setOrdersOpen(true)} style={{
-            border: `1px solid ${T.line}`, background: T.white, borderRadius: 20, padding: "8px 14px", minHeight: 40,
-            fontWeight: 700, fontSize: 14, color: T.brandDark, cursor: "pointer", fontFamily: "inherit",
-          }}>{t("st_orders")}</button>
-        )}
-      </div>
-      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 12px" }}>{t(stage1 ? "what_need" : (eat ? "st_eat_sub" : "st_shop_sub"))}</p>
-      <SearchBox value={q} onChange={setQ} placeholder={t("st_search")} />
+      {stage1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 4px" }}>
+          <h2 style={{ flex: 1, fontSize: 20, fontWeight: 800, color: T.ink, margin: 0 }}>{t(eat ? "home_eat" : "home_shop")}</h2>
+          {user && user.id && (
+            <button onClick={() => setOrdersOpen(true)} style={{
+              border: `1px solid ${T.line}`, background: T.white, borderRadius: 20, padding: "8px 14px", minHeight: 40,
+              fontWeight: 700, fontSize: 14, color: T.brandDark, cursor: "pointer", fontFamily: "inherit",
+            }}>{t("st_orders")}</button>
+          )}
+        </div>
+      )}
+      {stage1 && <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>}
       {stage1 ? (
         <SubCategories
           icon={gs.icon} fg={gs.fg} bg={gs.bg}
@@ -156,6 +160,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
                           renderEmpty={renderEmpty} onClose={() => setOpen(null)} onOrdered={() => setOrdersOpen(true)} />}
       {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
     </div>
+    </>
   );
 }
 
