@@ -334,7 +334,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     myStore: () => rpc("services_my_store", {}, true),
     setStore: (o) => rpc("services_set_store", {
       p_open: o.open || null, p_close: o.close || null, p_mins: o.mins || null, p_auto_rider: o.autoRider,
+      p_promo: o.promo || null, p_promo_photo: o.promoPhoto || null,
     }, true),
+    myRider: () => rpc("services_my_rider", {}, true),
+    setRider: (o) => rpc("services_set_rider", { p_per_km: o.perKm === "" || o.perKm == null ? null : Number(o.perKm), p_rides: !!o.rides, p_delivery: !!o.delivery }, true),
     pushSubscribe: (endpoint, p256dh, auth, lang) => rpc("services_push_subscribe", {
       p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_lang: lang,
     }, true),
@@ -1217,7 +1220,7 @@ const bigInput = {
   ...input, minHeight: 54, fontSize: 16.5, padding: "14px 15px", borderRadius: 12,
 };
 
-function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace, startGroup = null, startTrade = null }) {
+function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place, setPlace, startGroup = null, startTrade = null }) {
   const consent = useConsent();
   const { t, lang } = useI18n();
   const geo = useMyLocation();
@@ -1306,6 +1309,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
 
   const chosen = trades.find((x) => x.slug === picked[0]);
   const isSupplier = chosen && chosen.kind === "supplier";
+  // Each kind of business gets its own wording and its own next step.
+  const formKind = (chosen && chosen.group_name === "Eat & Stay") ? "eat"
+    : ((chosen && chosen.group_name === "Drivers") || group === "Drivers") ? "ride" : isSupplier ? "shop" : "worker";
   // Asked only of the trades that actually drive. The flag comes from the
   // database (services_trades.requires_vehicle) rather than a group name
   // hardcoded here, so changing which trades need a plate is an UPDATE and
@@ -1457,7 +1463,14 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
             : t("ok_submitted")}
         </p>
         {posFailed && <div style={{ margin: "0 0 16px" }}><Notice tone="bad">{t("loc_pos_failed")}</Notice></div>}
-        <Btn full onClick={reset}>{t("ok_another")}</Btn>
+        {!isAdmin && formKind !== "worker" && onNext && (
+          <div style={{ textAlign: "left", background: T.brandSoft, border: `1.5px solid ${T.brandDark}`, borderRadius: 14, padding: "14px 16px", margin: "0 0 14px" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 4 }}>{t("nx_title_" + formKind)}</div>
+            <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 10px" }}>{t("nx_sub")}</p>
+            <Btn full onClick={onNext}>{t("nx_btn")}</Btn>
+          </div>
+        )}
+        <Btn full kind={!isAdmin && formKind !== "worker" && onNext ? "ghost" : "primary"} onClick={reset}>{t("ok_another")}</Btn>
       </div>
     );
   }
@@ -1761,7 +1774,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPla
 
           {!isSupplier && (
             <>
-              <BigField fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}<ReqTag /></>}>
+              <BigField fid="rate" error={ferr("rate")} label={<>{formKind === "ride" ? t("w3_rate_drv") : t("w3_rate")}<ReqTag /></>}>
                 <div style={{ display: "flex", gap: 9 }}>
                   <input style={{ ...bigInput, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
                          placeholder={t("w3_rate_from")}
@@ -2993,7 +3006,8 @@ export default function ServicesPage({
                              startTrade={offerTrade}
                              place={place} setPlace={setPlace}
                              onBack={() => setTab(isAdmin ? "browse" : "work")}
-                             onDone={() => setReloadKey((k) => k + 1)} />
+                             onDone={() => setReloadKey((k) => k + 1)}
+                             onNext={() => setTab("work")} />
               )}
             </>
           )}

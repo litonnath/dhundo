@@ -9,6 +9,7 @@ import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
+import { SetupCard } from "./food.jsx";
 import { TileArt } from "./scenes.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -32,6 +33,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
   const [fare, setFare] = useState("");
   const [ride, setRide] = useState(null);
   const [online, setOnline] = useState([]);
+  const [fares, setFares] = useState({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [finished, setFinished] = useState(false);
@@ -57,7 +59,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
     if (!pick || typeof pick.lat !== "number") { setOnline([]); return; }
     let live = true;
     api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", radiusKm: 8, limit: 8 })
-      .then((rows) => { if (live) setOnline(many(rows)); }).catch(() => {});
+      .then((rows) => {
+        if (!live) return;
+        const list = many(rows); setOnline(list);
+        if (list.length) api.storeInfos(list.map((x) => x.id)).then((inf) => { if (live) { const o = {}; many(inf).forEach((i) => { o[i.id] = i.per_km_rupees; }); setFares(o); } }).catch(() => {});
+      }).catch(() => {});
     return () => { live = false; };
   }, [api, pick && pick.lat, pick && pick.lng]);
 
@@ -171,9 +177,10 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
             <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink }}>{d.display_name || d.full_name || d.trade_name}</span>
             <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{d.trade_name}</span>
           </span>
-          {d.distance_km != null && (
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", d.distance_km)}</span>
-          )}
+          <span style={{ textAlign: "right" }}>
+            {d.distance_km != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", d.distance_km)}</span>}
+            {fares[d.id] != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.ink }}>{String(t("rs_km_show")).replace("{n}", fares[d.id])}</span>}
+          </span>
         </div>
       ))}
       {onBrowse && (
@@ -204,12 +211,40 @@ function Route({ pick, drop }) {
 }
 
 // ------------------------------------------------- the driver's side
+function RiderSettings({ api, onSaved }) {
+  const { t } = useI18n();
+  const [f, setF] = useState(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    api.myRider().then((r) => { const x = one(r) || {}; setF({ perKm: x.per_km_rupees == null ? "" : String(x.per_km_rupees), rides: x.serves_rides !== false, delivery: x.serves_delivery !== false }); })
+      .catch(() => setF({ perKm: "", rides: true, delivery: true }));
+  }, [api]);
+  if (!f) return null;
+  const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
+  const save = async () => { try { await api.setRider(f); setSaved(true); onSaved && onSaved(); } catch (_) {} };
+  const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 44, fontSize: 15, fontWeight: 700 };
+  return (
+    <div style={card}>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{t("rs_title")}</div>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km")}</div>
+      <input style={{ ...input, marginBottom: 8 }} inputMode="numeric" maxLength={3} value={f.perKm} placeholder="12"
+             onChange={(e) => set("perKm", e.target.value.replace(/\D/g, ""))} />
+      <label style={row}><input type="checkbox" checked={f.rides} onChange={(e) => set("rides", e.target.checked)} /> {t("rs_rides")}</label>
+      <label style={row}><input type="checkbox" checked={f.delivery} onChange={(e) => set("delivery", e.target.checked)} /> {t("rs_delivery")}</label>
+      <Btn kind="ghost" onClick={save}>{saved ? t("ow_store_saved") : t("ow_save")}</Btn>
+    </div>
+  );
+}
+
 export function RideRequests({ api, online }) {
   const { t } = useI18n();
   const [rides, setRides] = useState([]);
   const [mine, setMine] = useState([]);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState("");
+  const [rider, setRiderInfo] = useState(null);
+  const loadRider = useCallback(() => { api.myRider().then((r) => setRiderInfo(one(r) || {})).catch(() => {}); }, [api]);
+  useEffect(loadRider, [loadRider]);
 
   const load = useCallback(async () => {
     try {
@@ -255,6 +290,11 @@ export function RideRequests({ api, online }) {
           </div>
         </div>
       ))}
+      <SetupCard steps={rider ? [
+        { done: rider.per_km_rupees != null, label: t("su_fare") },
+        { done: !!online, label: t("su_online") },
+      ] : []} />
+      <RiderSettings api={api} onSaved={loadRider} />
       <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>
       {msg && <Notice tone="bad">{msg}</Notice>}

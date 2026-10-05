@@ -122,6 +122,17 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           )}
         </div>
       )}
+      {stage1 && rows.filter((r) => infos[r.id] && infos[r.id].promo_text).length > 0 && (
+        <div style={{ margin: "0 0 16px" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 6 }}>{t("st_offers")}</div>
+          {rows.filter((r) => infos[r.id] && infos[r.id].promo_text).slice(0, 4).map((r) => (
+            <button key={r.id} onClick={() => setOpen(r)} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", marginBottom: 6 }}>
+              <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{r.display_name}</div>
+              <Promo info={infos[r.id]} small />
+            </button>
+          ))}
+        </div>
+      )}
       {stage1 && <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>}
       {stage1 ? (
         <SubCategories
@@ -154,6 +165,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
               {[r.trade_name, r.locality || r.area || r.city].filter(Boolean).join(" · ")}
             </span>
             <OpenLine info={infos[r.id]} t={t} />
+            {infos[r.id] && infos[r.id].promo_text && <Promo info={infos[r.id]} small />}
           </span>
         </button>
       ))}
@@ -163,6 +175,20 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
       {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
     </div>
     </>
+  );
+}
+
+function Promo({ info, small = false }) {
+  const { t } = useI18n();
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#FFF3D6", border: "1px solid #F3D48A", borderRadius: 12,
+                  padding: small ? "7px 10px" : "10px 12px", margin: small ? "8px 0 0" : "0 0 12px" }}>
+      {info.promo_photo && <span style={{ width: small ? 34 : 56, height: small ? 34 : 56, borderRadius: 8, flexShrink: 0, background: `center/cover url(${info.promo_photo})` }} />}
+      <span style={{ fontSize: small ? 13 : 14.5, fontWeight: 800, color: "#7A4A00", lineHeight: 1.35 }}>
+        <span style={{ display: "inline-block", background: "#D97706", color: "#fff", borderRadius: 6, padding: "1px 7px", marginRight: 7, fontSize: 11.5, letterSpacing: 0.3 }}>{t("st_offer")}</span>
+        {info.promo_text}
+      </span>
+    </div>
   );
 }
 
@@ -217,6 +243,7 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             {row.distance_km != null ? ` · ${String(t("st_away")).replace("{n}", row.distance_km)}` : ""}
           </div>
           {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
+          {info && info.promo_text && <Promo info={info} />}
           {!accepting && <div style={{ marginBottom: 12 }}><Notice tone="bad">{t("st_closed_err")}</Notice></div>}
         </div>
 
@@ -411,21 +438,53 @@ function Lines({ lines }) {
 }
 
 // ================================================================ OWNER
-function StoreSettings({ api, shop }) {
+// "Get your business ready": a short checklist that disappears when done.
+export function SetupCard({ steps }) {
+  const { t } = useI18n();
+  if (!steps.length || steps.every((x) => x.done)) return null;
+  return (
+    <div style={{ ...card, border: `1.5px solid ${T.brandDark}`, background: T.brandSoft }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{t("su_title")}</div>
+      {steps.map((x) => (
+        <div key={x.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", fontSize: 14.5, fontWeight: x.done ? 600 : 800, color: x.done ? T.inkSoft : T.ink }}>
+          <span style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                         background: x.done ? "#16A34A" : T.white, border: `2px solid ${x.done ? "#16A34A" : T.brandDark}`, color: "#fff" }}>
+            {x.done && <Icon name="check" size={13} />}
+          </span>
+          <span style={{ textDecoration: x.done ? "line-through" : "none" }}>{x.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StoreSettings({ api, shop, onSaved }) {
   const { t } = useI18n();
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [upBusy, setUpBusy] = useState(false);
   useEffect(() => {
     api.myStore().then((r) => {
       const x = one(r) || {};
       setF({ open: (x.open_time || "").slice(0, 5), close: (x.close_time || "").slice(0, 5),
-             mins: x.delivery_mins ? String(x.delivery_mins) : "", autoRider: x.auto_rider !== false });
-    }).catch(() => setF({ open: "", close: "", mins: "", autoRider: true }));
+             mins: x.delivery_mins ? String(x.delivery_mins) : "", autoRider: x.auto_rider !== false,
+             promo: x.promo_text || "", promoPhoto: x.promo_photo || "" });
+    }).catch(() => setF({ open: "", close: "", mins: "", autoRider: true, promo: "", promoPhoto: "" }));
   }, [api]);
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
   const save = async () => {
-    try { await api.setStore({ open: f.open || null, close: f.close || null, mins: f.mins ? Number(f.mins) : null, autoRider: f.autoRider }); setSaved(true); } catch (_) {}
+    try {
+      await api.setStore({ open: f.open || null, close: f.close || null, mins: f.mins ? Number(f.mins) : null,
+                           autoRider: f.autoRider, promo: f.promo, promoPhoto: f.promoPhoto });
+      setSaved(true); onSaved && onSaved();
+    } catch (_) {}
+  };
+  const pickPromo = async (file) => {
+    if (!file) return;
+    setUpBusy(true);
+    try { set("promoPhoto", await api.uploadPublic("services-photos", await shrink(file))); } catch (_) {}
+    setUpBusy(false);
   };
   const lab = { fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 };
   return (
@@ -442,6 +501,19 @@ function StoreSettings({ api, shop }) {
           <option value="">—</option>
           {[15, 30, 45, 60, 90, 120, 180, 240, 480].map((n) => <option key={n} value={n}>{n}</option>)}
         </select></label>
+      <div style={{ ...lab, marginTop: 4 }}>{t("ow_promo")}</div>
+      <input style={{ ...input, marginBottom: 8 }} maxLength={140} value={f.promo} placeholder={t("ow_promo_ph")} aria-label={t("ow_promo")}
+             onChange={(e) => set("promo", e.target.value)} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <span style={{ width: 72, height: 48, borderRadius: 10, background: f.promoPhoto ? `center/cover url(${f.promoPhoto}) ${T.line}` : T.brandSoft,
+                       display: "flex", alignItems: "center", justifyContent: "center", color: T.brandDark }}>
+          {!f.promoPhoto && <Icon name="camera" size={22} />}
+        </span>
+        <label style={{ color: T.brandDark, fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+          {upBusy ? t("ow_uploading") : f.promoPhoto ? t("ow_photo_change") : t("ow_promo_photo")}
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => pickPromo(e.target.files && e.target.files[0])} />
+        </label>
+      </div>
       {!shop && (
         <label style={{ display: "flex", gap: 10, alignItems: "flex-start", minHeight: 44, marginBottom: 10 }}>
           <input type="checkbox" checked={f.autoRider} onChange={(e) => set("autoRider", e.target.checked)} style={{ marginTop: 4 }} />
@@ -460,12 +532,14 @@ export function OwnerFood({ api, shop }) {
   const [menu, setMenu] = useState([]);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(null);
+  const [store, setStoreInfo] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const [o, m] = await Promise.all([api.myOrders(), api.myMenu()]);
+      const [o, m, st] = await Promise.all([api.myOrders(), api.myMenu(), api.myStore()]);
       setOrders(many(o).filter((x) => x.role === "owner"));
       setMenu(many(m));
+      setStoreInfo(one(st) || {});
     } catch (_) { /* the next tick tries again */ }
   }, [api]);
   useEffect(() => { load(); const id = setInterval(load, 12000); return () => clearInterval(id); }, [load]);
@@ -485,7 +559,12 @@ export function OwnerFood({ api, shop }) {
         }}><span style={{ position: "absolute", top: 3, left: accepting ? 25 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
       </div>
 
-      <StoreSettings api={api} shop={shop} />
+      <SetupCard steps={store ? [
+        { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu") },
+        { done: !!(store.open_time && store.close_time), label: t("su_hours") },
+        { done: !!store.promo_text, label: t("su_promo") },
+      ] : []} />
+      <StoreSettings api={api} shop={shop} onSaved={load} />
       <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
