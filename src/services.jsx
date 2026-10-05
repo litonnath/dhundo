@@ -101,11 +101,30 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     return data;
   }
 
+  // The real address of each listing is held with the account (and on the
+  // listing); the search cards do not carry it, so it is fetched for the
+  // people on screen and put on the card. Asked once per person.
+  const addrCache = new Map();
+  const withAddr = async (pending) => {
+    const res = await pending;
+    if (!Array.isArray(res)) return res;
+    const need = res.map((r) => r && r.id).filter((id) => id && !addrCache.has(id));
+    if (need.length) {
+      try {
+        const got = await rpc("services_work_addresses", { p_ids: [...new Set(need)].slice(0, 100) });
+        const seen = new Set();
+        (Array.isArray(got) ? got : []).forEach((g) => { addrCache.set(g.id, g.address || ""); seen.add(g.id); });
+        need.forEach((id) => { if (!seen.has(id)) addrCache.set(id, ""); });
+      } catch (_) { /* cards keep their area name */ }
+    }
+    return res.map((r) => (r && r.id && !r.address_line && addrCache.get(r.id) ? { ...r, address_line: addrCache.get(r.id) } : r));
+  };
+
   return {
     listTrades: (onlyWithListings = false, state = null) =>
       rpc("services_list_trades", { p_only_with_listings: onlyWithListings, p_state: state }),
     browse: (o = {}) =>
-      rpc("services_browse_workers", {
+      withAddr(rpc("services_browse_workers", {
         p_trade: o.trade || null, p_locality: o.locality || null,
         p_search: o.search || null, p_group: o.group || null,
         p_kind: o.kind || null, p_state: o.state || null,
@@ -117,7 +136,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_lat: typeof o.lat === "number" ? o.lat : null,
         p_lng: typeof o.lng === "number" ? o.lng : null,
         p_radius_km: o.radiusKm || null,
-      }),
+      })),
     // No viewer id: 59 reads it from the signed token. Passing one was how
     // a caller could spend somebody else's hourly reveal budget.
     reveal: (workerId) => rpc("services_reveal_contact", { p_worker_id: workerId }, true),
@@ -148,12 +167,12 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       }, true),
     // Anyone can ask: the answer is cards and distances, never positions.
     availableWorkers: (o = {}) =>
-      rpc("services_available_workers", {
+      withAddr(rpc("services_available_workers", {
         p_lat: typeof o.lat === "number" ? o.lat : null,
         p_lng: typeof o.lng === "number" ? o.lng : null,
         p_state: o.state || null, p_trade: o.trade || null, p_group: o.group || null,
         p_radius_km: o.radiusKm || NEAR_KM, p_limit: o.limit || 20,
-      }),
+      })),
     // ------------------------------------------------------ Buy & Sell (84)
     itemsBrowse: (o = {}) =>
       rpc("services_items_browse", {
@@ -295,11 +314,11 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     pincodeLookup: (pin) => rpc("services_pincode_lookup", { p_pin: pin }),
     // Everybody in one PIN code, as the same cards the search returns (89).
     pinWorkers: (o = {}) =>
-      rpc("services_pin_workers", {
+      withAddr(rpc("services_pin_workers", {
         p_pin: o.pin, p_trade: o.trade || null, p_group: o.group || null,
         p_lat: typeof o.lat === "number" ? o.lat : null,
         p_lng: typeof o.lng === "number" ? o.lng : null, p_limit: 50,
-      }),
+      })),
     walletBalance: () => rpc("services_wallet_balance", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
