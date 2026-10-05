@@ -13,7 +13,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
-import { NearbyDrivers } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive } from "./nearmap.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -143,6 +143,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           ) : (
             <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55 }}>{t("rd_wait_sub")}</div>
           )}
+          {accepted && <PassengerLive api={api} ride={ride} />}
           <Route pick={ride.pick_text} drop={ride.drop_text} />
           {ride.fare_paise != null && (
             <div style={{ fontSize: 13.5, fontWeight: 700, color: T.brandDark, marginBottom: 8 }}>
@@ -337,6 +338,7 @@ export function RideRequests({ api, online, trades = [] }) {
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{r.other_name}</div>
+          <DriverLive api={api} ride={r} />
           <Route pick={r.pick_text} drop={r.drop_text} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}

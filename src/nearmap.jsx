@@ -123,3 +123,136 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// LIVE RIDE: the driver as an arrow pointing the way he is moving, the pickup
+// and the drop, and a line between driver and pickup.
+// ---------------------------------------------------------------------------
+const rad = (x) => (x * Math.PI) / 180;
+export function kmBetween(a, b) {
+  const R = 6371, dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+export function bearing(a, b) {
+  const y = Math.sin(rad(b.lng - a.lng)) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lng - a.lng));
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+const fmtKm = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
+
+export function LiveRideMap({ pick, drop, driver, height = 230 }) {
+  const box = useRef(null);
+  const st = useRef({});
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet/dist/leaflet.css");
+      if (dead || !box.current) return;
+      if (!st.current.map) {
+        st.current.map = L.map(box.current).setView([pick.lat, pick.lng], 14);
+        L.tileLayer(TILES, { subdomains: "abcd", maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(st.current.map);
+        st.current.layer = L.layerGroup().addTo(st.current.map);
+      }
+      const { map, layer } = st.current;
+      layer.clearLayers();
+      const dot = (c, txt) => L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+        html: `<div style="width:26px;height:26px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);color:#fff;font:800 12px sans-serif;display:flex;align-items:center;justify-content:center">${txt}</div>` });
+      const pts = [[pick.lat, pick.lng]];
+      L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer);
+      if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: dot("#DC2626", "B") }).addTo(layer); pts.push([drop.lat, drop.lng]); }
+      if (driver) {
+        const h = Math.round(driver.heading || 0);
+        L.marker([driver.lat, driver.lng], {
+          zIndexOffset: 1000,
+          icon: L.divIcon({ className: "", iconSize: [44, 44], iconAnchor: [22, 22],
+            html: `<div style="width:44px;height:44px;border-radius:50%;background:#1D4ED8;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
+        }).addTo(layer);
+        L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
+        pts.push([driver.lat, driver.lng]);
+      }
+      if (pts.length > 1) map.fitBounds(pts, { padding: [34, 34], maxZoom: 16 }); else map.setView(pts[0], 15);
+      setTimeout(() => map.invalidateSize(), 50);
+    })();
+    return () => { dead = true; };
+  }, [pick.lat, pick.lng, drop && drop.lat, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10)]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
+  return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4", margin: "10px 0" }} />;
+}
+
+// The passenger's view: poll the matched driver every few seconds, work out
+// which way he is heading from his last two fixes.
+export function PassengerLive({ api, ride }) {
+  const { t } = useI18n();
+  const [drv, setDrv] = useState(null);
+  const prev = useRef(null);
+  const [toward, setToward] = useState(null);
+  useEffect(() => {
+    let live = true;
+    const tick = async () => {
+      try {
+        const r = many(await api.rideDriverPos(ride.id))[0];
+        if (!live) return;
+        if (!r) { setDrv(null); return; }
+        const cur = { lat: r.lat, lng: r.lng, seen: r.seen_at };
+        const p = prev.current;
+        let heading = (drv && drv.heading) || 0;
+        if (p && kmBetween(p, cur) > 0.01) {
+          heading = bearing(p, cur);
+          setToward(kmBetween(cur, { lat: ride.pick_lat, lng: ride.pick_lng }) < kmBetween(p, { lat: ride.pick_lat, lng: ride.pick_lng }));
+          prev.current = cur;
+        } else if (!p) prev.current = cur;
+        setDrv({ ...cur, heading });
+      } catch (_) { /* next tick */ }
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, ride.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (typeof ride.pick_lat !== "number") return null;
+  const pick = { lat: ride.pick_lat, lng: ride.pick_lng };
+  const km = drv ? kmBetween(drv, pick) : null;
+  return (
+    <div>
+      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={drv} />
+      <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
+        {drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
+      </div>
+    </div>
+  );
+}
+
+// The driver's view: own position and heading from the phone, sent every few
+// seconds while the ride is on, with the pickup in view.
+export function DriverLive({ api, ride }) {
+  const { t } = useI18n();
+  const [me, setMe] = useState(null);
+  const last = useRef(null);
+  const sent = useRef(0);
+  useEffect(() => {
+    const geo = typeof navigator !== "undefined" && navigator.geolocation;
+    if (!geo) return undefined;
+    const id = geo.watchPosition((g) => {
+      const cur = { lat: g.coords.latitude, lng: g.coords.longitude };
+      let heading = typeof g.coords.heading === "number" && !Number.isNaN(g.coords.heading) ? g.coords.heading : null;
+      if (heading === null && last.current && kmBetween(last.current, cur) > 0.01) heading = bearing(last.current, cur);
+      if (!last.current || kmBetween(last.current, cur) > 0.01) last.current = cur;
+      setMe((m) => ({ ...cur, heading: heading === null ? (m && m.heading) || 0 : heading }));
+      if (Date.now() - sent.current > 8000) {
+        sent.current = Date.now();
+        api.setAvailability(true, { lat: cur.lat, lng: cur.lng, accuracy: g.coords.accuracy }, null).catch(() => {});
+      }
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    return () => geo.clearWatch(id);
+  }, [api]);
+  if (typeof ride.pick_lat !== "number") return null;
+  const pick = { lat: ride.pick_lat, lng: ride.pick_lng };
+  const km = me ? kmBetween(me, pick) : null;
+  return (
+    <div>
+      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={me} />
+      {me && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t("rd_pick_in")).replace("{n}", fmtKm(km))}</div>}
+    </div>
+  );
+}
