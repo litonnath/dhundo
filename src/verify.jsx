@@ -108,7 +108,7 @@ export function AdminMfaCard({ api, onSession }) {
   const start = async () => {
     setBusy(true); setErr("");
     try { setEnrol(await mfaEnroll(api.cfg, await api.accessToken())); }
-    catch (_) { setErr("Could not start. Is MFA switched on in Supabase (Authentication, Multi-Factor)?"); }
+    catch (e) { setErr(`Could not start (${(e && e.message) || "unknown"}). Is MFA switched on in Supabase (Authentication, Multi-Factor)?`); }
     setBusy(false);
   };
   const confirm = async () => {
@@ -117,7 +117,12 @@ export function AdminMfaCard({ api, onSession }) {
       const tk = await mfaChallengeVerify(api.cfg, await api.accessToken(), enrol.id, code);
       onSession && onSession(tk);
       setEnrol(null); setState("on");
-    } catch (_) { setErr("That code is not right. Wait for the next one and try again."); }
+    } catch (e) {
+      const m = String((e && e.message) || "");
+      setErr(/invalid|expired|code/i.test(m) && /VERIFY/.test(m)
+        ? `That code was refused (${m.replace("VERIFY: ", "")}). Check that your phone clock is on automatic time, wait for the next code, and try again.`
+        : `Could not confirm (${m}). Press Start again for a new key and scan or type that one.`);
+    }
     setBusy(false);
   };
 
@@ -145,10 +150,16 @@ export function AdminMfaCard({ api, onSession }) {
             In the app choose Add account, scan this picture (or type the key), then enter the 6-digit code it shows.
           </div>
           {enrol.qr && <img src={enrol.qr} alt="" width={180} height={180} style={{ display: "block", margin: "0 auto 8px" }} />}
-          {enrol.secret && <div style={{ fontFamily: "monospace", fontSize: 13, textAlign: "center", wordBreak: "break-all", marginBottom: 10 }}>{enrol.secret}</div>}
+          {enrol.secret && <div style={{ fontFamily: "monospace", fontSize: 13, textAlign: "center", wordBreak: "break-all", marginBottom: 8 }}>{enrol.secret}</div>}
+          {enrol.uri && (
+            <div style={{ textAlign: "center", marginBottom: 10 }}>
+              <a href={enrol.uri} style={{ color: T.brandDark, fontWeight: 700, fontSize: 14 }}>On this phone? Tap here to open your authenticator app</a>
+            </div>
+          )}
           <input style={{ ...input, letterSpacing: 6, fontSize: 20, textAlign: "center", marginBottom: 8 }} inputMode="numeric"
                  maxLength={6} value={code} onChange={(e) => { setErr(""); setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }} />
           <Btn full disabled={busy || code.length < 6} onClick={confirm}>{busy ? "…" : "Turn on"}</Btn>
+          <button onClick={() => { setEnrol(null); setCode(""); setErr(""); start(); }} disabled={busy} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5, minHeight: 44, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>Start again with a new key</button>
         </>
       )}
       {err && <div style={{ color: T.red, fontSize: 13, fontWeight: 700, marginTop: 8 }}>{err}</div>}

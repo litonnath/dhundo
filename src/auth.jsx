@@ -295,14 +295,40 @@ export async function mfaVerifiedFactor(cfg, token) {
   } catch (_) { return null; }
 }
 
+// A readable reason from GoTrue, so a failure says what happened.
+const mfaWhy = async (res) => {
+  const j = await res.json().catch(() => null);
+  return (j && (j.msg || j.message || j.error_description || j.error)) || `HTTP ${res.status}`;
+};
+
+// Half-finished enrolments (a page closed before the code was typed) are
+// removed first; Supabase keeps them and they only get in the way.
+async function mfaDropUnverified(cfg, token) {
+  try {
+    const res = await fetch(`${cfg.url}/auth/v1/user`, { headers: mfaHeaders(cfg, token) });
+    if (!res.ok) return;
+    const u = await res.json();
+    for (const f of (u.factors || [])) {
+      if (f.factor_type === "totp" && f.status !== "verified") {
+        await fetch(`${cfg.url}/auth/v1/factors/${f.id}`, { method: "DELETE", headers: mfaHeaders(cfg, token) }).catch(() => {});
+      }
+    }
+  } catch (_) { /* enrolling still works */ }
+}
+
 export async function mfaEnroll(cfg, token) {
+  await mfaDropUnverified(cfg, token);
   const res = await fetch(`${cfg.url}/auth/v1/factors`, {
     method: "POST", headers: mfaHeaders(cfg, token),
     body: JSON.stringify({ factor_type: "totp", friendly_name: `Dhundo ${Date.now()}`, issuer: "Dhundo" }),
   });
+  if (!res.ok) throw new Error(await mfaWhy(res));
   const j = await res.json().catch(() => null);
-  if (!res.ok || !j || !j.id) throw new Error("MFA_ENROLL_FAILED");
-  return { id: j.id, qr: j.totp && j.totp.qr_code, secret: j.totp && j.totp.secret };
+  if (!j || !j.id) throw new Error("MFA_ENROLL_FAILED");
+  let qr = j.totp && j.totp.qr_code;
+  // GoTrue sends the picture as an unencoded SVG; some browsers will not draw it as is.
+  if (qr && /^data:image\/svg\+xml;utf-8,/i.test(qr)) qr = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qr.replace(/^data:image\/svg\+xml;utf-8,/i, ""));
+  return { id: j.id, qr, secret: j.totp && j.totp.secret, uri: j.totp && j.totp.uri };
 }
 
 // Challenge then verify. Returns the new tokens (an aal2 session), or throws.
@@ -311,13 +337,13 @@ export async function mfaChallengeVerify(cfg, token, factorId, code) {
     method: "POST", headers: mfaHeaders(cfg, token), body: "{}",
   });
   const cj = await ch.json().catch(() => null);
-  if (!ch.ok || !cj || !cj.id) throw new Error("MFA_CHALLENGE_FAILED");
+  if (!ch.ok || !cj || !cj.id) throw new Error("CHALLENGE: " + ((cj && (cj.msg || cj.message || cj.error_description)) || `HTTP ${ch.status}`));
   const v = await fetch(`${cfg.url}/auth/v1/factors/${factorId}/verify`, {
     method: "POST", headers: mfaHeaders(cfg, token),
     body: JSON.stringify({ challenge_id: cj.id, code: String(code || "").trim() }),
   });
   const vj = await v.json().catch(() => null);
-  if (!v.ok || !vj || !vj.access_token) throw new Error("MFA_BAD_CODE");
+  if (!v.ok || !vj || !vj.access_token) throw new Error("VERIFY: " + ((vj && (vj.msg || vj.message || vj.error_description)) || `HTTP ${v.status}`));
   return {
     access_token: vj.access_token, refresh_token: vj.refresh_token,
     expires_at: Date.now() + Number(vj.expires_in || 3600) * 1000,
