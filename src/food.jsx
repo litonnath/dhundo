@@ -23,15 +23,22 @@ const GREEN = "#0F8A3C", RED = "#B91C1C";
 // What a typed word most likely means, so the search can offer the right kind
 // of place first. Only a suggestion: the person taps it or ignores it.
 const FOOD_WORDS = [
-  ["bakery-sweets", /cake|pastry|bread|biscuit|cookie|sweet|mithai|mishti|rasgulla|laddu|jalebi|bakery|dessert|ice ?cream/],
-  ["tea-snacks", /tea|chai|coffee|samosa|snack|pakora|pakoda|singara|jhalmuri|puri|chop|tost|toast/],
-  ["fast-food-biryani", /biryani|biriyani|burger|pizza|momo|noodle|chowmein|roll|sandwich|fries|chicken|kebab|pasta|fast ?food/],
-  ["tiffin-home-food", /tiffin|thali|home ?(food|made|cook)|dabba|meal ?plan|roti/],
-  ["catering-service", /cater|party|wedding|function|event|bulk/],
-  ["dhaba-hotel", /dhaba|hotel|rice|bhat|dal|fish|mach|curry|meals?/],
-  ["restaurant", /restaurant|veg|non-?veg|paneer|dosa|idli|chinese|thai|south indian/],
+  ["bakery-sweets", /cake|pastry|bread|biscuit|cookie|sweet|mithai|mishti|rasgulla|laddu|jalebi|bakery|dessert|ice ?cream/,
+    /केक|पेस्ट्री|मिठाई|ब्रेड|बिस्कुट|মিষ্টি|কেক|পেস্ট্রি|রসগোল্লা|মিঠাই|કેક|મીઠાઈ|બ્રેડ|ಕೇಕ್|ಸಿಹಿ|ബേക്കറി|കേക്ക്|മധുര|ମିଠା|କେକ୍|ਕੇਕ|ਮਿਠਾਈ|கேக்|இனிப்பு|பேக்கரி|కేక్|స్వీట్|మిఠాయి|బేకరీ/],
+  ["tea-snacks", /tea|chai|coffee|samosa|snack|pakora|pakoda|singara|jhalmuri|puri|chop|tost|toast/,
+    /चाय|समोसा|नाश्ता|কফি|চায়|সিঙ্গারা|সমোসা|(^|\s)চা($|\s)|ચાય|સમોસા|(^|\s)ચા($|\s)|ಚಹಾ|ಟೀ|ಕಾಫಿ|ಸಮೋಸ|ചായ|കാപ്പി|സമോസ|ସମୋସା|(^|\s)ଚା($|\s)|ਚਾਹ|ਸਮੋਸਾ|டீ|தேநீர்|காபி|சமோசா|టీ|కాఫీ|సమోసా/],
+  ["fast-food-biryani", /biryani|biriyani|burger|pizza|momo|noodle|chowmein|roll|sandwich|fries|chicken|kebab|pasta|fast ?food/,
+    /बिरयानी|बिर्याणी|बर्गर|पिज़्ज़ा|पिज्जा|मोमो|नूडल्स|चाउमीन|रोल|सैंडविच|चिकन|কাবাব|বিরিয়ানি|বার্গার|পিৎজা|মোমো|নুডলস|চিকেন|રોલ|બિરયાની|બર્ગર|પિઝા|મોમો|ચિકન|ಬಿರಿಯಾನಿ|ಬರ್ಗರ್|ಪಿಜ್ಜಾ|ಮೋಮೋ|ಚಿಕನ್|ബിരിയാണി|ബർഗർ|പിസ്സ|ചിക്കൻ|ବିରିୟାନି|ବର୍ଗର|ପିଜା|ଚିକେନ|ਬਿਰਿਆਨੀ|ਬਰਗਰ|ਪੀਜ਼ਾ|ਚਿਕਨ|பிரியாணி|பர்கர்|பிட்சா|சிக்கன்|బిర్యానీ|బర్గర్|పిజ్జా|చికెన్/],
+  ["tiffin-home-food", /tiffin|thali|home ?(food|made|cook)|dabba|meal ?plan|roti/,
+    /टिफिन|थाली|घर का खाना|डब्बा|टिफ़िन|টিফিন|থালি|ঘরোয়া|ટિફિન|થાળી|ಟಿಫಿನ್|ടിഫിൻ|ଟିଫିନ|ਟਿਫਿਨ|ਥਾਲੀ|டிபன்|టిఫిన్/],
+  ["catering-service", /cater|party|wedding|function|event|bulk/,
+    /कैटरिंग|पार्टी|शादी|विवाह|ক্যাটারিং|পার্টি|বিয়ে|કેટરિંગ|પાર્ટી|લગ્ન|ಕ್ಯಾಟರಿಂಗ್|ಮದುವೆ|ಪಾರ್ಟಿ|കാറ്ററിംഗ്|കല്യാണം|ପାର୍ଟି|ବିବାହ|ਕੇਟਰਿੰਗ|ਵਿਆਹ|கேட்டரிங்|திருமணம்|క్యాటరింగ్|పెళ్లి/],
+  ["dhaba-hotel", /dhaba|hotel|rice|bhat|dal|fish|mach|curry|meals?/,
+    /ढाबा|होटल|चावल|दाल|मछली|ডাবা|হোটেল|ভাত|ডাল|মাছ|ઢાબા|હોટેલ|ભાત|દાળ|માછલી|ಧಾಬಾ|ಹೋಟೆಲ್|ಅನ್ನ|ಮೀನು|ധാബ|ഹോട്ടൽ|ചോറ്|മീൻ|ଢାବା|ହୋଟେଲ|ଭାତ|ମାଛ|ਢਾਬਾ|ਹੋਟਲ|ਚੌਲ|ਮੱਛੀ|தாபா|ஹோட்டல்|சாதம்|மீன்|ధాబా|హోటల్|అన్నం|చేప|భోజనం/],
+  ["restaurant", /restaurant|veg|non-?veg|paneer|dosa|idli|chinese|thai|south indian/,
+    /रेस्टोरेंट|रेस्तरां|शाकाहारी|पनीर|डोसा|इडली|রেস্টুরেন্ট|ডোসা|ઇડલી|ડોસા|રેસ્ટોરન્ટ|ರೆಸ್ಟೋರೆಂಟ್|ದೋಸೆ|ಇಡ್ಲಿ|റെസ്റ്റോറന്റ്|ദോശ|ഇഡ്ഡലി|ରେଷ୍ଟୁରାଣ୍ଟ|ଡୋସା|ਰੈਸਟੋਰੈਂਟ|ਡੋਸਾ|உணவகம்|தோசை|இட்லி|రెస్టారెంట్|దోసె|ఇడ్లీ/],
 ];
-const suggestKind = (q) => { const s = String(q || "").toLowerCase(); const m = FOOD_WORDS.find(([, re]) => re.test(s)); return m ? m[0] : null; };
+const suggestKind = (q) => { const s = String(q || "").toLowerCase().trim(); const m = FOOD_WORDS.find(([, en, loc]) => en.test(s) || loc.test(s)); return m ? m[0] : null; };
 
 function VegMark({ veg }) {
   const c = veg ? GREEN : RED;
@@ -122,7 +129,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     .filter((r) => near || !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
   const stage1 = !picked && !q.trim();
-  const hint = eat && q.trim().length >= 3 && !chip ? suggestKind(q) : null;
+  const hint = eat && q.trim().length >= 2 && !chip ? suggestKind(q) : null;
   const hintKind = hint && kinds.find((x) => x.slug === hint);
   const dishes = rows.flatMap((r) => (Array.isArray(r.items) ? r.items : []).map((it) => ({ ...it, row: r })))
     .filter((d) => !vegOnly || d.veg !== false);
