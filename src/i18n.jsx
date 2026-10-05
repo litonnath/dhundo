@@ -502,7 +502,7 @@ const STRINGS = {
     home_worker: "Worker or Helper",
     home_ride: "Ride",
     home_shop: "Shop",
-    home_eat: "Eat & Stay",
+    home_eat: "Eat",
     home_partner: "Partner",
     home_soon: "Coming soon",
     start_title: "What do you want to do?",
@@ -514,7 +514,7 @@ const STRINGS = {
     offer_sub_worker: "Mistri, electrician, cook, cleaner",
     offer_sub_ride: "Auto, taxi, van, delivery rider",
     offer_sub_shop: "Hardware, paint, timber, tools",
-    offer_sub_eat: "Restaurant, hotel, tiffin, tea stall",
+    offer_sub_eat: "Restaurant, tiffin, tea stall",
     offer_sub_sell: "Sell things you no longer need",
     launch_title: "What are you looking for?",
     launch_back: "Home",
@@ -1450,7 +1450,7 @@ const STRINGS = {
     home_worker: "কারিগর বা সাহায্যকারী",
     home_ride: "গাড়ি",
     home_shop: "দোকান",
-    home_eat: "খাওয়া ও থাকা",
+    home_eat: "খাবার",
     home_partner: "সঙ্গী",
     home_soon: "শীঘ্রই আসছে",
     start_title: "আপনি কী করতে চান?",
@@ -1462,7 +1462,7 @@ const STRINGS = {
     offer_sub_worker: "মিস্ত্রি, ইলেকট্রিশিয়ান, রাঁধুনি, পরিষ্কারকর্মী",
     offer_sub_ride: "অটো, ট্যাক্সি, ভ্যান, ডেলিভারি রাইডার",
     offer_sub_shop: "হার্ডওয়্যার, রং, কাঠ, যন্ত্রপাতি",
-    offer_sub_eat: "রেস্তোরাঁ, হোটেল, টিফিন, চায়ের দোকান",
+    offer_sub_eat: "রেস্তোরাঁ, টিফিন, চায়ের দোকান",
     offer_sub_sell: "যে জিনিস লাগে না তা বিক্রি করুন",
     launch_title: "আপনি কী খুঁজছেন?",
     launch_back: "হোম",
@@ -2397,7 +2397,7 @@ const STRINGS = {
     home_worker: "कारीगर या मददगार",
     home_ride: "सवारी",
     home_shop: "दुकान",
-    home_eat: "खाना और ठहराव",
+    home_eat: "खाना",
     home_partner: "साथी",
     home_soon: "जल्द आ रहा है",
     start_title: "आप क्या करना चाहते हैं?",
@@ -2409,7 +2409,7 @@ const STRINGS = {
     offer_sub_worker: "मिस्त्री, इलेक्ट्रीशियन, रसोइया, सफाईकर्मी",
     offer_sub_ride: "ऑटो, टैक्सी, वैन, डिलीवरी राइडर",
     offer_sub_shop: "हार्डवेयर, पेंट, लकड़ी, औज़ार",
-    offer_sub_eat: "रेस्टोरेंट, होटल, टिफिन, चाय की दुकान",
+    offer_sub_eat: "रेस्टोरेंट, टिफिन, चाय की दुकान",
     offer_sub_sell: "जो चीज़ें काम की नहीं, उन्हें बेचें",
     launch_title: "आप क्या ढूँढ रहे हैं?",
     launch_back: "होम",
@@ -2980,7 +2980,7 @@ export const useI18n = () => useContext(Ctx);
 // The other languages borrow the closest one people there can read: Marathi
 // shares Hindi's script, Assamese nearly shares Bengali's, and the rest get
 // English -- which is also how most trade words are said out loud anyway.
-// Names of the Eat and Stay trades in the nine languages the database does not
+// Names of the Eat trades in the nine languages the database does not
 // carry (it holds English, Hindi and Bengali). Looked up by trade slug.
 const NEW_TRADE_NAMES = {
   "restaurant": { as: "ৰেষ্টুৰেণ্ট", gu: "રેસ્ટોરન્ટ", kn: "ರೆಸ್ಟೋರೆಂಟ್", ml: "റെസ്റ്റോറന്റ്", mr: "रेस्टॉरंट", or: "ରେଷ୍ଟୁରାଣ୍ଟ", pa: "ਰੈਸਟੋਰੈਂਟ", ta: "உணவகம்", te: "రెస్టారెంట్" },
@@ -2990,8 +2990,6 @@ const NEW_TRADE_NAMES = {
   "tiffin-home-food": { as: "টিফিন আৰু ঘৰুৱা খাদ্য", gu: "ટિફિન અને ઘરનું જમવાનું", kn: "ಟಿಫಿನ್ ಮತ್ತು ಮನೆ ಊಟ", ml: "ടിഫിനും വീട്ടുഭക്ഷണവും", mr: "टिफिन आणि घरगुती जेवण", or: "ଟିଫିନ ଓ ଘରୋଇ ଖାଦ୍ୟ", pa: "ਟਿਫਿਨ ਤੇ ਘਰ ਦਾ ਖਾਣਾ", ta: "டிபன் மற்றும் வீட்டு உணவு", te: "టిఫిన్ మరియు ఇంటి భోజనం" },
   "fast-food-biryani": { as: "ফাষ্ট ফুড আৰু বিৰিয়ানী", gu: "ફાસ્ટ ફૂડ અને બિરયાની", kn: "ಫಾಸ್ಟ್ ಫುಡ್ ಮತ್ತು ಬಿರಿಯಾನಿ", ml: "ഫാസ്റ്റ് ഫുഡും ബിരിയാണിയും", mr: "फास्ट फूड आणि बिर्याणी", or: "ଫାଷ୍ଟ ଫୁଡ୍ ଓ ବିରିୟାନି", pa: "ਫਾਸਟ ਫੂਡ ਤੇ ਬਿਰਿਆਨੀ", ta: "துரித உணவு மற்றும் பிரியாணி", te: "ఫాస్ట్ ఫుడ్ మరియు బిర్యానీ" },
   "catering-service": { as: "কেটাৰিং সেৱা", gu: "કેટરિંગ સેવા", kn: "ಕ್ಯಾಟರಿಂಗ್ ಸೇವೆ", ml: "കാറ്ററിംഗ് സേവനം", mr: "केटरिंग सेवा", or: "କେଟରିଂ ସେବା", pa: "ਕੇਟਰਿੰਗ ਸੇਵਾ", ta: "கேட்டரிங் சேவை", te: "క్యాటరింగ్ సేవ" },
-  "hotel-lodge": { as: "হোটেল আৰু লজ", gu: "હોટેલ અને લૉજ", kn: "ಹೋಟೆಲ್ ಮತ್ತು ಲಾಡ್ಜ್", ml: "ഹോട്ടലും ലോഡ്ജും", mr: "हॉटेल आणि लॉज", or: "ହୋଟେଲ ଓ ଲଜ୍", pa: "ਹੋਟਲ ਤੇ ਲਾਜ", ta: "ஹோட்டல் மற்றும் லாட்ஜ்", te: "హోటల్ మరియు లాడ్జ్" },
-  "homestay-guesthouse": { as: "হোমষ্টে আৰু গেষ্ট হাউচ", gu: "હોમસ્ટે અને ગેસ્ટ હાઉસ", kn: "ಹೋಮ್‌ಸ್ಟೇ ಮತ್ತು ಗೆಸ್ಟ್ ಹೌಸ್", ml: "ഹോംസ്റ്റേയും ഗസ്റ്റ് ഹൗസും", mr: "होमस्टे आणि गेस्ट हाउस", or: "ହୋମଷ୍ଟେ ଓ ଗେଷ୍ଟ ହାଉସ୍", pa: "ਹੋਮਸਟੇ ਤੇ ਗੈਸਟ ਹਾਊਸ", ta: "ஹோம்ஸ்டே மற்றும் விருந்தினர் இல்லம்", te: "హోమ్‌స్టే మరియు గెస్ట్ హౌస్" },
 };
 const TRADE_FALLBACK = { mr: "hi", as: "bn" };
 export function tradeName(trade, lang) {

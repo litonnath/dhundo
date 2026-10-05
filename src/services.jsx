@@ -51,6 +51,8 @@ import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 // ---------------------------------------------------------------- data layer
 // How far "near" is for people available right now, and how far to look
 // when nobody is that near.
+// Dhundo is for eating, not for lodging: these are never offered or listed.
+const STAY_TRADES = ["hotel-lodge", "homestay-guesthouse"];
 const NEAR_KM = 30;
 const FAR_KM = 100;
 
@@ -2799,7 +2801,7 @@ export default function ServicesPage({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    api.listTrades(false, state).then((r) => setTrades(many(r))).catch(() => setTrades([]));
+    api.listTrades(false, state).then((r) => setTrades(many(r).filter((x) => !STAY_TRADES.includes(x.slug)))).catch(() => setTrades([]));
   }, [api, reloadKey, state]);
 
   const signedIn = !!(user && user.id);

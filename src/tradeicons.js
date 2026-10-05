@@ -13,7 +13,7 @@ const ICON_RULES = [
   // food places and food work
   [/tea|snack|chai/, "teacup"], [/bakery|sweet|halwai|mithai|cake/, "cake"], [/fast food|biryani|burger|pizza|momo/, "burger"],
   [/dhaba|curry/, "pot"], [/tiffin|lunch/, "tiffin"], [/cater/, "cloche"],
-  [/cook|chef|waiter|serving|restaurant|canteen|mess|food/, "cutlery"], [/hotel|lodge|resort/, "bed"], [/homestay|guest/, "home"],
+  [/cook|chef|waiter|serving|restaurant|canteen|mess|food/, "cutlery"],
   // home and care
   [/security|guard/, "shield"], [/garden|mali|plant/, "leaf"], [/maid|housekeep|clean|sweep/, "broom"],
   [/nanny|child|elder|attendant|care/, "heart"], [/laundry|iron/, "shirt"], [/pest/, "bug"], [/tailor/, "scissors"],

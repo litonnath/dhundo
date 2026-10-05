@@ -50,6 +50,7 @@ begin
                      and p_lng + v_deg / greatest(cos(radians(p_lat)), 0.2)
        and (case when p_kind = 'eat' then t.group_name = 'Eat & Stay'
                  else t.kind = 'supplier' and t.group_name <> 'Eat & Stay' end)
+       and w.trade_slug not in ('hotel-lodge', 'homestay-guesthouse')
        and (p_trade is null or w.trade_slug = p_trade)
        and (v_q is null
             or coalesce(w.business_name, '') ilike '%' || v_q || '%'

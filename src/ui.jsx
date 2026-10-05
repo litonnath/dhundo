@@ -161,42 +161,42 @@ export const groupStyle = (g) => GROUPS[g] || GROUPS.Other;
 
 // The database group names are descriptive; some are too long for a tile at
 // 390px. Only the label changes -- filtering still uses the real name.
-const SHORT = { "Home & Domestic": "Home", "Eat & Stay": "Eat & Stay" };
+const SHORT = { "Home & Domestic": "Home", "Eat & Stay": "Eat" };
 // Group names live in the database in English only (unlike the trades, which
 // carry name_bn). Rather than a migration for eight strings that are pure
 // presentation, they are translated here.
 const GROUP_NAMES = {
-  bn: { "Eat & Stay": "খাওয়া ও থাকা", "Construction": "নির্মাণ", "Drivers": "ড্রাইভার", "Home & Domestic": "ঘরের কাজ",
+  bn: { "Eat & Stay": "খাবার", "Construction": "নির্মাণ", "Drivers": "ড্রাইভার", "Home & Domestic": "ঘরের কাজ",
         "Food": "রান্না", "Repairs": "মেরামত", "Vehicle": "গাড়ি", "Events": "অনুষ্ঠান",
         "Suppliers": "দোকান", "Other": "অন্যান্য" },
-  hi: { "Eat & Stay": "खाना और ठहराव", "Construction": "निर्माण", "Drivers": "ड्राइवर", "Home & Domestic": "घर का काम",
+  hi: { "Eat & Stay": "खाना", "Construction": "निर्माण", "Drivers": "ड्राइवर", "Home & Domestic": "घर का काम",
         "Food": "खाना", "Repairs": "मरम्मत", "Vehicle": "गाड़ी", "Events": "आयोजन",
         "Suppliers": "दुकान", "Other": "अन्य" },
-  mr: { "Eat & Stay": "खाणे आणि राहणे", "Construction": "बांधकाम", "Drivers": "ड्रायव्हर", "Home & Domestic": "घरकाम",
+  mr: { "Eat & Stay": "खाणे", "Construction": "बांधकाम", "Drivers": "ड्रायव्हर", "Home & Domestic": "घरकाम",
         "Food": "जेवण", "Repairs": "दुरुस्ती", "Vehicle": "गाडी", "Events": "कार्यक्रम",
         "Suppliers": "दुकान", "Other": "इतर" },
-  te: { "Eat & Stay": "భోజనం & బస", "Construction": "నిర్మాణం", "Drivers": "డ్రైవర్లు", "Home & Domestic": "ఇంటి పని",
+  te: { "Eat & Stay": "భోజనం", "Construction": "నిర్మాణం", "Drivers": "డ్రైవర్లు", "Home & Domestic": "ఇంటి పని",
         "Food": "వంట", "Repairs": "రిపేర్లు", "Vehicle": "వాహనం", "Events": "ఫంక్షన్లు",
         "Suppliers": "దుకాణాలు", "Other": "ఇతర" },
-  ta: { "Eat & Stay": "உணவு & தங்குமிடம்", "Construction": "கட்டுமானம்", "Drivers": "டிரைவர்", "Home & Domestic": "வீட்டு வேலை",
+  ta: { "Eat & Stay": "உணவு", "Construction": "கட்டுமானம்", "Drivers": "டிரைவர்", "Home & Domestic": "வீட்டு வேலை",
         "Food": "சமையல்", "Repairs": "பழுது", "Vehicle": "வாகனம்", "Events": "நிகழ்ச்சி",
         "Suppliers": "கடைகள்", "Other": "மற்றவை" },
-  gu: { "Eat & Stay": "ખાવું અને રહેવું", "Construction": "બાંધકામ", "Drivers": "ડ્રાઇવર", "Home & Domestic": "ઘરકામ",
+  gu: { "Eat & Stay": "ખાવું", "Construction": "બાંધકામ", "Drivers": "ડ્રાઇવર", "Home & Domestic": "ઘરકામ",
         "Food": "રસોઈ", "Repairs": "રિપેર", "Vehicle": "વાહન", "Events": "પ્રસંગ",
         "Suppliers": "દુકાન", "Other": "અન્ય" },
-  kn: { "Eat & Stay": "ಊಟ ಮತ್ತು ವಾಸ", "Construction": "ಕಟ್ಟಡ ಕೆಲಸ", "Drivers": "ಡ್ರೈವರ್", "Home & Domestic": "ಮನೆಗೆಲಸ",
+  kn: { "Eat & Stay": "ಊಟ", "Construction": "ಕಟ್ಟಡ ಕೆಲಸ", "Drivers": "ಡ್ರೈವರ್", "Home & Domestic": "ಮನೆಗೆಲಸ",
         "Food": "ಅಡುಗೆ", "Repairs": "ರಿಪೇರಿ", "Vehicle": "ವಾಹನ", "Events": "ಸಮಾರಂಭ",
         "Suppliers": "ಅಂಗಡಿ", "Other": "ಇತರೆ" },
-  ml: { "Eat & Stay": "ഭക്ഷണവും താമസവും", "Construction": "നിർമ്മാണം", "Drivers": "ഡ്രൈവർ", "Home & Domestic": "വീട്ടുജോലി",
+  ml: { "Eat & Stay": "ഭക്ഷണം", "Construction": "നിർമ്മാണം", "Drivers": "ഡ്രൈവർ", "Home & Domestic": "വീട്ടുജോലി",
         "Food": "പാചകം", "Repairs": "റിപ്പയർ", "Vehicle": "വാഹനം", "Events": "പരിപാടികൾ",
         "Suppliers": "കടകൾ", "Other": "മറ്റുള്ളവ" },
-  or: { "Eat & Stay": "ଖାଇବା ଓ ରହିବା", "Construction": "ନିର୍ମାଣ", "Drivers": "ଡ୍ରାଇଭର", "Home & Domestic": "ଘର କାମ",
+  or: { "Eat & Stay": "ଖାଇବା", "Construction": "ନିର୍ମାଣ", "Drivers": "ଡ୍ରାଇଭର", "Home & Domestic": "ଘର କାମ",
         "Food": "ରୋଷେଇ", "Repairs": "ମରାମତି", "Vehicle": "ଗାଡ଼ି", "Events": "ଉତ୍ସବ",
         "Suppliers": "ଦୋକାନ", "Other": "ଅନ୍ୟାନ୍ୟ" },
-  pa: { "Eat & Stay": "ਖਾਣਾ ਤੇ ਠਹਿਰ", "Construction": "ਉਸਾਰੀ", "Drivers": "ਡਰਾਈਵਰ", "Home & Domestic": "ਘਰ ਦਾ ਕੰਮ",
+  pa: { "Eat & Stay": "ਖਾਣਾ", "Construction": "ਉਸਾਰੀ", "Drivers": "ਡਰਾਈਵਰ", "Home & Domestic": "ਘਰ ਦਾ ਕੰਮ",
         "Food": "ਖਾਣਾ", "Repairs": "ਮੁਰੰਮਤ", "Vehicle": "ਗੱਡੀ", "Events": "ਸਮਾਗਮ",
         "Suppliers": "ਦੁਕਾਨ", "Other": "ਹੋਰ" },
-  as: { "Eat & Stay": "খোৱা আৰু থকা", "Construction": "নিৰ্মাণ", "Drivers": "ড্ৰাইভাৰ", "Home & Domestic": "ঘৰুৱা কাম",
+  as: { "Eat & Stay": "খোৱা", "Construction": "নিৰ্মাণ", "Drivers": "ড্ৰাইভাৰ", "Home & Domestic": "ঘৰুৱা কাম",
         "Food": "ৰন্ধন", "Repairs": "মেৰামতি", "Vehicle": "গাড়ী", "Events": "অনুষ্ঠান",
         "Suppliers": "দোকান", "Other": "অন্যান্য" },
 };
