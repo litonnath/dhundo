@@ -849,7 +849,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
                   pincode: p.pin || prev.pincode, pin_auto: true,
                   // The town picked before belonged to the old place.
                   city_id: null, city_name: "", district: "",
-                  address_line: prev.address_line || (p.exact && p.address ? p.address : ""),
+                  // Not filled from the map: the nearest landmark is not where somebody works.
                   pos: typeof p.lat === "number" ? { lat: p.lat, lng: p.lng, source: p.source, exact: !!p.exact } : null,
                 }));
                 setDirty((d) => ({ ...d, contact: true, address: true }));
