@@ -386,6 +386,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    chatOpen: (id) => rpc("services_chat_open", { p_booking: id }, true),
+    chatList: (id) => rpc("services_chat_list", { p_booking: id }, true),
+    chatSend: (id, body) => rpc("services_chat_send", { p_booking: id, p_body: body }, true),
     bookingCancel: (id) => rpc("services_booking_cancel", { p_id: id }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },

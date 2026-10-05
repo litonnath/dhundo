@@ -350,12 +350,90 @@ export function BookingSheet({ api, row, onClose, place }) {
   );
 }
 
+// -------------------------------------------------------------------- CHAT
+// One chat per request, between the two people on it. Open while the request
+// is waiting or accepted; closed when it is declined or cancelled, and gone
+// 24 hours after that.
+export function ChatSheet({ api, booking, onClose }) {
+  const { t } = useI18n();
+  useDismissable(true, onClose);
+  const [msgs, setMsgs] = useState([]);
+  const [info, setInfo] = useState(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const box = useRef(null);
+  const load = useCallback(async () => {
+    try {
+      const i = one(await api.chatOpen(booking.id));
+      setInfo(i || { is_open: false, gone: true });
+      setMsgs(many(await api.chatList(booking.id)));
+    } catch (_) { /* the next tick tries again */ }
+  }, [api, booking.id]);
+  useEffect(() => { load(); const id = setInterval(load, 4000); return () => clearInterval(id); }, [load]);
+  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [msgs.length]);
+  const send = async () => {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true); setErr(null);
+    try {
+      const r = one(await api.chatSend(booking.id, body));
+      if (r && r.ok) { setText(""); load(); }
+      else setErr(r && r.reason === "closed" ? t("ch_ended") : t("e_save"));
+    } catch (e) { setErr((e && e.message) || t("e_save")); }
+    setBusy(false);
+  };
+  const open = info && info.is_open;
+  const hours = info && info.closes_at ? Math.max(1, Math.ceil((new Date(info.closes_at) - Date.now()) / 3600000)) : null;
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+         style={{ position: "fixed", inset: 0, zIndex: 560, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 480, height: "86vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "14px 18px 8px" }}>
+          <h1 style={{ flex: 1, fontSize: 18, fontWeight: 800, margin: 0, color: T.ink }}>{String(t("ch_title")).replace("{name}", booking.other_name || "")}</h1>
+          <CloseButton onClick={onClose} />
+        </div>
+        <div style={{ padding: "0 18px 8px", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5 }}>{t("ch_note")}</div>
+        <div ref={box} style={{ flex: 1, overflowY: "auto", padding: "8px 14px", background: "#F4F6F8" }}>
+          {msgs.length === 0 && <div style={{ textAlign: "center", color: T.inkFaint, fontSize: 14, marginTop: 24 }}>{t("ch_empty")}</div>}
+          {msgs.map((m) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: m.mine ? "flex-end" : "flex-start", marginBottom: 6 }}>
+              <span style={{
+                maxWidth: "80%", padding: "8px 12px", borderRadius: 14, fontSize: 14.5, lineHeight: 1.45, whiteSpace: "pre-wrap", overflowWrap: "anywhere",
+                background: m.mine ? T.brandDark : T.white, color: m.mine ? "#fff" : T.ink, border: m.mine ? "none" : `1px solid ${T.line}`,
+              }}>
+                {m.body}
+                <span style={{ display: "block", fontSize: 10.5, opacity: 0.7, marginTop: 2, textAlign: "right" }}>{fmtWhen(m.created_at)}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        {open ? (
+          <div style={{ padding: "10px 14px calc(12px + env(safe-area-inset-bottom))", borderTop: `1px solid ${T.line}` }}>
+            {err && <div style={{ marginBottom: 8 }}><Notice tone="bad">{err}</Notice></div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...input, flex: 1 }} value={text} maxLength={500} placeholder={t("ch_ph")} aria-label={t("ch_ph")}
+                     onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
+              <Btn onClick={send} disabled={busy || !text.trim()}>{t("ch_send")}</Btn>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: "12px 18px calc(14px + env(safe-area-inset-bottom))", borderTop: `1px solid ${T.line}` }}>
+            <Notice tone="info">{info && info.gone ? t("ch_gone") : t("ch_ended")}{hours ? ` ${String(t("ch_left")).replace("{n}", hours)}` : ""}</Notice>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ------------------------------------------------- MY BOOKINGS AND JOBS
 export function MyRequestsSheet({ api, onClose }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [bk, setBk] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [chatFor, setChatFor] = useState(null);
   const load = useCallback(async () => {
     try { setBk(many(await api.myBookings())); } catch (_) {}
     try { setJobs(many(await api.myJobs())); } catch (_) {}
@@ -381,6 +459,9 @@ export function MyRequestsSheet({ api, onClose }) {
             {b.note && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 3 }}>{b.note}</div>}
             <div style={{ fontSize: 13.5, fontWeight: 800, color: b.status === "accepted" ? T.green : T.brandDark, marginTop: 4 }}>{t("bk_status_" + b.status)}</div>
             {b.other_phone && <a href={`tel:${b.other_phone}`} style={{ ...linkBtn(T.green), marginTop: 8 }}>{b.other_phone}</a>}
+            {["requested", "accepted", "declined", "cancelled"].includes(b.status) && (
+              <button onClick={() => setChatFor(b)} style={{ marginTop: 8, marginRight: 10, background: T.white, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, borderRadius: 20, padding: "0 16px", minHeight: 40, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("ch_btn")}</button>
+            )}
             {b.role === "worker" && b.status === "requested" && (
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <Btn onClick={() => answer(b, true)}>{t("bk_accept")}</Btn>
@@ -401,6 +482,7 @@ export function MyRequestsSheet({ api, onClose }) {
           </div>
         ))}
       </div>
+      {chatFor && <ChatSheet api={api} booking={chatFor} onClose={() => setChatFor(null)} />}
     </div>
   );
 }
