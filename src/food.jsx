@@ -72,13 +72,22 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const slugs = useMemo(() => new Set(kinds.map((x) => x.slug)), [kinds]);
   const nameOf = (x) => (lang === "bn" && x.name_bn) || (lang === "hi" && x.name_hi) || x.name_en;
 
+  // With a position, only places within 30 km are listed and what is typed
+  // also matches dishes or goods. Without one the state list is the fallback.
+  const near = !!(place && typeof place.lat === "number" && typeof place.lng === "number");
+  const [qs, setQs] = useState("");
+  useEffect(() => { const h = setTimeout(() => setQs(q.trim()), 350); return () => clearTimeout(h); }, [q]);
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    api.browse({
-      trade: chip, group: eat && !chip ? "Eat & Stay" : null, kind: eat ? null : "supplier",
-      state: place && place.state, lat: place && place.lat, lng: place && place.lng, limit: 40,
-    }).then((r) => {
+    const req = near
+      ? api.storesNear({ kind: eat ? "eat" : "shop", lat: place.lat, lng: place.lng, trade: chip, q: qs, radiusKm: 30 })
+      : api.browse({
+          trade: chip, group: eat && !chip ? "Eat & Stay" : null, kind: eat ? null : "supplier",
+          state: place && place.state, lat: place && place.lat, lng: place && place.lng, limit: 40,
+        });
+    req.then((r) => {
       if (!alive) return;
       const list = many(r).filter((x) => slugs.has(x.trade_slug));
       setRows(list); setLoading(false);
@@ -91,10 +100,10 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     })
       .catch(() => { if (alive) { setRows([]); setLoading(false); } });
     return () => { alive = false; };
-  }, [api, chip, eat, slugs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, chip, eat, slugs, near, qs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = rows
-    .filter((r) => !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
+    .filter((r) => near || !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
   const stage1 = !picked && !q.trim();
   const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
@@ -165,6 +174,16 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
               {[r.trade_name, r.locality || r.area || r.city].filter(Boolean).join(" · ")}
             </span>
             <OpenLine info={infos[r.id]} t={t} />
+            {Array.isArray(r.items) && r.items.length > 0 && (
+              <span style={{ display: "block", marginTop: 6, fontSize: 13.5, color: T.ink }}>
+                {r.items.map((it, i) => (
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginRight: 12 }}>
+                    {it.photo && <span style={{ width: 26, height: 26, borderRadius: 6, background: `center/cover url(${it.photo})` }} />}
+                    <b>{it.name}</b> {rupees(it.price_paise)}
+                  </span>
+                ))}
+              </span>
+            )}
             {infos[r.id] && infos[r.id].promo_text && <Promo info={infos[r.id]} small />}
           </span>
         </button>

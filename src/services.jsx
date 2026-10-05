@@ -330,6 +330,12 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
       p_price_rupees: m.price, p_veg: m.veg, p_available: m.available, p_photo: m.photo || null,
     }, true),
+    // Shops or food places within the radius of a person, with the dishes or
+    // goods that match what they typed. Nothing outside the radius comes back.
+    storesNear: (o) => rpc("services_stores_near", {
+      p_kind: o.kind, p_lat: o.lat, p_lng: o.lng, p_trade: o.trade || null,
+      p_q: o.q || null, p_radius_km: o.radiusKm || NEAR_KM, p_limit: o.limit || 40,
+    }),
     storeInfos: (ids) => rpc("services_store_infos", { p_ids: ids }),
     myStore: () => rpc("services_my_store", {}, true),
     setStore: (o) => rpc("services_set_store", {
