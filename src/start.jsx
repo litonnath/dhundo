@@ -105,13 +105,25 @@ export function OfferTypeGate({ onPick, onBack, inline = false }) {
 // a line icon on a soft tint, a title and one line under it. Each opens its
 // own screen. Deliberately flat -- no gradients, no pictures.
 const TILES = [
-  ["worker", "construction", "#C2410C", "#FFF1E6", "home_worker", "offer_sub_worker"],
-  ["ride", "drivers", "#1D4ED8", "#E8F0FE", "home_ride", "offer_sub_ride"],
-  ["shop", "suppliers", "#15803D", "#E7F5EC", "home_shop", "offer_sub_shop"],
-  ["eat", "food", "#A16207", "#FDF3DC", "home_eat", "offer_sub_eat"],
-  ["market", "tag", "#7E22CE", "#F3E8FD", "need_buy", "need_buy_sub"],
-  ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub"],
+  ["worker", "construction", "#C2410C", "#FFF1E6", "home_worker", "offer_sub_worker", "worker"],
+  ["ride", "drivers", "#1D4ED8", "#E8F0FE", "home_ride", "offer_sub_ride", "need-ride"],
+  ["shop", "suppliers", "#15803D", "#E7F5EC", "home_shop", "offer_sub_shop", "shop"],
+  ["eat", "food", "#A16207", "#FDF3DC", "home_eat", "offer_sub_eat", "need-eat"],
+  ["market", "tag", "#7E22CE", "#F3E8FD", "need_buy", "need_buy_sub", "need-market"],
+  ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub", "partner"],
 ];
+
+// The small "back to home" pill at the top of every screen that opens from the front.
+export function HomeButton({ onClick, label }) {
+  const { t } = useI18n();
+  return (
+    <button onClick={onClick} style={{
+      display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`,
+      borderRadius: 20, padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+      fontSize: 14, fontWeight: 700, color: T.brandDark,
+    }}><Icon name="back" size={16} /> {label || t("launch_back")}</button>
+  );
+}
 
 export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
   const { t } = useI18n();
@@ -166,13 +178,13 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
           {t("launch_title")}
         </h1>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
-          {TILES.map(([key, icon, fg, bg, label, sub]) => (
+          {TILES.map(([key, icon, fg, bg, label, sub, art]) => (
             <button key={key} onClick={() => onPick(key)} style={{
               display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left",
               padding: 0, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
               cursor: "pointer", fontFamily: "inherit",
             }}>
-              <TileArt k={key} />
+              <TileArt k={art} />
               <span style={{ display: "block", padding: "11px 13px 13px" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 28, height: 28, borderRadius: 8, color: fg, background: bg, flexShrink: 0,

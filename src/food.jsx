@@ -94,7 +94,8 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     .filter((r) => !q.trim() || String(r.display_name || "").toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 130px" }}>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
+      <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 260, marginBottom: 14 }} />
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
         <h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t(eat ? "st_eat_title" : "st_shop_title")}</h1>
         {user && user.id && (

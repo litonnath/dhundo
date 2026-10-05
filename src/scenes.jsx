@@ -159,7 +159,7 @@ const SCENES = {
   ),
 };
 
-export function TileArt({ k, style }) {
+export function TileArt({ k, style, pos = "center" }) {
   // jpg first, then webp, then png; the drawing stays until one loads.
   const EXT = ["jpg", "webp", "png"];
   const [photo, setPhoto] = useState(false);
@@ -167,11 +167,11 @@ export function TileArt({ k, style }) {
   return (
     <span style={{ display: "block", position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", ...style }} aria-hidden="true">
       <span style={{ position: "absolute", inset: 0, display: "block" }}>
-        {React.cloneElement(SCENES[k === "sell" ? "market" : k] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
+        {React.cloneElement(SCENES[k === "sell" ? "market" : String(k).replace(/^need-/, "")] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
       </span>
       <img src={`/tiles/${k}.${EXT[ei]}`} key={ei} alt="" onLoad={() => setPhoto(true)}
            onError={() => { setPhoto(false); if (ei < EXT.length - 1) setEi(ei + 1); }}
-           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: photo ? "block" : "none" }} />
+           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: pos, display: photo ? "block" : "none" }} />
     </span>
   );
 }

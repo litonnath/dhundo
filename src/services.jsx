@@ -43,7 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { MenuSheet } from "./menu.jsx";
-import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories } from "./start.jsx";
+import { StartGate, OfferTypeGate, CustomerLauncher, SubCategories, HomeButton } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -467,6 +467,8 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
   );
 }
 
+// Remembered between visits so Back from Buy something lands on the I need tiles.
+let lastSide = null;
 function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
@@ -474,7 +476,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // Which front tile this person entered: null shows the six tiles.
   const [section, setSection] = useState(null);
   // The very first choice: I need / I offer. Stays on "need" while browsing tiles.
-  const [side, setSide] = useState(null);
+  const [side, setSideState] = useState(lastSide);
+  const setSide = (v) => { lastSide = v; setSideState(v); };
   const [trade, setTrade] = useState(null);
   // "Show everyone in this category" instead of picking a sub-category.
   const [allIn, setAllIn] = useState(false);
@@ -2895,13 +2898,14 @@ export default function ServicesPage({
       )}
 
       {tab === "market" && (
-        <MarketPage api={api} place={place} state={state}
+        <MarketPage api={api} place={place} state={state} onBack={() => setTab("browse")}
                     onOpenItem={(it) => setItemOpen({ id: it.id, km: it.distance_km })}
                     />
       )}
 
       {tab === "sell" && (
         <SellPage api={api} user={signedIn ? user : null} place={place} onSignIn={onSignIn}
+                  onBack={() => setTab("work")}
                   onPickLocation={() => setLocOpen(true)}
                   onOpenItem={(it) => setItemOpen({ id: it.id })}
                   editId={editItem} setEditId={setEditItem} />

@@ -19,6 +19,8 @@ import { useI18n, stateName } from "./i18n.jsx";
 import { ITEM_CATEGORIES, itemCategoryFor } from "./itemwords.js";
 import { hasIndic, variants } from "./translit.js";
 import { useConsent } from "./consent-core.js";
+import { TileArt } from "./scenes.jsx";
+import { HomeButton } from "./start.jsx";
 
 const NEAR_KM = 30;
 const FAR_KM = 100;
@@ -219,7 +221,7 @@ const grid = {
 // ------------------------------------------------------------ Buy & Sell tab
 // Its own page, apart from the services: a search box for things, the
 // categories, the ads nearest first, and one clear way to sell.
-export function MarketPage({ api, place, state, onOpenItem, onSell }) {
+export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   // "purana bike" or "পুরনো মোবাইল" is a category, not words to find in a
@@ -227,36 +229,32 @@ export function MarketPage({ api, place, state, onOpenItem, onSell }) {
   const cat = itemCategoryFor(q);
   return (
     <div>
-      <div style={{ background: `linear-gradient(160deg, ${T.brandDark}, ${T.brandDeep})`, color: "#fff" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "18px 16px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 23, fontWeight: 900, margin: 0, flex: 1 }}>{t("need_buy")}</h1>
-            {onSell && (
-            <button onClick={onSell} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, background: T.accent, color: "#fff",
-              border: "none", borderRadius: 24, padding: "10px 16px", fontSize: 15, fontWeight: 900,
-              cursor: "pointer", fontFamily: "inherit", minHeight: 44, boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-            }}><Icon name="plus" size={18} /> {t("mk_sell_btn")}</button>
-            )}
-          </div>
-          <p style={{ fontSize: 14, opacity: 0.85, margin: "4px 0 14px" }}>{t("need_buy_sub")}</p>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 14,
-            padding: "6px 6px 6px 14px", boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
-          }}>
-            <Icon name="search" size={20} style={{ color: T.inkFaint }} />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("mk_search_ph")}
-                   aria-label={t("mk_search_ph")} style={{
-              flex: 1, border: "none", outline: "none", fontSize: 16, minHeight: 44, background: "transparent",
-              color: T.ink, fontFamily: "inherit", minWidth: 0,
-            }} />
-            {q && (
-              <button onClick={() => setQ("")} aria-label="Clear" style={{
-                border: "none", background: "none", cursor: "pointer", color: T.inkFaint, width: 36, height: 44,
-              }}><Icon name="close" size={18} /></button>
-            )}
-            <VoiceButton onHeard={setQ} />
-          </div>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
+        {onBack && <HomeButton onClick={onBack} />}
+        <TileArt k="need-market" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginTop: 10 }} />
+        {onSell && (
+          <button onClick={onSell} style={{
+            display: "inline-flex", alignItems: "center", gap: 6, background: T.accent, color: "#fff", marginTop: 10,
+            border: "none", borderRadius: 24, padding: "10px 16px", fontSize: 15, fontWeight: 900,
+            cursor: "pointer", fontFamily: "inherit", minHeight: 44,
+          }}><Icon name="plus" size={18} /> {t("mk_sell_btn")}</button>
+        )}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14,
+          padding: "4px 6px 4px 14px", marginTop: 12,
+        }}>
+          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("mk_search_ph")}
+                 aria-label={t("mk_search_ph")} style={{
+            flex: 1, border: "none", outline: "none", fontSize: 16, minHeight: 44, background: "transparent",
+            color: T.ink, fontFamily: "inherit", minWidth: 0,
+          }} />
+          {q && (
+            <button onClick={() => setQ("")} aria-label="Clear" style={{
+              border: "none", background: "none", cursor: "pointer", color: T.inkFaint, width: 36, height: 44,
+            }}><Icon name="close" size={18} /></button>
+          )}
+          <VoiceButton onHeard={setQ} />
         </div>
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
@@ -334,7 +332,7 @@ export function MarketHome({ api, place, state, query = "", category: initialCat
         }}>
           <div style={{ fontSize: 40 }}>{cat ? catOf(cat).emoji : "🛍️"}</div>
           <div style={{ fontSize: 17, fontWeight: 800, marginTop: 6 }}>{t("mk_empty")}</div>
-          <p style={{ fontSize: 14, color: T.inkSoft, margin: "6px 0 16px", lineHeight: 1.55 }}>{t("mk_empty_sub")}</p>
+          <p style={{ fontSize: 14, color: T.inkSoft, margin: "6px 0 16px", lineHeight: 1.55 }}>{t("st_none")}</p>
           {onSell && <Btn onClick={onSell}><Icon name="tag" size={18} /> {t("mk_sell_title")}</Btn>}
         </div>
       ) : (
@@ -647,7 +645,7 @@ function ReportSheet({ api, id, onClose }) {
 }
 
 // --------------------------------------------------------------- selling
-export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenItem, editId, setEditId }) {
+export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenItem, editId, setEditId, onBack }) {
   const { t } = useI18n();
   const [mode, setMode] = useState(editId ? "edit" : "list");
   const [mine, setMine] = useState(null);
@@ -684,7 +682,9 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
 
   const active = (mine || []).filter((m) => m.status === "active" && !m.expired).length;
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "22px 16px 40px" }}>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 40px" }}>
+      {onBack && <HomeButton onClick={onBack} label={t("nav_dash")} />}
+      <TileArt k="sell" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, margin: "10px 0 16px" }} />
       <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 4px" }}>{t("mk_sell_title")}</h1>
       <p style={{ fontSize: 14.5, color: T.inkSoft, margin: "0 0 16px", lineHeight: 1.55 }}>{t("mk_sell_sub")}</p>
       {flash && <Notice tone="good">{flash}</Notice>}
