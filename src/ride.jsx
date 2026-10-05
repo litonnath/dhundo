@@ -10,6 +10,7 @@ import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { SetupCard } from "./food.jsx";
+import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -24,8 +25,9 @@ const dirUrl = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination
 
 const VEHICLES = [["any", "rd_any", "search"], ["bike", "rd_bike", "drivers"], ["auto", "rd_auto", "drivers"], ["car", "rd_car", "drivers"]];
 
-export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
-  const { t } = useI18n();
+export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = [] }) {
+  const { t, lang } = useI18n();
+  const vehicles = trades.filter((x) => x.group_name === "Drivers");
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [drop, setDrop] = useState(null);
@@ -58,14 +60,14 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
   useEffect(() => {
     if (!pick || typeof pick.lat !== "number") { setOnline([]); return; }
     let live = true;
-    api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", radiusKm: 8, limit: 8 })
+    api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", trade: vehicle !== "any" ? vehicle : null, radiusKm: 8, limit: 8 })
       .then((rows) => {
         if (!live) return;
         const list = many(rows); setOnline(list);
         if (list.length) api.storeInfos(list.map((x) => x.id)).then((inf) => { if (live) { const o = {}; many(inf).forEach((i) => { o[i.id] = i.per_km_rupees; }); setFares(o); } }).catch(() => {});
       }).catch(() => {});
     return () => { live = false; };
-  }, [api, pick && pick.lat, pick && pick.lng]);
+  }, [api, vehicle, pick && pick.lat, pick && pick.lng]);
 
   const here = async () => {
     const got = await geo.detect();
@@ -149,15 +151,20 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse }) {
         <PlaceField value={drop} onChange={setDrop} sheetPlace={drop || place} />
       </div>
 
-      <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_vehicle")}</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-        {VEHICLES.map(([k, label, icon]) => (
-          <button key={k} onClick={() => setVehicle(k)} aria-pressed={vehicle === k} style={{
-            display: "inline-flex", alignItems: "center", gap: 6, minHeight: 42, padding: "8px 14px", borderRadius: 21, cursor: "pointer",
-            fontFamily: "inherit", fontSize: 14, fontWeight: 700,
-            border: `1.5px solid ${vehicle === k ? T.brandDark : T.line}`,
-            background: vehicle === k ? T.brandSoft : T.white, color: vehicle === k ? T.brandDark : T.ink,
-          }}><Icon name={icon} size={16} /> {t(label)}</button>
+      <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
+      <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", marginBottom: 14 }}>
+        {[{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }].concat(
+          vehicles.map((x) => ({ slug: x.slug, label: vehicleLabel(x, lang), icon: tradeIcon(x, "drivers"), color: vividFor(x.slug) }))
+        ).map((v) => (
+          <button key={v.slug} onClick={() => setVehicle(v.slug)} aria-pressed={vehicle === v.slug} style={{
+            display: "flex", alignItems: "center", gap: 9, textAlign: "left", padding: "9px 10px", minHeight: 52, borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
+            border: `2px solid ${vehicle === v.slug ? T.brandDark : T.line}`, background: vehicle === v.slug ? T.brandSoft : T.white,
+          }}>
+            <span style={{ width: 34, height: 34, borderRadius: 9, background: v.color, color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name={v.icon} size={19} />
+            </span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, lineHeight: 1.2, minWidth: 0, overflowWrap: "anywhere" }}>{v.label}</span>
+          </button>
         ))}
       </div>
       <input style={{ ...input, marginBottom: 8 }} value={fare} inputMode="numeric" maxLength={5}
@@ -236,8 +243,8 @@ function RiderSettings({ api, onSaved }) {
   );
 }
 
-export function RideRequests({ api, online }) {
-  const { t } = useI18n();
+export function RideRequests({ api, online, trades = [] }) {
+  const { t, lang } = useI18n();
   const [rides, setRides] = useState([]);
   const [mine, setMine] = useState([]);
   const [busy, setBusy] = useState(null);
@@ -311,7 +318,7 @@ export function RideRequests({ api, online }) {
           <Route pick={r.pick_text} drop={r.drop_text} />
           <div style={{ fontSize: 13.5, color: T.ink, fontWeight: 700, margin: "0 0 10px" }}>
             {r.fare_paise != null ? String(t("rdr_fare")).replace("{n}", Math.round(r.fare_paise / 100)) : t("rdr_nofare")}
-            {r.vehicle !== "any" ? ` · ${t("rd_" + r.vehicle)}` : ""}
+            {r.vehicle !== "any" && trades.find((x) => x.slug === r.vehicle) ? ` · ${vehicleLabel(trades.find((x) => x.slug === r.vehicle), lang)}` : ""}
           </div>
           <Btn full disabled={busy === r.id} onClick={() => accept(r)}>{busy === r.id ? "…" : t("rdr_accept")}</Btn>
         </div>

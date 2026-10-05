@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "જે વસ્તુ કામની નથી તે વેચો",
   launch_title: "તમે શું શોધી રહ્યા છો?",
   launch_back: "હોમ",
+  rd_which: "કયું વાહન જોઈએ છે?",
+  offer_which: "તમારી પાસે કયું વાહન છે?",
   nx_title_ride: "આગળ: ભાડું નક્કી કરો અને ઓનલાઇન આવો",
   nx_title_shop: "આગળ: તમારી વસ્તુઓ અને ઓફર ઉમેરો",
   nx_title_eat: "આગળ: તમારું મેનૂ ઉમેરો",

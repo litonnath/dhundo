@@ -28,6 +28,8 @@ const ICON_RULES = [
   // repairs, vehicles, events
   [/\bac\b|fridge|refrigerator|cooling/, "snow"], [/washing machine|appliance/, "repairs"], [/mobile|phone/, "phone"],
   [/computer|laptop/, "laptop"], [/cctv|photo|video|drone|camera/, "camera"], [/inverter|solar|purohit|priest|pandit/, "sun"],
+  [/truck|lorry/, "truck"], [/school van|\bbus\b|\bvan\b/, "bus"], [/ambulance/, "ambulance"], [/tractor/, "tractor"],
+  [/jcb|excavator|crane|hydra/, "crane"], [/delivery|2-wheeler/, "bike"],
   [/car mechanic|car\b/, "drivers"], [/bike|scooter|tyre|puncture/, "vehicle"],
   [/decor|tent/, "events"], [/\bdj\b|sound/, "music"], [/driver|rider|taxi|auto|toto/, "drivers"],
 ];

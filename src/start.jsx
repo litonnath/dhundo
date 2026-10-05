@@ -83,7 +83,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     list.forEach((x) => {
       let g = byGroup.find((y) => y.g === x.group_name);
       if (!g) { g = { g: x.group_name, items: [] }; byGroup.push(g); }
-      g.items.push({ key: x.slug, label: tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
+      g.items.push({ key: x.slug, label: picking === "ride" ? vehicleLabel(x, lang) : tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
     });
     const searching = oq.trim().length > 0;
     // Worker or Helper has many trades: pick the kind of work first, like the
@@ -119,7 +119,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     return (
       <SubCategories
         art={grp && !searching ? null : picking} title={grp && !searching ? groupLabel(grp, lang) : t(meta[4])}
-        sub={t("offer_what")} query={oq}
+        sub={t(picking === "ride" ? "offer_which" : "offer_what")} query={oq}
         sections={shown.map((g) => ({ title: shown.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
                                       icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
         onPick={(slug) => onPick(picking, slug)} />
@@ -134,7 +134,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
           padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark,
         }}><Icon name="back" size={16} /> {t("w_back")}</button>
       </div>
-      <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t("offer_what")} placeholder={t("st_search")} />
+      <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t(picking === "ride" ? "offer_which" : "offer_what")} placeholder={t("st_search")} />
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 120px" }}>{step2}</div>
     </div>
   ) : (
@@ -147,7 +147,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("offer_title")}</h1>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
         {types.map(([key, icon, bg, fg, title, sub]) => (
-          <button key={key} onClick={() => (key === "worker" || key === "shop" || key === "eat" ? setType(key) : onPick(key))} style={{
+          <button key={key} onClick={() => (key === "worker" || key === "shop" || key === "eat" || key === "ride" ? setType(key) : onPick(key))} style={{
             display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
             borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
           }}>
@@ -320,7 +320,16 @@ export function SearchBox({ value, onChange, placeholder }) {
 
 // Which trades belong to which front tile, so every screen agrees.
 const NOT_WORKER = ["Drivers", "Suppliers", "Eat & Stay"];
+// "Car driver" -> "Car": the customer is choosing a vehicle, and the owner is
+// saying which vehicle they have, so the word driver or operator is dropped.
+export function vehicleLabel(tr, lang) {
+  const n = tradeName(tr, lang);
+  if (lang !== "en" && lang) return n;
+  return String(n).replace(/\s+(driver|operator)\b/i, "").replace(/Delivery rider/i, "Delivery bike");
+}
+
 export function tradesFor(kind, trades) {
+  if (kind === "ride") return trades.filter((x) => x.group_name === "Drivers");
   if (kind === "eat") return trades.filter((x) => x.group_name === "Eat & Stay");
   if (kind === "shop") return trades.filter((x) => (x.kind === "supplier" || x.group_name === "Suppliers") && x.group_name !== "Eat & Stay");
   return trades.filter((x) => x.kind !== "supplier" && !NOT_WORKER.includes(x.group_name));
@@ -367,11 +376,11 @@ export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPic
   );
 }
 const tileStyle = (bg, line) => ({
-  display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 12px", minHeight: 62,
+  display: "flex", alignItems: "center", gap: 9, textAlign: "left", padding: "12px 9px", minHeight: 62,
   borderRadius: 12, border: `1px solid ${line}`, background: bg, cursor: "pointer", fontFamily: "inherit",
 });
 const iconBox = (bg, fg) => ({
   width: 42, height: 42, borderRadius: 11, background: bg, color: fg, flexShrink: 0, boxShadow: "0 3px 8px rgba(15,20,25,0.18)",
   display: "flex", alignItems: "center", justifyContent: "center",
 });
-const labelStyle = { fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0, overflowWrap: "anywhere" };
+const labelStyle = { fontSize: 14, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0, overflowWrap: "break-word" };

@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "ਜੋ ਚੀਜ਼ਾਂ ਕੰਮ ਦੀਆਂ ਨਹੀਂ ਉਹ ਵੇਚੋ",
   launch_title: "ਤੁਸੀਂ ਕੀ ਲੱਭ ਰਹੇ ਹੋ?",
   launch_back: "ਹੋਮ",
+  rd_which: "ਕਿਹੜਾ ਵਾਹਨ ਚਾਹੀਦਾ ਹੈ?",
+  offer_which: "ਤੁਹਾਡੇ ਕੋਲ ਕਿਹੜਾ ਵਾਹਨ ਹੈ?",
   nx_title_ride: "ਅੱਗੇ: ਕਿਰਾਇਆ ਤੈਅ ਕਰੋ ਅਤੇ ਆਨਲਾਈਨ ਆਓ",
   nx_title_shop: "ਅੱਗੇ: ਆਪਣੇ ਉਤਪਾਦ ਅਤੇ ਆਫ਼ਰ ਜੋੜੋ",
   nx_title_eat: "ਅੱਗੇ: ਆਪਣਾ ਮੀਨੂ ਜੋੜੋ",

@@ -888,7 +888,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             fontSize: 14, fontWeight: 700, color: T.brandDark,
           }}><Icon name="back" size={16} /> {t("launch_back")}</button>
         </div>
-        <RideScreen api={api} signedIn={!!(user && user.id)} place={place} onSignIn={onSignIn}
+        <RideScreen api={api} trades={trades} signedIn={!!(user && user.id)} place={place} onSignIn={onSignIn}
                     onBrowse={() => setGroup("Drivers")} />
       </>
     );
@@ -2931,7 +2931,7 @@ export default function ServicesPage({
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
             if (!signedIn || !hasListing || isAdmin) return null;
-            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} /><RiderJobs api={api} online={avail.online} /></>;
+            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} trades={trades} /><RiderJobs api={api} online={avail.online} /></>;
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
               return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return null;

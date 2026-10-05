@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "ಬೇಡವಾದ ವಸ್ತುಗಳನ್ನು ಮಾರಿ",
   launch_title: "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
   launch_back: "ಮುಖಪುಟ",
+  rd_which: "ಯಾವ ವಾಹನ ಬೇಕು?",
+  offer_which: "ನಿಮ್ಮ ಬಳಿ ಯಾವ ವಾಹನ ಇದೆ?",
   nx_title_ride: "ಮುಂದೆ: ದರ ಹೊಂದಿಸಿ ಮತ್ತು ಆನ್‌ಲೈನ್ ಆಗಿ",
   nx_title_shop: "ಮುಂದೆ: ಉತ್ಪನ್ನ ಮತ್ತು ಆಫರ್ ಸೇರಿಸಿ",
   nx_title_eat: "ಮುಂದೆ: ಮೆನು ಸೇರಿಸಿ",

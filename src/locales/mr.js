@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "नको असलेल्या वस्तू विका",
   launch_title: "तुम्ही काय शोधत आहात?",
   launch_back: "होम",
+  rd_which: "कोणते वाहन हवे?",
+  offer_which: "तुमच्याकडे कोणते वाहन आहे?",
   nx_title_ride: "पुढे: भाडे ठरवा आणि ऑनलाइन या",
   nx_title_shop: "पुढे: तुमची उत्पादने आणि ऑफर जोडा",
   nx_title_eat: "पुढे: तुमचा मेनू जोडा",

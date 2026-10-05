@@ -479,6 +479,8 @@ export default {
   offer_sub_sell: "নালাগিলে জিনিস বিক্ৰী কৰক",
   launch_title: "আপুনি কি বিচাৰি আছে?",
   launch_back: "হোম",
+  rd_which: "কোনখন বাহন লাগে?",
+  offer_which: "আপোনাৰ কোনখন বাহন আছে?",
   nx_title_ride: "পাছত: ভাড়া ঠিক কৰক আৰু অনলাইনলৈ আহক",
   nx_title_shop: "পাছত: সামগ্ৰী আৰু অফাৰ যোগ কৰক",
   nx_title_eat: "পাছত: মেনু যোগ কৰক",
