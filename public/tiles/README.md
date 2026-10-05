@@ -30,5 +30,5 @@ shallow depth of field, realistic skin and clothing, 16:9, no text, no logos,
 no brand names, no number plates."
 
 Already done: need, offer, worker, ride, shop, eat, need-ride, need-eat, need-market and sell. Still to add:
-partner, need, offer. Send them to Claude in the chat and they will be
+partner. Send them to Claude in the chat and they will be
 cropped to 16:9, cleaned of any brand names or plates, shrunk and added.
