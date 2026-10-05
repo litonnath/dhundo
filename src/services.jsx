@@ -2970,7 +2970,7 @@ export default function ServicesPage({
                    onClose={() => setMenuOpen(false)} />
       )}
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
-      {bookRow && signedIn && <BookingSheet api={api} row={bookRow} onClose={() => setBookRow(null)} />}
+      {bookRow && signedIn && <BookingSheet api={api} row={bookRow} place={place} onClose={() => setBookRow(null)} />}
       {requestsOpen && signedIn && <MyRequestsSheet api={api} onClose={() => setRequestsOpen(false)} />}
       {partnerOpen && <PartnerSheet api={api} signedIn={signedIn} onSignIn={onSignIn} onClose={() => setPartnerOpen(false)} />}
       {verifyOpen && signedIn && (

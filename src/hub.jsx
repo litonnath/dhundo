@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, Icon, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
+import { PlaceField } from "./locpicker.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -199,16 +200,18 @@ const pad2 = (x) => String(x).padStart(2, "0");
 const localStamp = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
 
-export function BookingSheet({ api, row, onClose }) {
+export function BookingSheet({ api, row, onClose, place }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [mins, setMins] = useState(60);
   const [custom, setCustom] = useState(false);
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState(60);
-  const soon = new Date(Date.now() + 5 * 60000);
-  const [start, setStart] = useState(localStamp(soon));
-  const [note, setNote] = useState("");
+  const [whenKey, setWhenKey] = useState("now");
+  const [start, setStart] = useState(localStamp(new Date(Date.now() + 5 * 60000)));
+  const [what, setWhat] = useState("");
+  const [pay, setPay] = useState("");
+  const [where, setWhere] = useState(() => (place && (place.address || place.area) ? place : null));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [sent, setSent] = useState(false);
@@ -220,38 +223,77 @@ export function BookingSheet({ api, row, onClose }) {
     return () => { live = false; };
   }, [api, row.id]);
   const total = custom ? Math.round(Number(amount || 0) * unit) : mins;
-  const ok = !!start && total >= 5 && total <= 525600;
+  const startDate = new Date(start);
+  const endDate = new Date(startDate.getTime() + total * 60000);
+  const ok = !!start && !Number.isNaN(startDate.getTime()) && total >= 5 && total <= 525600 && what.trim().length >= 3;
+  const quick = (key) => {
+    setWhenKey(key);
+    const d = new Date();
+    if (key === "now") d.setMinutes(d.getMinutes() + 5);
+    else if (key === "1h") d.setHours(d.getHours() + 1);
+    else if (key === "tmr") { d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); }
+    if (key !== "pick") setStart(localStamp(d));
+  };
+  const placeText = where ? (where.address || where.area || "") : "";
 
   const send = async () => {
     setBusy(true); setMsg(null);
+    // The owner reads this as one line, so it is kept to plain English.
+    const units = { rt_u_hour: "hour", rt_u_day: "day", rt_u_week: "week", rt_u_month: "month", rt_u_trip: "trip", rt_u_km: "km", rt_u_job: "job" };
+    const text = [
+      what.trim(),
+      rate ? `Rate: ${rate.label} ${rateText(rate, (k) => units[k])}` : "",
+      pay ? `Offer: \u20B9${pay}` : "",
+      placeText ? `At: ${placeText}` : "",
+    ].filter(Boolean).join(" \u00b7 ").slice(0, 300);
     try {
-      const r = one(await api.bookingRequest(row.id, new Date(start).toISOString(), total, (rate ? `Rate: ${rate.label} ${rateText(rate, (k) => ({ rt_u_hour: "hour", rt_u_day: "day", rt_u_week: "week", rt_u_month: "month", rt_u_trip: "trip", rt_u_km: "km", rt_u_job: "job" }[k]))}${note ? " · " : ""}` : "") + note));
+      const r = one(await api.bookingRequest(row.id, startDate.toISOString(), total, text));
       if (r && r.ok) setSent(true);
       else setMsg(r && r.reason === "already_open" ? t("bk_open") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
   };
   const pill = (on) => ({
-    border: `1px solid ${on ? T.brandDark : T.line}`, borderRadius: 18, padding: "8px 14px", minHeight: 40,
-    background: on ? T.brandSoft : T.white, color: T.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
+    border: `1.5px solid ${on ? T.brandDark : T.line}`, borderRadius: 18, padding: "8px 14px", minHeight: 40,
+    background: on ? T.brandSoft : T.white, color: on ? T.brandDark : T.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
   });
+  const head = { display: "flex", alignItems: "center", gap: 8, fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "16px 0 8px" };
+  const num = { width: 22, height: 22, borderRadius: "50%", background: T.brandDark, color: "#fff", fontSize: 12.5, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  const face = row.avatar_url || (row.photos && row.photos[0]);
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
          style={{ position: "fixed", inset: 0, zIndex: 520, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 460, padding: "14px 18px 24px", maxHeight: "92vh", overflowY: "auto", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0, color: T.ink }}>{String(t("bk_title")).replace("{name}", row.display_name || "")}</h1>
+      <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 480, padding: "14px 18px 24px", maxHeight: "92vh", overflowY: "auto", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: face ? `center/cover url(${face}) ${T.line}` : T.brandSoft, color: T.brandDark, fontWeight: 800, fontSize: 19, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {!face && String(row.display_name || "?").trim().charAt(0).toUpperCase()}
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 18, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(t("bk_title")).replace("{name}", row.display_name || "")}</span>
+            {row.trade_name && <span style={{ display: "block", fontSize: 13, color: T.inkSoft }}>{row.trade_name}</span>}
+          </span>
           <CloseButton onClick={onClose} />
         </div>
         {sent ? (
-          <div style={{ marginTop: 12 }}><Notice tone="good">{t("bk_sent")}</Notice></div>
+          <div style={{ marginTop: 14 }}>
+            <Notice tone="good">{t("bk_sent")}</Notice>
+            <div style={{ marginTop: 12 }}><Btn full kind="ghost" onClick={onClose}>{t("w_back")}</Btn></div>
+          </div>
         ) : (
           <>
-            <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>{t("bk_sub")}</p>
+            <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6, margin: "10px 0 0" }}>{t("bk_sub")}</p>
+
+            <div style={head}><span style={num}>1</span>{t("bk_what")}</div>
+            <input style={{ ...input, marginBottom: 8 }} value={what} maxLength={120} placeholder={t("bk_what_ph")} aria-label={t("bk_what")}
+                   onChange={(e) => setWhat(e.target.value)} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...input, flex: 1 }} value={pay} inputMode="numeric" maxLength={7} placeholder={t("bk_pay")} aria-label={t("bk_pay")}
+                     onChange={(e) => setPay(e.target.value.replace(/\D/g, ""))} />
+            </div>
             {rates.length > 0 && (
               <>
-                <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("rt_choose")}</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, margin: "10px 0 6px" }}>{t("rt_choose")}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {rates.map((r) => (
                     <button key={r.id} onClick={() => setRate(rate && rate.id === r.id ? null : r)} aria-pressed={!!rate && rate.id === r.id} style={pill(!!rate && rate.id === r.id)}>
                       {r.label} · {rateText(r, t)}
@@ -261,15 +303,27 @@ export function BookingSheet({ api, row, onClose }) {
                 </div>
               </>
             )}
-            <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("bk_period")}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+
+            <div style={head}><span style={num}>2</span>{t("bk_when")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              {[["now", "bk_now"], ["1h", "bk_1h"], ["tmr", "bk_tmr"], ["pick", "bk_pick"]].map(([k, key]) => (
+                <button key={k} onClick={() => quick(k)} aria-pressed={whenKey === k} style={pill(whenKey === k)}>{t(key)}</button>
+              ))}
+            </div>
+            {whenKey === "pick" && (
+              <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
+                     onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 4 }} />
+            )}
+
+            <div style={head}><span style={num}>3</span>{t("bk_period")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {LENGTHS.map((m) => (
                 <button key={m} onClick={() => { setCustom(false); setMins(m); }} style={pill(!custom && mins === m)}>{fmtLength(m, t)}</button>
               ))}
               <button onClick={() => setCustom(true)} style={pill(custom)}>{t("bk_custom")}</button>
             </div>
             {custom && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
                 <input style={{ ...input, flex: 1 }} inputMode="numeric" maxLength={5} value={amount} placeholder={t("bk_amount")} aria-label={t("bk_amount")}
                        onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))} />
                 <select style={{ ...input, flex: 1 }} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>
@@ -277,13 +331,22 @@ export function BookingSheet({ api, row, onClose }) {
                 </select>
               </div>
             )}
-            <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("bk_start")}</div>
-            <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
-                   onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 12 }} />
-            <textarea style={{ ...input, width: "100%", minHeight: 80, boxSizing: "border-box", marginBottom: 12 }} maxLength={300}
-                      placeholder={t("bk_note")} value={note} onChange={(e) => setNote(e.target.value)} />
-            {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
-            <Btn full disabled={busy || !ok} onClick={send}>{busy ? "…" : t("bk_send")}</Btn>
+
+            <div style={head}><span style={num}>4</span>{t("bk_where")}</div>
+            <PlaceField value={where} onChange={setWhere} sheetPlace={where || place} />
+
+            {ok && (
+              <div style={{ background: T.brandSoft, borderRadius: 12, padding: "10px 12px", margin: "16px 0 12px", fontSize: 13.5, color: T.ink, lineHeight: 1.6 }}>
+                <b>{what.trim()}</b><br />
+                {fmtWhen(startDate)}{" \u2192 "}{fmtWhen(endDate)} · {fmtLength(total, t)}
+                {pay ? <><br />{"\u20B9"}{pay}</> : null}
+              </div>
+            )}
+            {msg && <div style={{ margin: "12px 0" }}><Notice tone="bad">{msg}</Notice></div>}
+            <div style={{ marginTop: ok ? 0 : 16 }}>
+              <Btn full disabled={busy || !ok} onClick={send}>{busy ? "\u2026" : t("bk_send")}</Btn>
+              {!ok && what.trim().length < 3 && <div style={{ fontSize: 12.5, color: T.inkFaint, textAlign: "center", marginTop: 6 }}>{t("bk_need_what")}</div>}
+            </div>
           </>
         )}
       </div>
