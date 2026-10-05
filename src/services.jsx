@@ -348,8 +348,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     myOrders: () => rpc("services_my_orders", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
     rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
-    bookingRequest: (worker, period, start, note) =>
-      rpc("services_booking_request", { p_worker: worker, p_period: period, p_start: start, p_note: note || null }, true),
+    bookingRequest: (worker, startIso, minutes, note) =>
+      rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
     bookingCancel: (id) => rpc("services_booking_cancel", { p_id: id }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),

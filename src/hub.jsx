@@ -181,28 +181,52 @@ export function ShopJobs({ api, hasListing }) {
 }
 
 // -------------------------------------------------------------- BOOKINGS
-const PERIODS = ["week", "month", "quarter", "year"];
+// Lengths people ask for, in minutes: a few minutes, hours, days, up to a year.
+const LENGTHS = [10, 30, 60, 120, 240, 480, 1440, 10080, 43200, 129600, 525600];
+const UNITS = [["bk_unit_min", 1], ["bk_unit_hr", 60], ["bk_unit_day", 1440]];
+
+// 90 -> "90 min", 120 -> "2 hr", 10080 -> "1 wk": the largest unit that divides evenly.
+export function fmtLength(mins, t) {
+  const n = Number(mins) || 0;
+  const [key, div] = n % 525600 === 0 ? ["bk_u_yr", 525600] : n % 43200 === 0 ? ["bk_u_mo", 43200]
+    : n % 10080 === 0 ? ["bk_u_wk", 10080] : n % 1440 === 0 ? ["bk_u_day", 1440]
+    : n % 60 === 0 ? ["bk_u_hr", 60] : ["bk_u_min", 1];
+  return String(t(key)).replace("{n}", n / div);
+}
+const pad2 = (x) => String(x).padStart(2, "0");
+// A phone's date-time box wants local time as YYYY-MM-DDTHH:MM.
+const localStamp = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
 
 export function BookingSheet({ api, row, onClose }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
-  const [period, setPeriod] = useState("month");
-  const today = new Date().toISOString().slice(0, 10);
-  const [start, setStart] = useState(today);
+  const [mins, setMins] = useState(60);
+  const [custom, setCustom] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [unit, setUnit] = useState(60);
+  const soon = new Date(Date.now() + 5 * 60000);
+  const [start, setStart] = useState(localStamp(soon));
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [sent, setSent] = useState(false);
+  const total = custom ? Math.round(Number(amount || 0) * unit) : mins;
+  const ok = !!start && total >= 5 && total <= 525600;
 
   const send = async () => {
     setBusy(true); setMsg(null);
     try {
-      const r = one(await api.bookingRequest(row.id, period, start, note));
+      const r = one(await api.bookingRequest(row.id, new Date(start).toISOString(), total, note));
       if (r && r.ok) setSent(true);
       else setMsg(r && r.reason === "already_open" ? t("bk_open") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
   };
+  const pill = (on) => ({
+    border: `1px solid ${on ? T.brandDark : T.line}`, borderRadius: 18, padding: "8px 14px", minHeight: 40,
+    background: on ? T.brandSoft : T.white, color: T.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
+  });
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
          style={{ position: "fixed", inset: 0, zIndex: 520, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -217,20 +241,28 @@ export function BookingSheet({ api, row, onClose }) {
           <>
             <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>{t("bk_sub")}</p>
             <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("bk_period")}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-              {PERIODS.map((p) => (
-                <button key={p} onClick={() => setPeriod(p)} style={{
-                  border: `1px solid ${period === p ? T.brandDark : T.line}`, borderRadius: 18, padding: "8px 14px", minHeight: 40,
-                  background: period === p ? T.brandSoft : T.white, color: T.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
-                }}>{t("bk_" + p)}</button>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              {LENGTHS.map((m) => (
+                <button key={m} onClick={() => { setCustom(false); setMins(m); }} style={pill(!custom && mins === m)}>{fmtLength(m, t)}</button>
               ))}
+              <button onClick={() => setCustom(true)} style={pill(custom)}>{t("bk_custom")}</button>
             </div>
+            {custom && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <input style={{ ...input, flex: 1 }} inputMode="numeric" maxLength={5} value={amount} placeholder={t("bk_amount")} aria-label={t("bk_amount")}
+                       onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))} />
+                <select style={{ ...input, flex: 1 }} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>
+                  {UNITS.map(([k, v]) => <option key={k} value={v}>{t(k)}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("bk_start")}</div>
-            <input type="date" min={today} value={start} onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 12 }} />
+            <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
+                   onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 12 }} />
             <textarea style={{ ...input, width: "100%", minHeight: 80, boxSizing: "border-box", marginBottom: 12 }} maxLength={300}
                       placeholder={t("bk_note")} value={note} onChange={(e) => setNote(e.target.value)} />
             {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
-            <Btn full disabled={busy || !start} onClick={send}>{busy ? "…" : t("bk_send")}</Btn>
+            <Btn full disabled={busy || !ok} onClick={send}>{busy ? "…" : t("bk_send")}</Btn>
           </>
         )}
       </div>
@@ -264,8 +296,8 @@ export function MyRequestsSheet({ api, onClose }) {
         {bk.length > 0 && <h2 style={{ ...h2, marginTop: 14 }}>{t("bk_mine")}</h2>}
         {bk.map((b) => (
           <div key={b.id} style={card}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{b.other_name} · {t("bk_" + b.period)}</div>
-            <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("bk_start")}: {b.start_on}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{b.other_name}{b.duration_mins ? ` · ${fmtLength(b.duration_mins, t)}` : ""}</div>
+            <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("bk_start")}: {b.start_at ? fmtWhen(b.start_at) : b.start_on}</div>
             {b.note && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 3 }}>{b.note}</div>}
             <div style={{ fontSize: 13.5, fontWeight: 800, color: b.status === "accepted" ? T.green : T.brandDark, marginTop: 4 }}>{t("bk_status_" + b.status)}</div>
             {b.other_phone && <a href={`tel:${b.other_phone}`} style={{ ...linkBtn(T.green), marginTop: 8 }}>{b.other_phone}</a>}
