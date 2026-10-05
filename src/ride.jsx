@@ -152,7 +152,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           </div>
         </div>
         {!accepted && <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={null} vehicle="any"
-                                     onlineIds={new Set(online.map((d) => d.id))} fares={fares} trip={null} />}
+                                     onlineIds={new Set(online.map((d) => d.id))} onlineRows={online} fares={fares} trip={null} />}
       </div>
     );
   }
@@ -219,7 +219,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
 
       <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={vehicles.map((v) => v.slug)} vehicle={vehicle}
-                     onlineIds={new Set(online.map((d) => d.id))} fares={fares} trip={trip} />
+                     onlineIds={new Set(online.map((d) => d.id))} onlineRows={online} fares={fares} trip={trip} />
 
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "24px 0 10px" }}>{t("rd_online")}</h2>
       {online.length === 0 ? (

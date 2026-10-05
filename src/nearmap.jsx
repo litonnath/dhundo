@@ -58,10 +58,12 @@ function DriverMap({ me, pins, height }) {
   return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
 }
 
-export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, fares, trip, height = 250 }) {
+export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onlineRows = [], fares, trip, height = 250 }) {
   const { t, lang } = useI18n();
   const [rows, setRows] = useState(null);
   const [pos, setPos] = useState({});
+  const onlineIdsRef = useRef([]);
+  onlineIdsRef.current = onlineRows.map((r) => r && r.id).filter(Boolean);
   useEffect(() => {
     if (!pick || typeof pick.lat !== "number") { setRows(null); return undefined; }
     let live = true;
@@ -70,7 +72,7 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, far
         const list = many(await api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 40, state }));
         if (!live) return;
         setRows(list);
-        const ids = list.map((r) => r.id).filter(Boolean).slice(0, 25);
+        const ids = [...new Set([...onlineIdsRef.current, ...list.map((r) => r.id)])].filter(Boolean).slice(0, 25);
         if (ids.length) {
           const got = many(await api.publicPositions(ids));
           if (live) { const o = {}; got.forEach((g) => { o[g.id] = g; }); setPos(o); }
@@ -78,9 +80,13 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, far
       } catch (_) { if (live) setRows([]); }
     })();
     return () => { live = false; };
-  }, [api, pick && pick.lat, pick && pick.lng, state]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, pick && pick.lat, pick && pick.lng, state, onlineRows.map((r) => r && r.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!pick || typeof pick.lat !== "number") return null;
-  const shown = (rows || []).filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
+  // Drivers who are online right now are always included, even when the
+  // ordinary search did not return them.
+  const have = new Set((rows || []).map((r) => r.id));
+  const merged = (rows || []).concat(onlineRows.filter((r) => r && r.id && !have.has(r.id)));
+  const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
   const sorted = shown.slice().sort((a, b) => (onlineIds.has(b.id) ? 1 : 0) - (onlineIds.has(a.id) ? 1 : 0)
     || (Number(a.distance_km ?? 1e9) - Number(b.distance_km ?? 1e9)));
   const pins = sorted.filter((r) => pos[r.id]).map((r) => ({
