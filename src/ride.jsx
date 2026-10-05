@@ -27,7 +27,13 @@ const VEHICLES = [["any", "rd_any", "search"], ["bike", "rd_bike", "drivers"], [
 
 export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = [] }) {
   const { t, lang } = useI18n();
-  const vehicles = trades.filter((x) => x.group_name === "Drivers");
+  const allVeh = trades.filter((x) => x.group_name === "Drivers");
+  // Travel (bike, auto, car) is a different errand from hiring a machine for
+  // work (JCB, truck, tractor, crane): no destination, a place to work at.
+  const isTravel = (x) => /\b(bike|auto|car|cab|taxi|rickshaw|toto|scooter|e-?rickshaw)\b/i.test(`${x.slug} ${x.name_en || ""}`);
+  const [mode, setMode] = useState("travel");
+  const hire = mode === "hire";
+  const vehicles = allVeh.filter((x) => (hire ? !isTravel(x) : isTravel(x)));
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [drop, setDrop] = useState(null);
@@ -80,12 +86,12 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
-    if (!pick || typeof pick.lat !== "number" || !placeText(drop)) { setMsg(t("rd_need_loc")); return; }
+    if (!pick || typeof pick.lat !== "number" || (!hire && !placeText(drop))) { setMsg(t("rd_need_loc")); return; }
     setBusy(true); setMsg(null); setFinished(false);
     try {
       const r = one(await api.rideRequest(
         { text: placeText(pick), lat: pick.lat, lng: pick.lng },
-        { text: placeText(drop), lat: drop.lat, lng: drop.lng },
+        hire ? { text: placeText(pick), lat: pick.lat, lng: pick.lng } : { text: placeText(drop), lat: drop.lat, lng: drop.lng },
         vehicle, fare === "" ? null : Number(fare)));
       if (r && r.ok) loadRide();
       else setMsg(r && r.reason === "already_open" ? t("rd_open") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
@@ -137,8 +143,17 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0 14px" }}>{t("rd_title")}</h1>
       {finished && <div style={{ marginBottom: 12 }}><Notice tone="good">{t("rd_done")}</Notice></div>}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {[["travel", "rd_mode_travel"], ["hire", "rd_mode_hire"]].map(([k, key]) => (
+          <button key={k} onClick={() => { setMode(k); setVehicle("any"); }} aria-pressed={mode === k} style={{
+            flex: 1, minHeight: 46, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 14.5,
+            border: `2px solid ${mode === k ? T.brandDark : T.line}`, background: mode === k ? T.brandDark : T.white, color: mode === k ? "#fff" : T.ink,
+          }}>{t(key)}</button>
+        ))}
+      </div>
+      {hire && <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_hire_hint")}</p>}
       <div style={{ ...card, padding: "14px 14px 16px" }}>
-        <Label dot="#16A34A" text={t("rd_pick")} />
+        <Label dot="#16A34A" text={hire ? t("rd_hire_where") : t("rd_pick")} />
         <PlaceField value={pick} onChange={setPick} sheetPlace={pick || place} />
         {geo.supported && (
           <button onClick={here} disabled={geo.state === "locating"} style={{
@@ -146,9 +161,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
             color: T.brandDark, fontWeight: 700, fontSize: 13.5, padding: "8px 0 2px", minHeight: 40, fontFamily: "inherit",
           }}><Icon name="crosshair" size={16} /> {geo.state === "locating" ? "…" : t("rd_here")}</button>
         )}
-        <div style={{ height: 12 }} />
-        <Label dot="#DC2626" text={t("rd_drop")} />
-        <PlaceField value={drop} onChange={setDrop} sheetPlace={drop || place} />
+        {!hire && (<>
+          <div style={{ height: 12 }} />
+          <Label dot="#DC2626" text={t("rd_drop")} />
+          <PlaceField value={drop} onChange={setDrop} sheetPlace={drop || place} />
+        </>)}
       </div>
 
       <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
@@ -172,7 +189,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
              onChange={(e) => setFare(e.target.value.replace(/\D/g, ""))} />
       <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
-      <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t("rd_find") : t("nav_signin")}</Btn>
+      <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
 
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "24px 0 10px" }}>{t("rd_online")}</h2>
       {online.length === 0 ? (
