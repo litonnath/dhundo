@@ -2114,23 +2114,20 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <Icon name="pin" size={14} style={{ color: T.inkFaint }} />
-              {[row.locality, cityShown].filter(Boolean).join(", ")}
+              {[row.locality, cityShown].filter(Boolean).join(", ") || [row.pincode, row.state].filter(Boolean).join(", ")}
             </span>
-            {/* Same town or same PIN code: said in words, not as a number
-                of km. Positions inside a town are often rough, and "18 km"
-                between two people in Panisagar is simply wrong. */}
-            {nearLabel ? (
-              <>
-                {dot}
-                <span style={{ fontWeight: 800, color: T.green }}>{nearLabel}</span>
-                {roadText && (<>{dot}<span style={{ fontWeight: 700, color: T.brandDark }}>{roadText}</span></>)}
-              </>
-            ) : (distance || roadText) && (
+            {/* The distance in km first, whenever there is one. "Same PIN" or
+                "same town" is only a note beside it, or all there is when no
+                distance can be measured. */}
+            {(distance || roadText) ? (
               <>
                 {dot}
                 <span style={{ fontWeight: 700, color: T.brandDark }}>{distanceText}</span>
+                {nearLabel && (<>{dot}<span style={{ fontWeight: 800, color: T.green }}>{nearLabel}</span></>)}
               </>
-            )}
+            ) : nearLabel ? (
+              <>{dot}<span style={{ fontWeight: 800, color: T.green }}>{nearLabel}</span></>
+            ) : null}
           </div>
         </div>
       </div>
