@@ -58,6 +58,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
   const { t, lang } = useI18n();
   const [type, setType] = useState(null);
   const [oq, setOq] = useState("");
+  const [grp, setGrp] = useState(null);
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
     const on = () => setWide(window.innerWidth >= 600);
@@ -82,11 +83,43 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
       if (!g) { g = { g: x.group_name, items: [] }; byGroup.push(g); }
       g.items.push({ key: x.slug, label: tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
     });
+    const searching = oq.trim().length > 0;
+    // Worker or Helper has many trades: pick the kind of work first, like the
+    // other side does, then the exact trade.
+    if (picking === "worker" && byGroup.length > 1 && !grp && !searching) {
+      return (
+        <>
+          <TileArt k={picking} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(meta[4])}</h2>
+          <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("offer_what")}</p>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+            {byGroup.map((g) => {
+              const st = groupStyle(g.g);
+              return (
+                <button key={g.g} onClick={() => setGrp(g.g)} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 10px 14px", borderRadius: 14,
+                  border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <span style={{ width: 58, height: 58, borderRadius: "50%", background: st.fg, color: "#fff", display: "flex",
+                                 alignItems: "center", justifyContent: "center", boxShadow: `0 4px 10px ${st.fg}44` }}>
+                    <Icon name={st.icon} size={28} />
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{groupLabel(g.g, lang)}</span>
+                  <span style={{ fontSize: 12.5, color: T.inkSoft }}>{g.items.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      );
+    }
+    const shown = grp && !searching ? byGroup.filter((g) => g.g === grp) : byGroup;
     return (
       <SubCategories
-        art={picking} title={t(meta[4])} sub={t("offer_what")} query={oq}
-        sections={byGroup.map((g) => ({ title: byGroup.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
-                                         icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
+        art={grp && !searching ? null : picking} title={grp && !searching ? groupLabel(grp, lang) : t(meta[4])}
+        sub={t("offer_what")} query={oq}
+        sections={shown.map((g) => ({ title: shown.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
+                                      icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
         onPick={(slug) => onPick(picking, slug)} />
     );
   })();
@@ -94,7 +127,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
   const body = picking ? (
     <div style={{ width: "100%" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
-        <button onClick={() => { setType(null); setOq(""); }} style={{
+        <button onClick={() => { if (grp) { setGrp(null); setOq(""); } else { setType(null); setOq(""); } }} style={{
           display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`, borderRadius: 20,
           padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark,
         }}><Icon name="back" size={16} /> {t("w_back")}</button>
@@ -247,18 +280,26 @@ export const vividFor = (key) => {
   return VIVID[h % VIVID.length];
 };
 const ICON_RULES = [
-  [/tea|snack|chai/, "teacup"], [/bakery|sweet|cake|mithai/, "cake"], [/fast food|biryani|burger|pizza|momo|roll/, "burger"],
-  [/dhaba|curry|meal/, "pot"], [/tiffin|home food|lunch/, "tiffin"], [/cater/, "cloche"], [/hotel|lodge|resort/, "bed"],
-  [/homestay|guest|house stay|stay/, "home"], [/restaurant|food|canteen|mess/, "cutlery"],
-  [/paint/, "roller"], [/cement/, "bag"], [/brick/, "bricks"], [/steel|rod|tmt|iron/, "rods"], [/pipe|tank/, "pipes"],
-  [/tile|marble|granite/, "tiles"], [/electric|wire|bulb|light/, "bolt"], [/sanitary|plumbing|bath/, "tap"],
-  [/ply|timber|wood|door/, "timber"], [/glass|alumin/, "glass"], [/tin|roof/, "sheets"], [/sand|stone|gravel|chips/, "bricks"],
-  [/hardware|tool/, "repairs"],
-  [/electrician|wiring/, "bolt"], [/plumber/, "tap"], [/painter|polish/, "roller"], [/carpenter|furniture|wood/, "timber"],
-  [/mason|rajmistri|construction|labour|helper/, "bricks"], [/tailor|barber|salon|beauty/, "scissors"],
-  [/maid|clean|sweep|house\s?keep|domestic|cook|chef/, "broom"], [/garden|plant|farm/, "leaf"],
-  [/photo|camera|video/, "camera"], [/security|guard/, "shield"], [/welder|fitter|mechanic|ac |repair/, "repairs"],
-  [/driver|rider|taxi|auto|toto/, "drivers"], [/event|decor|tent|dj/, "events"],
+  // food places and food work
+  [/tea|snack|chai/, "teacup"], [/bakery|sweet|halwai|mithai|cake/, "cake"], [/fast food|biryani|burger|pizza|momo/, "burger"],
+  [/dhaba|curry/, "pot"], [/tiffin|lunch/, "tiffin"], [/cater/, "cloche"],
+  [/cook|chef|waiter|serving|restaurant|canteen|mess|food/, "cutlery"], [/hotel|lodge|resort/, "bed"], [/homestay|guest/, "home"],
+  // home and care
+  [/security|guard/, "shield"], [/garden|mali|plant/, "leaf"], [/maid|housekeep|clean|sweep/, "broom"],
+  [/nanny|child|elder|attendant|care/, "heart"], [/laundry|iron/, "shirt"], [/pest/, "bug"], [/tailor/, "scissors"],
+  [/beautician|makeup/, "sparkle"], [/barber|salon/, "scissors"], [/packers|movers/, "bag"],
+  // building
+  [/car wash/, "drop"], [/mason|rajmistri/, "bricks"], [/carpenter|centering|shuttering|furniture|ply|timber|wood|door/, "timber"],
+  [/electrician|wiring|electric|wire|bulb|light/, "bolt"], [/plumb|sanitary|bath/, "tap"],
+  [/painter|painting|polish|waterproof|denting|paint/, "roller"], [/welder|grill|hardware|tool/, "repairs"],
+  [/tile|marble|granite/, "tiles"], [/pop|ceiling|\btin\b|roof|shed/, "sheets"], [/contractor|labour|helper/, "construction"],
+  [/borewell|pump|pipe|tank/, "pipes"], [/glass|alumin/, "glass"], [/cement/, "bag"], [/brick|sand|stone|gravel|chips/, "bricks"],
+  [/steel|rod|tmt|iron/, "rods"],
+  // repairs, vehicles, events
+  [/\bac\b|fridge|refrigerator|cooling/, "snow"], [/washing machine|appliance/, "repairs"], [/mobile|phone/, "phone"],
+  [/computer|laptop/, "laptop"], [/cctv|photo|video|drone|camera/, "camera"], [/inverter|solar|purohit|priest|pandit/, "sun"],
+  [/car mechanic|car\b/, "drivers"], [/bike|scooter|tyre|puncture/, "vehicle"],
+  [/decor|tent/, "events"], [/\bdj\b|sound/, "music"], [/driver|rider|taxi|auto|toto/, "drivers"],
 ];
 export function tradeIcon(tr, fallback) {
   const k = `${tr.name_en || ""} ${tr.slug || ""}`.toLowerCase();
@@ -339,4 +380,4 @@ const iconBox = (bg, fg) => ({
   width: 42, height: 42, borderRadius: 11, background: bg, color: fg, flexShrink: 0, boxShadow: "0 3px 8px rgba(15,20,25,0.18)",
   display: "flex", alignItems: "center", justifyContent: "center",
 });
-const labelStyle = { fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0 };
+const labelStyle = { fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, minWidth: 0, overflowWrap: "anywhere" };
