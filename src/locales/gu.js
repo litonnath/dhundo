@@ -463,7 +463,7 @@ export default {
   home_worker: "કારીગર કે મદદગાર",
   home_ride: "સવારી",
   home_shop: "દુકાન",
-  home_eat: "ખાવું",
+  home_eat: "ખાવું અને ઓર્ડર",
   home_partner: "સાથી",
   home_soon: "જલ્દી આવે છે",
   start_title: "તમે શું કરવા માંગો છો?",

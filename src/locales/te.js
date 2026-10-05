@@ -463,7 +463,7 @@ export default {
   home_worker: "పనివాడు లేదా సహాయకుడు",
   home_ride: "ప్రయాణం",
   home_shop: "దుకాణం",
-  home_eat: "భోజనం",
+  home_eat: "భోజనం & ఆర్డర్",
   home_partner: "భాగస్వామి",
   home_soon: "త్వరలో వస్తోంది",
   start_title: "మీరు ఏమి చేయాలనుకుంటున్నారు?",

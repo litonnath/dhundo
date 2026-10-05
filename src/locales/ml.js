@@ -463,7 +463,7 @@ export default {
   home_worker: "പണിക്കാരൻ അല്ലെങ്കിൽ സഹായി",
   home_ride: "യാത്ര",
   home_shop: "കട",
-  home_eat: "ഭക്ഷണം",
+  home_eat: "ഭക്ഷണം & ഓർഡർ",
   home_partner: "പങ്കാളി",
   home_soon: "ഉടൻ വരുന്നു",
   start_title: "നിങ്ങൾ എന്താണ് ചെയ്യാൻ ആഗ്രഹിക്കുന്നത്?",

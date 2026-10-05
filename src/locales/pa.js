@@ -463,7 +463,7 @@ export default {
   home_worker: "ਕਾਰੀਗਰ ਜਾਂ ਮਦਦਗਾਰ",
   home_ride: "ਸਵਾਰੀ",
   home_shop: "ਦੁਕਾਨ",
-  home_eat: "ਖਾਣਾ",
+  home_eat: "ਖਾਣਾ ਤੇ ਆਰਡਰ",
   home_partner: "ਸਾਥੀ",
   home_soon: "ਜਲਦੀ ਆ ਰਿਹਾ ਹੈ",
   start_title: "ਤੁਸੀਂ ਕੀ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?",
