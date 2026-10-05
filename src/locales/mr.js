@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "नको असलेल्या वस्तू विका",
   launch_title: "तुम्ही काय शोधत आहात?",
   launch_back: "होम",
+  offer_what: "तुम्ही नेमके काय करता?",
   st_open: "उघडे",
   st_closed: "बंद",
   st_opens: "{t} ला उघडेल",

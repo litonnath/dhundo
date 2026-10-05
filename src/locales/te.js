@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "అవసరం లేని వస్తువులను అమ్మండి",
   launch_title: "మీరు దేని కోసం చూస్తున్నారు?",
   launch_back: "హోమ్",
+  offer_what: "మీరు సరిగ్గా ఏమి చేస్తారు?",
   st_open: "తెరిచి ఉంది",
   st_closed: "మూసివేశారు",
   st_opens: "{t}కి తెరుస్తారు",

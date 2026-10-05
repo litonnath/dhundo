@@ -1217,18 +1217,18 @@ const bigInput = {
   ...input, minHeight: 54, fontSize: 16.5, padding: "14px 15px", borderRadius: 12,
 };
 
-function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace, startGroup = null }) {
+function ListingForm({ api, trades, user, isAdmin, onDone, onBack, place, setPlace, startGroup = null, startTrade = null }) {
   const consent = useConsent();
   const { t, lang } = useI18n();
   const geo = useMyLocation();
 
   const [step, setStep] = useState(1);
-  const [group, setGroup] = useState(startGroup);
+  const [group, setGroup] = useState(() => (startTrade && (trades.find((x) => x.slug === startTrade) || {}).group_name) || startGroup);
   // A list, not a single value. A mistri who also tiles was previously
   // choosing which half of his work to advertise at the moment he signed
   // up -- and most people never come back to fix that. The FIRST pick is
   // the main trade; the rest become other_trades.
-  const [picked, setPicked] = useState([]);
+  const [picked, setPicked] = useState(() => (startTrade && trades.some((x) => x.slug === startTrade) ? [startTrade] : []));
   const [f, setF] = useState(() => ({
     // From the account profile, when there is one. Editable: a shop may be
     // listed under somebody else's name.
@@ -2461,6 +2461,7 @@ export default function ServicesPage({
   const [installOpen, setInstallOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [offerPick, setOfferPick] = useState(false);
+  const [offerTrade, setOfferTrade] = useState(null);
   const [locOpen, setLocOpen] = useState(false);
   // Buy & Sell: the ad open on top of whatever tab, and the ad being edited.
   // A shared link (?item=<id>) opens that ad straight away.
@@ -2807,11 +2808,11 @@ export default function ServicesPage({
           onOffer={() => setStart("offer")} />
       )}
       {!langGate && !signedIn && start === "offer" && (
-        <OfferTypeGate
+        <OfferTypeGate trades={trades}
           onBack={() => setStart("role")}
-          onPick={(type) => {
+          onPick={(type, trade) => {
             try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
-            setOfferType(type);
+            setOfferType(type); setOfferTrade(trade || null);
             finishStart();
             if (type === "sell") { setTab("sell"); } else { setTab("add"); }
             onSignIn && onSignIn();
@@ -2870,11 +2871,11 @@ export default function ServicesPage({
       )}
 
       {tab === "browse" && offerPick && (
-        <OfferTypeGate inline
+        <OfferTypeGate inline trades={trades}
           onBack={() => setOfferPick(false)}
-          onPick={(type) => {
+          onPick={(type, trade) => {
             try { window.localStorage.setItem("dhundo_offer_type", type); } catch (_) {}
-            setOfferType(type);
+            setOfferType(type); setOfferTrade(trade || null);
             setOfferPick(false);
             if (type === "sell") { setTab("sell"); } else { setTab("add"); }
             if (!signedIn) onSignIn && onSignIn();
@@ -2976,6 +2977,7 @@ export default function ServicesPage({
               ) : (
                 <ListingForm api={api} trades={trades} user={user} isAdmin={isAdmin}
                              startGroup={{ ride: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
+                             startTrade={offerTrade}
                              place={place} setPlace={setPlace}
                              onBack={() => setTab(isAdmin ? "browse" : "work")}
                              onDone={() => setReloadKey((k) => k + 1)} />

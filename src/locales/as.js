@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "নালাগিলে জিনিস বিক্ৰী কৰক",
   launch_title: "আপুনি কি বিচাৰি আছে?",
   launch_back: "হোম",
+  offer_what: "আপুনি ঠিক কি কৰে?",
   st_open: "মুকলি",
   st_closed: "বন্ধ",
   st_opens: "{t} বজাত মুকলি হ’ব",

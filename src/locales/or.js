@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ଦରକାର ନଥିବା ଜିନିଷ ବିକନ୍ତୁ",
   launch_title: "ଆପଣ କଣ ଖୋଜୁଛନ୍ତି?",
   launch_back: "ହୋମ୍",
+  offer_what: "ଆପଣ ଠିକ୍ କଣ କରନ୍ତି?",
   st_open: "ଖୋଲା",
   st_closed: "ବନ୍ଦ",
   st_opens: "{t} ରେ ଖୋଲିବ",

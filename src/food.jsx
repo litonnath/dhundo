@@ -10,6 +10,7 @@ import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink } from "./market.jsx";
 import { AlertsCard } from "./alerts.jsx";
+import { SubCategories } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -57,6 +58,8 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const { t, lang } = useI18n();
   const eat = kind === "eat";
   const [chip, setChip] = useState(null);
+  // false = the sub-category tiles, like the Worker screen; true = the places.
+  const [picked, setPicked] = useState(false);
   const [q, setQ] = useState("");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,9 +96,32 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const shown = rows
     .filter((r) => !q.trim() || String(r.display_name || "").toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
+  if (!picked) {
+    const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
+    return (
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
+        <SubCategories
+          art={eat ? "need-eat" : "shop"} title={t(eat ? "st_eat_title" : "st_shop_title")} sub={t("what_need")}
+          icon={gs.icon} fg={gs.fg} bg={gs.bg}
+          items={kinds.map((x) => ({ key: x.slug, label: nameOf(x) }))}
+          onPick={(slug) => { setChip(slug); setPicked(true); }}
+          onAll={() => { setChip(null); setPicked(true); }} allLabel={t("st_all")} />
+        {user && user.id && (
+          <button onClick={() => setOrdersOpen(true)} style={{
+            border: `1px solid ${T.line}`, background: T.white, borderRadius: 20, padding: "8px 14px", minHeight: 40, marginTop: 6,
+            fontWeight: 700, fontSize: 14, color: T.brandDark, cursor: "pointer", fontFamily: "inherit",
+          }}>{t("st_orders")}</button>
+        )}
+        {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
+      </div>
+    );
+  }
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
-      <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 260, marginBottom: 14 }} />
+      <button onClick={() => setPicked(false)} style={{
+        display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
+        color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "10px 0 6px", minHeight: 44, fontFamily: "inherit",
+      }}><Icon name="back" size={17} /> {t(eat ? "st_eat_title" : "st_shop_title")}</button>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
         <h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t(eat ? "st_eat_title" : "st_shop_title")}</h1>
         {user && user.id && (

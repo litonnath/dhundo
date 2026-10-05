@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "જે વસ્તુ કામની નથી તે વેચો",
   launch_title: "તમે શું શોધી રહ્યા છો?",
   launch_back: "હોમ",
+  offer_what: "તમે બરાબર શું કરો છો?",
   st_open: "ખુલ્લું",
   st_closed: "બંધ",
   st_opens: "{t} ખુલશે",

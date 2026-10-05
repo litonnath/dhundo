@@ -226,7 +226,11 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
   const [q, setQ] = useState("");
   // "purana bike" or "পুরনো মোবাইল" is a category, not words to find in a
   // title; anything else is searched as typed.
-  const cat = itemCategoryFor(q);
+  const typedCat = itemCategoryFor(q);
+  // Worker-style: category tiles first, then the ads for the one you pick.
+  const [catPick, setCatPick] = useState(undefined);
+  const cat = typedCat || (catPick === undefined ? null : catPick);
+  const showTiles = catPick === undefined && !q.trim();
   return (
     <div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
@@ -258,8 +262,34 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
         </div>
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
-        <MarketHome api={api} place={place} state={state} query={q} category={cat}
-                    onOpenItem={onOpenItem} onSell={onSell} />
+        {showTiles ? (
+          <>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t("need_buy")}</h2>
+            <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
+            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+              {[{ key: null, emoji: "🔎", label: t("st_all") }, ...ITEM_CATEGORIES.map((c) => ({ key: c.key, emoji: c.emoji, label: t("mk_cat_" + c.key) }))].map((c) => (
+                <button key={c.key || "all"} onClick={() => setCatPick(c.key)} style={{
+                  display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px", minHeight: 62, borderRadius: 12,
+                  border: `1px solid ${c.key ? T.line : T.brandDark}`, background: c.key ? T.white : T.brandSoft, cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  <span style={{ width: 38, height: 38, borderRadius: 10, background: "#F3E8FD", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{c.emoji}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{c.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {catPick !== undefined && !q.trim() && (
+              <button onClick={() => setCatPick(undefined)} style={{
+                display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
+                color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "0 0 10px", minHeight: 40, fontFamily: "inherit",
+              }}><Icon name="back" size={17} /> {t("need_buy")}</button>
+            )}
+            <MarketHome api={api} place={place} state={state} query={q} category={cat}
+                        onOpenItem={onOpenItem} onSell={onSell} />
+          </>
+        )}
       </div>
     </div>
   );

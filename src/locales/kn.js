@@ -479,6 +479,7 @@ export default {
   offer_sub_sell: "ಬೇಡವಾದ ವಸ್ತುಗಳನ್ನು ಮಾರಿ",
   launch_title: "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ?",
   launch_back: "ಮುಖಪುಟ",
+  offer_what: "ನೀವು ನಿಖರವಾಗಿ ಏನು ಮಾಡುತ್ತೀರಿ?",
   st_open: "ತೆರೆದಿದೆ",
   st_closed: "ಮುಚ್ಚಿದೆ",
   st_opens: "{t}ಕ್ಕೆ ತೆರೆಯುತ್ತದೆ",

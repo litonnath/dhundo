@@ -4,8 +4,8 @@
 // remembered, so these show once.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
-import { T, Icon } from "./ui.jsx";
-import { useI18n } from "./i18n.jsx";
+import { T, Icon, groupStyle, groupLabel } from "./ui.jsx";
+import { useI18n, tradeName } from "./i18n.jsx";
 import { TileArt } from "./scenes.jsx";
 
 // Centred both ways: on a wide screen the choices sit in the middle, not in a
@@ -54,8 +54,9 @@ export function StartGate({ onNeed, onOffer }) {
 }
 
 // Screen 2, for people who offer: what kind of business is it.
-export function OfferTypeGate({ onPick, onBack, inline = false }) {
-  const { t } = useI18n();
+export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
+  const { t, lang } = useI18n();
+  const [type, setType] = useState(null);
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
     const on = () => setWide(window.innerWidth >= 600);
@@ -69,16 +70,36 @@ export function OfferTypeGate({ onPick, onBack, inline = false }) {
     ["eat", "food", "#FDF3DC", "#A16207", "home_eat", "offer_sub_eat"],
     ["sell", "tag", "#F3E8FD", "#7E22CE", "offer_sell", "offer_sub_sell"],
   ];
+  // Second step, like the Worker screen on the other side: what exactly do you do.
+  const picking = type && tradesFor(type, trades).length > 0 ? type : null;
+  const step2 = picking && (() => {
+    const list = tradesFor(picking, trades);
+    const meta = types.find((x) => x[0] === picking);
+    const byGroup = [];
+    list.forEach((x) => {
+      let g = byGroup.find((y) => y.g === x.group_name);
+      if (!g) { g = { g: x.group_name, items: [] }; byGroup.push(g); }
+      g.items.push({ key: x.slug, label: tradeName(x, lang) });
+    });
+    return (
+      <SubCategories
+        art={picking} title={t(meta[4])} sub={t("offer_what")}
+        sections={byGroup.map((g) => ({ title: byGroup.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
+                                         icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
+        onPick={(slug) => onPick(picking, slug)} />
+    );
+  })();
   const body = (
     <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px 120px" : "20px 16px 34px", boxSizing: "border-box" }}>
-      <button onClick={onBack} style={{
+      <button onClick={() => (picking ? setType(null) : onBack())} style={{
         display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
         color: T.brandDark, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 40, marginBottom: 6,
       }}><Icon name="back" size={16} /> {t("w_back")}</button>
+      {step2 || (<>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("offer_title")}</h1>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
         {types.map(([key, icon, bg, fg, title, sub]) => (
-          <button key={key} onClick={() => onPick(key)} style={{
+          <button key={key} onClick={() => (key === "worker" || key === "shop" || key === "eat" ? setType(key) : onPick(key))} style={{
             display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
             borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
           }}>
@@ -94,6 +115,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false }) {
           </button>
         ))}
       </div>
+      </>)}
     </div>
   );
   if (inline) return body;
@@ -201,29 +223,48 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
   );
 }
 
-// WHAT DO YOU NEED, for the app somebody chose: only that app's own
-// sub-categories, as plain rows with a line icon. No illustrations.
-export function SubCategories({ title, icon, fg, bg, items, onPick, onAll, allLabel, art }) {
+// Which trades belong to which front tile, so every screen agrees.
+const NOT_WORKER = ["Drivers", "Suppliers", "Eat & Stay"];
+export function tradesFor(kind, trades) {
+  if (kind === "eat") return trades.filter((x) => x.group_name === "Eat & Stay");
+  if (kind === "shop") return trades.filter((x) => (x.kind === "supplier" || x.group_name === "Suppliers") && x.group_name !== "Eat & Stay");
+  return trades.filter((x) => x.kind !== "supplier" && !NOT_WORKER.includes(x.group_name));
+}
+
+// WHAT DO YOU NEED / WHAT DO YOU OFFER, for the app somebody chose: only that
+// app's own sub-categories, as plain rows with a line icon (or an emoji for
+// the items). No illustrations. Optional banner on top; optional sections.
+export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPick, onAll, allLabel, art }) {
   const { t } = useI18n();
+  const secs = sections || [{ items }];
   return (
     <div>
-      {art && <TileArt k={art} style={{ borderRadius: 14, aspectRatio: "21 / 8", maxHeight: 190, marginBottom: 14 }} />}
+      {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />}
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>
-      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
-      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-        {onAll && (
+      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{sub || t("what_need")}</p>
+      {onAll && (
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", marginBottom: 10 }}>
           <button onClick={onAll} style={tileStyle(T.brandSoft, T.brandDark)}>
             <span style={iconBox(T.white, T.brandDark)}><Icon name="search" size={20} /></span>
             <span style={labelStyle}>{allLabel}</span>
           </button>
-        )}
-        {items.map((it) => (
-          <button key={it.key} onClick={() => onPick(it.key)} style={tileStyle(T.white, T.line)}>
-            <span style={iconBox(bg, fg)}><Icon name={it.icon || icon} size={20} /></span>
-            <span style={labelStyle}>{it.label}</span>
-          </button>
-        ))}
-      </div>
+        </div>
+      )}
+      {secs.map((sec, si) => (
+        <div key={si} style={{ marginBottom: 14 }}>
+          {sec.title && <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, margin: "6px 0 8px", textTransform: "uppercase", letterSpacing: 0.3 }}>{sec.title}</div>}
+          <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+            {sec.items.map((it) => (
+              <button key={it.key} onClick={() => onPick(it.key)} style={tileStyle(T.white, T.line)}>
+                <span style={iconBox(sec.bg || bg, sec.fg || fg)}>
+                  {it.emoji ? <span style={{ fontSize: 20 }}>{it.emoji}</span> : <Icon name={it.icon || sec.icon || icon} size={20} />}
+                </span>
+                <span style={labelStyle}>{it.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
