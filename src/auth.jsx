@@ -326,8 +326,12 @@ export async function mfaEnroll(cfg, token) {
   const j = await res.json().catch(() => null);
   if (!j || !j.id) throw new Error("MFA_ENROLL_FAILED");
   let qr = j.totp && j.totp.qr_code;
-  // GoTrue sends the picture as an unencoded SVG; some browsers will not draw it as is.
-  if (qr && /^data:image\/svg\+xml;utf-8,/i.test(qr)) qr = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qr.replace(/^data:image\/svg\+xml;utf-8,/i, ""));
+  // GoTrue sends the picture either as raw SVG text or as an unencoded
+  // data URI; neither draws in an <img> as is, so both are encoded here.
+  if (qr) {
+    const raw = /^data:image\/svg\+xml;[^,]*,/i.test(qr) ? qr.replace(/^data:image\/svg\+xml;[^,]*,/i, "") : /<svg/i.test(qr) ? qr : null;
+    if (raw) qr = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(raw);
+  }
   return { id: j.id, qr, secret: j.totp && j.totp.secret, uri: j.totp && j.totp.uri };
 }
 
