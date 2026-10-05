@@ -15,7 +15,7 @@
 // during a bad minute keeps serving it -- and with it, the chunk hashes from
 // that build -- long after the source is fixed. That is how a fault that no
 // longer exists in the code keeps appearing in somebody's browser.
-const CACHE = "services-shell-v4";
+const CACHE = "services-shell-v5";
 const SHELL = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {
@@ -85,6 +85,8 @@ self.addEventListener("push", (e) => {
   e.waitUntil(self.registration.showNotification(d.title || "Dhundo", {
     body: d.body || "", icon: "/icon-192.png", badge: "/icon-192.png",
     tag: d.tag || "dhundo", data: { url: d.url || "/" },
+    requireInteraction: !!d.requireInteraction, renotify: !!d.renotify && !!d.tag,
+    vibrate: d.vibrate || undefined,
   }));
 });
 

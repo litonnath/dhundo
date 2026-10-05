@@ -16,7 +16,7 @@ const h2 = { fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" };
 
 // A short beep and a buzz when a new job arrives, so a rider with the phone
 // in a pocket notices. Both are silently skipped where not allowed.
-function alertNewJob() {
+export function alertNewJob() {
   try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
   try {
     const C = window.AudioContext || window.webkitAudioContext;

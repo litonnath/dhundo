@@ -34,10 +34,21 @@ Deno.serve(async (req) => {
   for (const s of subs || []) {
     const lang = s.lang in OPEN ? s.lang : "en";
     const title = (T[rec.kind] || {})[lang] || (T[rec.kind] || {}).en || "Dhundo";
-    const text = rec.kind === "order_new" && rec.extra ? `₹${rec.extra} · ${OPEN[lang]}` : OPEN[lang];
+    // A ride alert carries "ride id|km to the pickup": the distance goes in the
+    // words, and the ride id makes each request its own notification, so
+    // several waiting at once stack instead of replacing one another.
+    const ride = rec.kind === "ride_new" && rec.extra ? String(rec.extra).split("|") : null;
+    const text = rec.kind === "order_new" && rec.extra ? `₹${rec.extra} · ${OPEN[lang]}`
+      : ride && ride[1] ? `${ride[1]} km · ${OPEN[lang]}` : OPEN[lang];
+    const urgent = rec.kind === "ride_new" || rec.kind === "job_new" || rec.kind === "order_new";
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify({ title, body: text, url: "/", tag: rec.kind }), { TTL: 3600 });
+        JSON.stringify({
+          title, body: text, url: "/",
+          tag: ride ? `ride-${ride[0]}` : rec.kind,
+          // Stays on screen until answered, and buzzes again each time it is repeated.
+          requireInteraction: urgent, renotify: true, vibrate: urgent ? [400, 200, 400, 200, 400] : undefined,
+        }), { TTL: 600, urgency: urgent ? "high" : "normal" });
       sent++;
     } catch (e) {
       // A phone that is gone (410 or 404) is forgotten.

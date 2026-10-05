@@ -14,6 +14,7 @@ import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
 import { NearbyDrivers, PassengerLive, DriverLive } from "./nearmap.jsx";
+import { alertNewJob } from "./hub.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -314,9 +315,24 @@ export function RideRequests({ api, online, trades = [] }) {
   }, [api]);
   useEffect(() => {
     load();
-    const id = setInterval(load, online ? 8000 : 30000);
+    const id = setInterval(load, online ? 6000 : 30000);
     return () => clearInterval(id);
   }, [load, online]);
+
+  // While requests are waiting and nobody has been picked, the phone keeps
+  // beeping and buzzing every few seconds, nearest request first in the list,
+  // until the driver answers, silences it, or the requests are gone.
+  const [muted, setMuted] = useState(false);
+  const sorted = rides.slice().sort((a, b) => Number(a.pick_km) - Number(b.pick_km));
+  const idsKey = sorted.map((r) => r.id).join(",");
+  const busyNow = mine.length > 0;
+  useEffect(() => { setMuted(false); }, [idsKey]);
+  useEffect(() => {
+    if (!online || busyNow || muted || sorted.length === 0) return undefined;
+    alertNewJob();
+    const id = setInterval(alertNewJob, 6000);
+    return () => clearInterval(id);
+  }, [online, busyNow, muted, idsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const accept = async (r) => {
     setBusy(r.id); setMsg("");
@@ -362,8 +378,17 @@ export function RideRequests({ api, online, trades = [] }) {
         <Notice tone="info">{t("jb_offline")}</Notice>
       ) : rides.length === 0 ? (
         <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6 }}>{t("rdr_none")}</div>
-      ) : rides.map((r) => (
-        <div key={r.id} style={card}>
+      ) : (
+        <>
+        {!busyNow && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FFF3D6", border: "1px solid #F3D48A", borderRadius: 12, padding: "9px 12px", margin: "0 0 10px" }}>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 800, color: "#7A4A00" }}>{String(t("rdr_waiting")).replace("{n}", sorted.length)}</span>
+            {!muted && <button onClick={() => setMuted(true)} style={{ minHeight: 40, padding: "0 14px", borderRadius: 20, border: "1.5px solid #B45309", background: "#fff", color: "#7A4A00", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>{t("rdr_silence")}</button>}
+          </div>
+        )}
+        {sorted.map((r, i) => (
+        <div key={r.id} style={{ ...card, border: i === 0 && sorted.length > 1 ? `2px solid ${T.green}` : card.border }}>
+          {i === 0 && sorted.length > 1 && <div style={{ display: "inline-block", fontSize: 11.5, fontWeight: 800, color: "#fff", background: T.green, borderRadius: 6, padding: "2px 8px", marginBottom: 6 }}>{t("rdr_nearest")}</div>}
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.brandDark }}>{String(t("rdr_pick_km")).replace("{n}", r.pick_km)}</span>
             {r.trip_km != null && <span style={{ fontSize: 12.5, color: T.inkFaint }}>{String(t("rdr_trip")).replace("{n}", r.trip_km)}</span>}
@@ -375,7 +400,9 @@ export function RideRequests({ api, online, trades = [] }) {
           </div>
           <Btn full disabled={busy === r.id} onClick={() => accept(r)}>{busy === r.id ? "…" : t("rdr_accept")}</Btn>
         </div>
-      ))}
+        ))}
+        </>
+      )}
     </div>
   );
 }
