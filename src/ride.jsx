@@ -32,10 +32,13 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const allVeh = trades.filter((x) => x.group_name === "Drivers");
   // Travel (bike, auto, car) is a different errand from hiring a machine for
   // work (JCB, truck, tractor, crane): no destination, a place to work at.
-  const isTravel = (x) => /\b(bike|auto|car|cab|taxi|rickshaw|toto|scooter|e-?rickshaw)\b/i.test(`${x.slug} ${x.name_en || ""}`);
+  const isDelivery = (x) => /deliver/i.test(`${x.slug} ${x.name_en || ""}`);
+  const isTravel = (x) => !isDelivery(x) && /\b(bike|auto|car|cab|taxi|rickshaw|toto|scooter|e-?rickshaw)\b/i.test(`${x.slug} ${x.name_en || ""}`);
   const [mode, setMode] = useState("travel");
   const hire = mode === "hire";
-  const vehicles = allVeh.filter((x) => (hire ? !isTravel(x) : isTravel(x)));
+  // A delivery rider is another service altogether, booked by shops through
+  // delivery jobs: not a ride and not a machine for hire.
+  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? !isTravel(x) : isTravel(x)));
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [drop, setDrop] = useState(null);

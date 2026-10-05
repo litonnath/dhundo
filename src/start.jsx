@@ -325,7 +325,7 @@ const NOT_WORKER = ["Drivers", "Suppliers", "Eat & Stay"];
 export function vehicleLabel(tr, lang) {
   const n = tradeName(tr, lang);
   if (lang !== "en" && lang) return n;
-  return String(n).replace(/\s+(driver|operator)\b/i, "").replace(/Delivery rider/i, "Delivery bike");
+  return String(n).replace(/\s+(driver|operator)\b/i, "");
 }
 
 export function tradesFor(kind, trades) {
