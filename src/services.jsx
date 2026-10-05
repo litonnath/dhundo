@@ -1361,9 +1361,10 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   // database (services_trades.requires_vehicle) rather than a group name
   // hardcoded here, so changing which trades need a plate is an UPDATE and
   // not a release. Any of the picked trades needing one is enough.
-  const needsVehicle = picked.some(
-    (slug) => (trades.find((x) => x.slug === slug) || {}).requires_vehicle
-  );
+  const needsVehicle = picked.some((slug) => {
+    const x = trades.find((y) => y.slug === slug) || {};
+    return !!x.requires_vehicle || x.group_name === "Drivers";
+  });
   // Cooks, drivers and domestic help are asked for an ID photo; the flag is
   // the database's (services_trades.requires_id), the group names are the
   // fallback for a trades list that does not carry it yet.
