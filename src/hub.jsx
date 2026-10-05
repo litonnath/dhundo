@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, Icon, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { rateText } from "./rates.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -211,13 +212,20 @@ export function BookingSheet({ api, row, onClose }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [sent, setSent] = useState(false);
+  const [rates, setRates] = useState([]);
+  const [rate, setRate] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.ratesGet(row.id).then((r) => { if (live) setRates(many(r)); }).catch(() => {});
+    return () => { live = false; };
+  }, [api, row.id]);
   const total = custom ? Math.round(Number(amount || 0) * unit) : mins;
   const ok = !!start && total >= 5 && total <= 525600;
 
   const send = async () => {
     setBusy(true); setMsg(null);
     try {
-      const r = one(await api.bookingRequest(row.id, new Date(start).toISOString(), total, note));
+      const r = one(await api.bookingRequest(row.id, new Date(start).toISOString(), total, (rate ? `Rate: ${rate.label} ${rateText(rate, (k) => ({ rt_u_hour: "hour", rt_u_day: "day", rt_u_week: "week", rt_u_month: "month", rt_u_trip: "trip", rt_u_km: "km", rt_u_job: "job" }[k]))}${note ? " · " : ""}` : "") + note));
       if (r && r.ok) setSent(true);
       else setMsg(r && r.reason === "already_open" ? t("bk_open") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
@@ -240,6 +248,19 @@ export function BookingSheet({ api, row, onClose }) {
         ) : (
           <>
             <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>{t("bk_sub")}</p>
+            {rates.length > 0 && (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("rt_choose")}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                  {rates.map((r) => (
+                    <button key={r.id} onClick={() => setRate(rate && rate.id === r.id ? null : r)} aria-pressed={!!rate && rate.id === r.id} style={pill(!!rate && rate.id === r.id)}>
+                      {r.label} · {rateText(r, t)}
+                    </button>
+                  ))}
+                  <button onClick={() => setRate(null)} aria-pressed={!rate} style={pill(!rate)}>{t("rt_other")}</button>
+                </div>
+              </>
+            )}
             <div style={{ fontSize: 14, fontWeight: 700, margin: "6px 0" }}>{t("bk_period")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
               {LENGTHS.map((m) => (

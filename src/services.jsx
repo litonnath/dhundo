@@ -42,6 +42,7 @@ import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
+import { RatesCard } from "./rates.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
@@ -338,6 +339,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       p_kind: o.kind, p_lat: o.lat, p_lng: o.lng, p_trade: o.trade || null,
       p_q: o.q || null, p_radius_km: o.radiusKm || NEAR_KM, p_limit: o.limit || 40,
     }),
+    ratesGet: (workerId) => rpc("services_rates_get", { p_worker: workerId }),
+    myRates: () => rpc("services_my_rates", {}, true),
+    rateSave: (r) => rpc("services_rate_save", { p_id: r.id || null, p_label: r.label, p_unit: r.unit, p_rupees: r.rupees }, true),
+    rateDelete: (id) => rpc("services_rate_delete", { p_id: id }, true),
     storeInfos: (ids) => rpc("services_store_infos", { p_ids: ids }),
     myStore: () => rpc("services_my_store", {}, true),
     setStore: (o) => rpc("services_set_store", {
@@ -3030,10 +3035,10 @@ export default function ServicesPage({
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
             if (!signedIn || !hasListing || isAdmin) return null;
-            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} trades={trades} /><RiderJobs api={api} online={avail.online} /></>;
+            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} trades={trades} /><RatesCard api={api} /><RiderJobs api={api} online={avail.online} /></>;
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
               return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
-            return null;
+            return <RatesCard api={api} />;
           })()}
           avail={avail} signedIn={signedIn} hasListing={hasListing}
           onSignIn={onSignIn}
