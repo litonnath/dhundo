@@ -209,7 +209,6 @@ export function BookingSheet({ api, row, onClose, place }) {
   const [unit, setUnit] = useState(60);
   const [whenKey, setWhenKey] = useState("now");
   const [start, setStart] = useState(localStamp(new Date(Date.now() + 5 * 60000)));
-  const [what, setWhat] = useState("");
   const [pay, setPay] = useState("");
   const [where, setWhere] = useState(() => (place && (place.address || place.area) ? place : null));
   const [busy, setBusy] = useState(false);
@@ -225,7 +224,7 @@ export function BookingSheet({ api, row, onClose, place }) {
   const total = custom ? Math.round(Number(amount || 0) * unit) : mins;
   const startDate = new Date(start);
   const endDate = new Date(startDate.getTime() + total * 60000);
-  const ok = !!start && !Number.isNaN(startDate.getTime()) && total >= 5 && total <= 525600 && what.trim().length >= 3;
+  const ok = !!start && !Number.isNaN(startDate.getTime()) && total >= 5 && total <= 525600;
   const quick = (key) => {
     setWhenKey(key);
     const d = new Date();
@@ -241,7 +240,6 @@ export function BookingSheet({ api, row, onClose, place }) {
     // The owner reads this as one line, so it is kept to plain English.
     const units = { rt_u_hour: "hour", rt_u_day: "day", rt_u_week: "week", rt_u_month: "month", rt_u_trip: "trip", rt_u_km: "km", rt_u_job: "job" };
     const text = [
-      what.trim(),
       rate ? `Rate: ${rate.label} ${rateText(rate, (k) => units[k])}` : "",
       pay ? `Offer: \u20B9${pay}` : "",
       placeText ? `At: ${placeText}` : "",
@@ -283,9 +281,38 @@ export function BookingSheet({ api, row, onClose, place }) {
           <>
             <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6, margin: "10px 0 0" }}>{t("bk_sub")}</p>
 
-            <div style={head}><span style={num}>1</span>{t("bk_what")}</div>
-            <input style={{ ...input, marginBottom: 8 }} value={what} maxLength={120} placeholder={t("bk_what_ph")} aria-label={t("bk_what")}
-                   onChange={(e) => setWhat(e.target.value)} />
+            <div style={head}><span style={num}>1</span>{t("bk_when")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              {[["now", "bk_now"], ["1h", "bk_1h"], ["tmr", "bk_tmr"], ["pick", "bk_pick"]].map(([k, key]) => (
+                <button key={k} onClick={() => quick(k)} aria-pressed={whenKey === k} style={pill(whenKey === k)}>{t(key)}</button>
+              ))}
+            </div>
+            {whenKey === "pick" && (
+              <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
+                     onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 4 }} />
+            )}
+
+            <div style={head}><span style={num}>2</span>{t("bk_period")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+              {LENGTHS.map((m) => (
+                <button key={m} onClick={() => { setCustom(false); setMins(m); }} style={pill(!custom && mins === m)}>{fmtLength(m, t)}</button>
+              ))}
+              <button onClick={() => setCustom(true)} style={pill(custom)}>{t("bk_custom")}</button>
+            </div>
+            {custom && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+                <input style={{ ...input, flex: 1 }} inputMode="numeric" maxLength={5} value={amount} placeholder={t("bk_amount")} aria-label={t("bk_amount")}
+                       onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))} />
+                <select style={{ ...input, flex: 1 }} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>
+                  {UNITS.map(([k, v]) => <option key={k} value={v}>{t(k)}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div style={head}><span style={num}>3</span>{t("bk_where")}</div>
+            <PlaceField value={where} onChange={setWhere} sheetPlace={where || place} />
+
+            <div style={head}><span style={num}>4</span>{t("bk_pay")}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <input style={{ ...input, flex: 1 }} value={pay} inputMode="numeric" maxLength={7} placeholder={t("bk_pay")} aria-label={t("bk_pay")}
                      onChange={(e) => setPay(e.target.value.replace(/\D/g, ""))} />
@@ -304,40 +331,10 @@ export function BookingSheet({ api, row, onClose, place }) {
               </>
             )}
 
-            <div style={head}><span style={num}>2</span>{t("bk_when")}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              {[["now", "bk_now"], ["1h", "bk_1h"], ["tmr", "bk_tmr"], ["pick", "bk_pick"]].map(([k, key]) => (
-                <button key={k} onClick={() => quick(k)} aria-pressed={whenKey === k} style={pill(whenKey === k)}>{t(key)}</button>
-              ))}
-            </div>
-            {whenKey === "pick" && (
-              <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
-                     onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 4 }} />
-            )}
-
-            <div style={head}><span style={num}>3</span>{t("bk_period")}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              {LENGTHS.map((m) => (
-                <button key={m} onClick={() => { setCustom(false); setMins(m); }} style={pill(!custom && mins === m)}>{fmtLength(m, t)}</button>
-              ))}
-              <button onClick={() => setCustom(true)} style={pill(custom)}>{t("bk_custom")}</button>
-            </div>
-            {custom && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-                <input style={{ ...input, flex: 1 }} inputMode="numeric" maxLength={5} value={amount} placeholder={t("bk_amount")} aria-label={t("bk_amount")}
-                       onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))} />
-                <select style={{ ...input, flex: 1 }} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>
-                  {UNITS.map(([k, v]) => <option key={k} value={v}>{t(k)}</option>)}
-                </select>
-              </div>
-            )}
-
-            <div style={head}><span style={num}>4</span>{t("bk_where")}</div>
-            <PlaceField value={where} onChange={setWhere} sheetPlace={where || place} />
 
             {ok && (
               <div style={{ background: T.brandSoft, borderRadius: 12, padding: "10px 12px", margin: "16px 0 12px", fontSize: 13.5, color: T.ink, lineHeight: 1.6 }}>
-                <b>{what.trim()}</b><br />
+                <b>{row.display_name}</b>{row.trade_name ? ` · ${row.trade_name}` : ""}<br />
                 {fmtWhen(startDate)}{" \u2192 "}{fmtWhen(endDate)} · {fmtLength(total, t)}
                 {pay ? <><br />{"\u20B9"}{pay}</> : null}
               </div>
@@ -345,7 +342,6 @@ export function BookingSheet({ api, row, onClose, place }) {
             {msg && <div style={{ margin: "12px 0" }}><Notice tone="bad">{msg}</Notice></div>}
             <div style={{ marginTop: ok ? 0 : 16 }}>
               <Btn full disabled={busy || !ok} onClick={send}>{busy ? "\u2026" : t("bk_send")}</Btn>
-              {!ok && what.trim().length < 3 && <div style={{ fontSize: 12.5, color: T.inkFaint, textAlign: "center", marginTop: 6 }}>{t("bk_need_what")}</div>}
             </div>
           </>
         )}
