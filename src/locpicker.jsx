@@ -113,6 +113,22 @@ const joinUnique = (parts) => {
   }).join(", ");
 };
 
+// The public "where I work" label saved as the listing's locality: the named
+// spot or nearest landmark plus the village, "Deocherra Tila, Panisagar",
+// not the village alone. Only for a spot that was placed exactly; a typed
+// village stays as typed so searches by village keep matching.
+export function workPlace(p) {
+  const area = String((p && p.area) || "").trim();
+  if (!p || !p.exact || !p.address) return area;
+  const skip = new Set([p.state, p.district].filter(Boolean).map((x) => String(x).trim().toLowerCase()));
+  const segs = String(p.address).split(",").map((x) => x.trim().replace(/^near\s+/i, "")).filter(Boolean)
+    .filter((x) => !skip.has(x.toLowerCase()));
+  const head = segs.find((x) => x.toLowerCase() !== area.toLowerCase());
+  const out = [head, area].filter(Boolean);
+  const label = out.filter((x, i) => out.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i).join(", ");
+  return (label || area).slice(0, 70);
+}
+
 // The address as it will be saved and shown: the name the person gave the
 // spot (else the nearest landmark), the road, the village, the district.
 const lineOf = (c) => {

@@ -37,7 +37,7 @@ import {
   plateLooksRight, ReqTag,
 } from "./ui.jsx";
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
-import { PlaceField } from "./locpicker.jsx";
+import { PlaceField, workPlace } from "./locpicker.jsx";
 import { plateExample } from "./states.js";
 import { useConsent } from "./consent-core.js";
 
@@ -845,7 +845,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               onChange={(p) => {
                 setF((prev) => ({
                   ...prev,
-                  locality: p.area, state: p.state || prev.state,
+                  locality: workPlace(p), state: p.state || prev.state,
                   pincode: p.pin || prev.pincode, pin_auto: true,
                   // The town picked before belonged to the old place.
                   city_id: null, city_name: "", district: "",

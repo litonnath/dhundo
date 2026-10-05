@@ -46,7 +46,7 @@ import { RatesCard } from "./rates.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
-import { LocationSheet, LocationBar, PlaceField, describePoint } from "./locpicker.jsx";
+import { LocationSheet, LocationBar, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
 // ---------------------------------------------------------------- data layer
@@ -1396,7 +1396,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         p_years_experience: num(f.years_experience),
         p_day_rate_min: num(f.day_rate_min),
         p_day_rate_max: num(f.day_rate_max),
-        p_locality: ((lp && lp.area) || "").trim() || null,
+        p_locality: workPlace(lp).trim() || null,
         p_city: null,
         p_about: f.about.trim() || null,
         p_languages: [],
