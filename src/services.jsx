@@ -31,7 +31,7 @@ import {
 import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances, lineDistances } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
-import { MarketPage, ItemDetail, SellPage, AdminAds } from "./market.jsx";
+import { MarketPage, ItemDetail, SellPage, AdminAds, shrink } from "./market.jsx";
 import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
@@ -1181,10 +1181,10 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
 // required-LOOKING fields asking for data nobody has to hand while standing
 // in a shop.
 // ---------------------------------------------------------------------------
-function StepDots({ step }) {
+function StepDots({ step, total = 3 }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-      {[1, 2, 3].map((n) => (
+      {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
         <span key={n} style={{
           width: n === step ? 22 : 7, height: 7, borderRadius: 4,
           background: n <= step ? T.brandDark : T.line,
@@ -1259,6 +1259,12 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const [done, setDone] = useState(null);
   // The listing saved but its exact pin did not: said on the success screen.
   const [posFailed, setPosFailed] = useState(false);
+  // Shops and food places list what they sell as part of signing up, not only
+  // later from the dashboard. Held here until the listing exists.
+  const [items, setItems] = useState([]);
+  const [draft, setDraft] = useState({ name: "", price: "", category: "", veg: true, photo: "" });
+  const [itemBusy, setItemBusy] = useState(false);
+  const [itemsFailed, setItemsFailed] = useState(0);
   // Where THIS listing is. Its own, not the place somebody is browsing from:
   // choosing a shop's location here must not move the home screen, and the
   // home screen's location must not become a shop's by accident.
@@ -1326,7 +1332,22 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     const x = trades.find((y) => y.slug === slug) || {};
     return x.requires_id === undefined ? ["Drivers", "Home & Domestic"].includes(x.group_name) : !!x.requires_id;
   });
+  const hasItemsStep = !isAdmin && (formKind === "shop" || formKind === "eat");
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
+  const addItem = () => {
+    if (draft.name.trim().length < 2 || !(Number(draft.price) >= 1)) return setErr(t("lf_item_need"));
+    if (items.length >= 12) return setErr(t("lf_item_max"));
+    setErr(null);
+    setItems((x) => [...x, { ...draft, name: draft.name.trim(), category: draft.category.trim() }]);
+    setDraft((d) => ({ name: "", price: "", category: d.category, veg: d.veg, photo: "" }));
+  };
+  const pickItemPhoto = async (file) => {
+    if (!file) return;
+    setItemBusy(true); setErr(null);
+    try { setDraft((d) => ({ ...d, photo: "" })); const u = await api.uploadPublic("services-photos", await shrink(file)); setDraft((d) => ({ ...d, photo: u })); }
+    catch (_) { setErr(t("mk_e_upload")); }
+    setItemBusy(false);
+  };
 
   const groups = useMemo(() => {
     const out = [];
@@ -1409,6 +1430,19 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         try { await api.setMyPosition(lp.lat, lp.lng, lp.source); } catch (_) { setPosFailed(true); }
       }
 
+      // The goods typed in the last step. The listing exists now, so each one
+      // is saved against it; one failing does not undo the listing.
+      if (r && r.ok && hasItemsStep && items.length) {
+        let lost = 0;
+        for (const it of items) {
+          try {
+            const q = one(await api.menuSave({ category: it.category, name: it.name, price: Number(it.price), veg: formKind === "eat" ? it.veg : true, available: true, photo: it.photo }));
+            if (!(q && q.ok)) lost++;
+          } catch (_) { lost++; }
+        }
+        setItemsFailed(lost);
+      }
+
       if (r && r.ok) {
         setDone(r.reason === "updated" ? "updated" : "created");
         if (onDone) onDone();
@@ -1437,7 +1471,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   };
 
   const reset = () => {
-    setDone(null); setPosFailed(false); setStep(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
+    setDone(null); setPosFailed(false); setItems([]); setItemsFailed(0); setStep(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
     setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
                    years_experience: "", day_rate_min: "", day_rate_max: "" }));
   };
@@ -1462,6 +1496,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             ? (done === "updated" ? t("ok_updated") : t("ok_added"))
             : t("ok_submitted")}
         </p>
+        {itemsFailed > 0 && <div style={{ margin: "0 0 16px" }}><Notice tone="bad">{t("lf_items_failed")}</Notice></div>}
         {posFailed && <div style={{ margin: "0 0 16px" }}><Notice tone="bad">{t("loc_pos_failed")}</Notice></div>}
         {!isAdmin && formKind !== "worker" && onNext && (
           <div style={{ textAlign: "left", background: T.brandSoft, border: `1.5px solid ${T.brandDark}`, borderRadius: 14, padding: "14px 16px", margin: "0 0 14px" }}>
@@ -1505,7 +1540,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 700 }}>
           {t("w_step").replace("{n}", String(step))}
         </span>
-        <StepDots step={step} />
+        <StepDots step={step} total={hasItemsStep ? 4 : 3} />
       </div>
 
       {err && <Notice tone="bad">{err}</Notice>}
@@ -1829,8 +1864,64 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             </div>
           )}
 
-          <Btn full onClick={submit} disabled={busy}>
-            {busy ? t("w_sending") : isAdmin ? t("w_submit_admin") : t("w_submit")}
+          {hasItemsStep ? (
+            <Btn full onClick={() => {
+              if (!isSupplier) {
+                const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
+                if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"));
+                if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"));
+              }
+              if (!f.about.trim()) return bad("about", t("e_about"));
+              setErr(null); setFieldErr(null); setStep(4);
+            }}>{t("w_next")}</Btn>
+          ) : (
+            <Btn full onClick={submit} disabled={busy}>
+              {busy ? t("w_sending") : isAdmin ? t("w_submit_admin") : t("w_submit")}
+            </Btn>
+          )}
+        </>
+      )}
+
+      {/* ---------------------------------------- 4. goods or menu (shop, food) */}
+      {step === 4 && hasItemsStep && (
+        <>
+          <h2 style={title}>{formKind === "eat" ? t("lf_menu_title") : t("lf_prod_title")}</h2>
+          <p style={sub}>{formKind === "eat" ? t("lf_menu_sub") : t("lf_prod_sub")}</p>
+
+          {items.map((it, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.line}`, borderRadius: 12, padding: 8, marginBottom: 8 }}>
+              <span style={{ width: 46, height: 46, borderRadius: 10, flex: "none", background: it.photo ? `center/cover url(${it.photo}) ${T.line}` : T.brandSoft }} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontWeight: 700, fontSize: 15, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
+                <span style={{ display: "block", fontSize: 13, color: T.inkSoft }}>₹{it.price}{it.category ? ` · ${it.category}` : ""}</span>
+              </span>
+              <button onClick={() => setItems((x) => x.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: T.inkSoft, fontWeight: 700, cursor: "pointer", minHeight: 44, fontFamily: "inherit" }}>{t("lf_remove")}</button>
+            </div>
+          ))}
+
+          <div style={{ border: `1.5px dashed ${T.brandDark}`, borderRadius: 14, padding: 12, marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <span style={{ width: 64, height: 64, borderRadius: 12, flex: "none", background: draft.photo ? `center/cover url(${draft.photo}) ${T.line}` : T.brandSoft, display: "flex", alignItems: "center", justifyContent: "center", color: T.brandDark }}>
+                {!draft.photo && <Icon name="camera" size={24} />}
+              </span>
+              <label style={{ color: T.brandDark, fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+                {itemBusy ? t("ow_uploading") : draft.photo ? t("ow_photo_change") : t("ow_photo")}
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => pickItemPhoto(e.target.files && e.target.files[0])} />
+              </label>
+            </div>
+            <input style={{ ...bigInput, marginBottom: 8 }} value={draft.name} maxLength={80} placeholder={t("ow_name")} aria-label={t("ow_name")} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+            <input style={{ ...bigInput, marginBottom: 8 }} value={draft.price} inputMode="numeric" maxLength={5} placeholder={t("ow_price")} aria-label={t("ow_price")} onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value.replace(/\D/g, "") }))} />
+            <input style={{ ...bigInput, marginBottom: 8 }} value={draft.category} maxLength={40} placeholder={t("ow_cat")} aria-label={t("ow_cat")} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))} />
+            {formKind === "eat" && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, fontSize: 15, marginBottom: 6 }}>
+                <input type="checkbox" checked={draft.veg} onChange={(e) => setDraft((d) => ({ ...d, veg: e.target.checked }))} /> {t("ow_veg")}
+              </label>
+            )}
+            <Btn full kind="ghost" onClick={addItem} disabled={itemBusy}>{t("lf_add_item")}</Btn>
+          </div>
+
+          <Btn full onClick={submit} disabled={busy || itemBusy}>
+            {busy ? t("w_sending") : items.length ? t("w_submit") : t("lf_skip")}
           </Btn>
         </>
       )}
