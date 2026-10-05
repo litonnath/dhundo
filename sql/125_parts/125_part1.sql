@@ -1,7 +1,7 @@
 -- ===========================================================================
--- 125_part1.sql -- the real address of a listing, for its card. Taken from the
--- listing when it has one, otherwise from the owner's account address. Only
--- for approved listings, only the address text and nothing else.
+-- 125_part1.sql -- the address typed on a listing, for its card. Only the
+-- listing own address: the account address is the nearest landmark noted when
+-- the person picked their location, not where they work, so it is not used.
 -- ===========================================================================
 drop function if exists public.services_work_addresses(uuid[]);
 create function public.services_work_addresses(p_ids uuid[])
@@ -12,9 +12,8 @@ security definer
 set search_path to 'public'
 as $fn$
   select w.id,
-         coalesce(nullif(btrim(w.address_line), ''), nullif(btrim(s.address), ''))::text
+         nullif(btrim(w.address_line), '')::text
     from public.services_workers w
-    left join public.services_signups s on s.id = w.user_id or s.auth_user_id = w.user_id
    where w.id = any (p_ids) and w.status = 'approved'
      and coalesce(w.address_public, true);
 $fn$;

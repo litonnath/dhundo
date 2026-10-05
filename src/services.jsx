@@ -1440,8 +1440,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             // the same follow-up call as the address rather than widening a
             // signature that has already been rewritten twice.
             p_other_trades: picked.length > 1 ? picked.slice(1) : null,
-            // A listing's address is public: the line typed, else the place picked.
-            p_address_line: f.address_line.trim() || (lp && lp.address) || null,
+            // A listing's address is public: the line the person typed.
+            p_address_line: f.address_line.trim() || null,
             p_address_public: true,
             p_landmark: f.landmark.trim() || null,
             p_pincode: f.pincode.trim() || null,
