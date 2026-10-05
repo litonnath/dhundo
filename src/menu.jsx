@@ -4,7 +4,7 @@
 // privacy and contact -- one tap from the bottom bar, out of the way of
 // the screens people actually use.
 // ---------------------------------------------------------------------------
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { T, Icon, CloseButton, useDismissable } from "./ui.jsx";
 import { CONTACT } from "./brand.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -15,6 +15,13 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
   const { t } = useI18n();
   const { isIos, installed } = useInstallPrompt();
   useDismissable(true, onClose);
+  // Centred on a wide screen, a bottom sheet on a phone.
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 700);
+  useEffect(() => {
+    const on = () => setWide(window.innerWidth >= 700);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
   const canInstall = !(installed || isIos || isInstalledApp());
   const num = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   const help = num ? `https://wa.me/${num}?text=${encodeURIComponent(t("sh_msg"))}` : null;
@@ -44,8 +51,8 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
          style={{ position: "fixed", inset: 0, zIndex: 520, background: "rgba(15,20,25,0.55)",
-                  display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 480,
+                  display: "flex", alignItems: wide ? "center" : "flex-end", justifyContent: "center", padding: wide ? 16 : 0 }}>
+      <div style={{ background: T.white, borderRadius: wide ? 18 : "18px 18px 0 0", width: "100%", maxWidth: 480,
                     padding: "14px 18px calc(22px + env(safe-area-inset-bottom))", maxHeight: "92vh",
                     overflowY: "auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
