@@ -2909,6 +2909,11 @@ export default function ServicesPage({
       )}
 
       {tab === "work" && (
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
+          <HomeButton onClick={() => setTab("browse")} />
+        </div>
+      )}
+      {tab === "work" && (
         <WorkerHome
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
@@ -2926,7 +2931,8 @@ export default function ServicesPage({
       )}
 
       {tab === "mine" && signedIn && (
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "22px 16px 60px" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
+          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("browse")} /></div>
           <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("nav_mine")}</h1>
           <MyListing api={api} trades={trades} isAdmin={isAdmin}
                      onGoAdd={() => setTab("add")} />
@@ -2935,9 +2941,14 @@ export default function ServicesPage({
 
       {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" &&
        tab !== "market" && tab !== "sell" && (
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "26px 16px 60px" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
           {tab === "add" && (
             <>
+              {!isAdmin && (!signedIn || hasListing) && (
+                <div style={{ marginBottom: 14 }}>
+                  <HomeButton label={t("w_back")} onClick={() => { setOfferPick(true); setTab("browse"); }} />
+                </div>
+              )}
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 6px" }}>
                 {isAdmin ? t("add_title_admin") : t("add_title")}
               </h1>
