@@ -387,6 +387,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    chatDelete: (id) => rpc("services_chat_delete", { p_booking: id }, true),
     chatInbox: () => rpc("services_chat_inbox", {}, true),
     chatMarkRead: (id) => rpc("services_chat_mark_read", { p_booking: id }, true),
     chatOpen: (id) => rpc("services_chat_open", { p_booking: id }, true),
@@ -3111,7 +3112,8 @@ export default function ServicesPage({
       )}
 
       {tab === "chats" && (signedIn ? (
-        <ChatsPage items={inbox.items} onOpen={(x) => setChatItem(x)} onHome={() => setTab("browse")} alerts={inbox.alerts} onRequests={openNotif} />
+        <ChatsPage items={inbox.items} onOpen={(x) => setChatItem(x)} onHome={() => setTab("browse")} alerts={inbox.alerts} onRequests={openNotif}
+                   onDelete={async (x) => { try { await api.chatDelete(x.id); } catch (_) { /* the list reloads */ } inbox.reload(); }} />
       ) : (
         <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("ch_tab")} text={t("ch_gate")}
                     perks={[[t("trust_2_t"), t("trust_2_s")]]} />

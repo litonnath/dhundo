@@ -61,8 +61,9 @@ export function useInbox(api, signedIn) {
 }
 
 // -------------------------------------------------------------- chats tab
-export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null }) {
+export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null, onDelete = null }) {
   const { t } = useI18n();
+  const [ask, setAsk] = useState(null);
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 16px 120px" }}>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "4px 0 4px" }}>{t("ch_tab")}</h1>
@@ -87,27 +88,46 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
         </div>
       ) : (
         <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden" }}>
-          {items.map((x, i) => (
-            <button key={x.id} onClick={() => onOpen(x)} style={{
-              display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "13px 14px",
-              background: x.unread ? "#F3F8FF" : T.white, border: "none", borderTop: i ? `1px solid ${T.line}` : "none", cursor: "pointer", fontFamily: "inherit",
-            }}>
-              <Avatar name={x.other_name} />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ flex: 1, fontSize: 16, fontWeight: x.unread ? 800 : 700, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name}</span>
-                  <span style={{ fontSize: 12, color: T.inkFaint, flexShrink: 0 }}>{when(x.last_at || x.created_at)}</span>
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                  <span style={{ flex: 1, fontSize: 13.5, color: x.unread ? T.ink : T.inkSoft, fontWeight: x.unread ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {x.last_body ? `${x.last_mine ? `${t("ch_you")}: ` : ""}${x.last_body}` : (x.note || t("ch_req_sent"))}
-                  </span>
-                  {x.unread > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#1FA85A", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{x.unread}</span>}
-                </span>
-                <span style={{ display: "inline-block", marginTop: 4, fontSize: 11.5, fontWeight: 800, color: statusColor[x.status] || T.inkSoft }}>{t("bk_status_" + x.status)}</span>
-              </span>
-            </button>
-          ))}
+          {items.map((x, i) => {
+            const over = ["declined", "cancelled"].includes(x.status);
+            return (
+              <div key={x.id} style={{ borderTop: i ? `1px solid ${T.line}` : "none", background: x.unread ? "#F3F8FF" : T.white }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <button onClick={() => onOpen(x)} style={{
+                    display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textAlign: "left", padding: "13px 6px 13px 14px",
+                    background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                    <Avatar name={x.other_name} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ flex: 1, fontSize: 16, fontWeight: x.unread ? 800 : 700, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name}</span>
+                        <span style={{ fontSize: 12, color: T.inkFaint, flexShrink: 0 }}>{when(x.last_at || x.created_at)}</span>
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                        <span style={{ flex: 1, fontSize: 13.5, color: x.unread ? T.ink : T.inkSoft, fontWeight: x.unread ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {x.last_body ? `${x.last_mine ? `${t("ch_you")}: ` : ""}${x.last_body}` : (x.note || t("ch_req_sent"))}
+                        </span>
+                        {x.unread > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#1FA85A", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{x.unread}</span>}
+                      </span>
+                      <span style={{ display: "inline-block", marginTop: 4, fontSize: 11.5, fontWeight: 800, color: statusColor[x.status] || T.inkSoft }}>{t("bk_status_" + x.status)}</span>
+                    </span>
+                  </button>
+                  {onDelete && (
+                    <button onClick={() => setAsk(ask === x.id ? null : x.id)} aria-label={t("ch_delete")} style={{ width: 44, height: 44, marginRight: 6, border: "none", background: "none", color: T.inkFaint, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon name="trash" size={19} />
+                    </button>
+                  )}
+                </div>
+                {ask === x.id && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "0 14px 12px 14px" }}>
+                    <span style={{ flex: 1, minWidth: 180, fontSize: 13.5, color: T.ink, fontWeight: 700 }}>{t(over ? "ch_del_q_closed" : "ch_del_q_open")}</span>
+                    <Btn kind="ghost" onClick={() => setAsk(null)}>{t("ch_keep")}</Btn>
+                    <button onClick={() => { setAsk(null); onDelete(x); }} style={{ minHeight: 44, padding: "0 18px", borderRadius: 12, border: "none", background: "#B91C1C", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>{t("ch_delete")}</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
