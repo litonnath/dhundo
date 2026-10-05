@@ -288,6 +288,9 @@ const mfaHeaders = (cfg, token) => ({
 export async function mfaVerifiedFactor(cfg, token) {
   try {
     const res = await fetch(`${cfg.url}/auth/v1/user`, { headers: mfaHeaders(cfg, token) });
+    // 401/403 here means the sign-in itself is no longer valid on the server
+    // (signed out elsewhere, or the session was ended), not "no factor yet".
+    if (res.status === 401 || res.status === 403) return "expired";
     if (!res.ok) return null;
     const u = await res.json();
     const f = (u.factors || []).find((x) => x.factor_type === "totp" && x.status === "verified");

@@ -3119,7 +3119,7 @@ export default function ServicesPage({
           {tab === "manage" && isAdmin && (
             <>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
-              <AdminMfaCard api={api} onSession={onSessionTokens} />
+              <AdminMfaCard api={api} onSession={onSessionTokens} onSignOut={onSignOut} />
               <AdminList api={api} trades={trades} reloadKey={reloadKey} />
               <AdminWithdrawals api={api} />
               <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />

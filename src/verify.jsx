@@ -87,7 +87,7 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
 // on in the database (sql/111) and an admin session without the code is
 // refused by every admin function.
 // ---------------------------------------------------------------------------
-export function AdminMfaCard({ api, onSession }) {
+export function AdminMfaCard({ api, onSession, onSignOut }) {
   const [state, setState] = useState("loading");
   const [enrol, setEnrol] = useState(null);
   const [code, setCode] = useState("");
@@ -100,7 +100,7 @@ export function AdminMfaCard({ api, onSession }) {
       const token = api.accessToken ? await api.accessToken() : null;
       if (!token) { if (alive) setState("none"); return; }
       const f = await mfaVerifiedFactor(api.cfg, token);
-      if (alive) setState(f ? "on" : "off");
+      if (alive) setState(f === "expired" ? "expired" : f ? "on" : "off");
     })();
     return () => { alive = false; };
   }, [api]);
@@ -108,7 +108,11 @@ export function AdminMfaCard({ api, onSession }) {
   const start = async () => {
     setBusy(true); setErr("");
     try { setEnrol(await mfaEnroll(api.cfg, await api.accessToken())); }
-    catch (e) { setErr(`Could not start (${(e && e.message) || "unknown"}). Is MFA switched on in Supabase (Authentication, Multi-Factor)?`); }
+    catch (e) {
+      const m = String((e && e.message) || "");
+      if (/session_id|session.*(not|exist)|jwt/i.test(m)) setState("expired");
+      else setErr(`Could not start (${m || "unknown"}). Is MFA switched on in Supabase (Authentication, Multi-Factor)?`);
+    }
     setBusy(false);
   };
   const confirm = async () => {
@@ -127,6 +131,18 @@ export function AdminMfaCard({ api, onSession }) {
   };
 
   if (state === "loading" || state === "none") return null;
+  if (state === "expired") {
+    return (
+      <div style={{ background: T.white, border: `1px solid ${T.red}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, marginBottom: 4 }}>Sign in again to set up two-step sign-in</div>
+        <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, marginBottom: 8 }}>
+          This device's sign-in has ended on the server (you signed in somewhere else, or it timed out), so the authenticator cannot be checked from here.
+          Sign out, sign in again with your PIN{"\u00A0"}and the 6-digit code from your authenticator app, then open Manage again.
+        </div>
+        {onSignOut && <Btn onClick={onSignOut}>Sign out</Btn>}
+      </div>
+    );
+  }
   const box = { background: T.white, border: `1px solid ${state === "on" ? T.line : T.red}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 };
   return (
     <div style={box}>
