@@ -100,7 +100,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
   return (
     <>
-    <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!stage1}
+    <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!stage1} tone={eat ? "eat" : "shop"}
           title={t(eat ? "st_eat_title" : "st_shop_title")} sub={t(eat ? "st_eat_sub" : "st_shop_sub")} placeholder={t("st_search")} />
     <div style={{ maxWidth: stage1 ? 1000 : 760, margin: "0 auto", padding: "62px 16px 130px" }}>
       {stage1 ? (

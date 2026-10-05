@@ -99,7 +99,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
           padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark,
         }}><Icon name="back" size={16} /> {t("w_back")}</button>
       </div>
-      <Hero search={oq} setSearch={setOq} onVoice={setOq} title={t(meta2[4])} sub={t("offer_what")} placeholder={t("st_search")} />
+      <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t("offer_what")} placeholder={t("st_search")} />
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 120px" }}>{step2}</div>
     </div>
   ) : (

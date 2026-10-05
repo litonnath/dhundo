@@ -900,7 +900,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
           fontSize: 14, fontWeight: 700, color: T.brandDark,
         }}><Icon name="back" size={16} /> {t("launch_back")}</button>
       </div>
-      <Hero search={search} setSearch={setSearch} compact={!showGrid} onVoice={(said) => {
+      <Hero search={search} setSearch={setSearch} compact={!showGrid} tone="worker" onVoice={(said) => {
         // A trade name, in any language, goes straight to that trade;
         // anything else becomes an ordinary search.
         const tr = matchTrade(said, trades);

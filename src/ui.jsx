@@ -1755,13 +1755,22 @@ export function OutOfArea({ state, showing, onDismiss }) {
 // The area field used to live here beside the search box. It has moved into
 // the header, where it is set once and stays visible -- having it in two
 // places meant two sources of truth for the single most important filter.
-export function Hero({ search, setSearch, onVoice, compact = false, title = null, sub = null, placeholder = null }) {
+// Heading colours, one per front option, matching its tile.
+const HERO_TONES = {
+  worker: ["#7C2D12", "#C2410C", "#EA580C"],
+  shop:   ["#14532D", "#15803D", "#22A455"],
+  eat:    ["#7F1D1D", "#B91C1C", "#E23B3B"],
+  buy:    ["#4C1D95", "#7E22CE", "#A855F7"],
+};
+export function Hero({ search, setSearch, onVoice, compact = false, title = null, sub = null, placeholder = null, tone = null }) {
   const { t } = useI18n();
   // Compact once somebody is looking at results: the welcome line has done
   // its job, and on a small phone it was pushing the first card off screen.
   return (
     <div style={{
-      background: `linear-gradient(160deg, ${T.brandDeep} 0%, ${T.brandDark} 55%, ${T.brand} 100%)`,
+      background: HERO_TONES[tone]
+        ? `linear-gradient(160deg, ${HERO_TONES[tone][0]} 0%, ${HERO_TONES[tone][1]} 55%, ${HERO_TONES[tone][2]} 100%)`
+        : `linear-gradient(160deg, ${T.brandDeep} 0%, ${T.brandDark} 55%, ${T.brand} 100%)`,
       padding: compact ? "12px 16px 50px" : "30px 16px 58px", position: "relative",
     }}>
       <div style={{ maxWidth: 1000, margin: "0 auto", display: compact ? "none" : "block" }}>

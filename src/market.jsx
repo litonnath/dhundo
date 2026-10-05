@@ -234,7 +234,7 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
   return (
     <div>
       {onBack && <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}><HomeButton onClick={onBack} /></div>}
-      <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!showTiles}
+      <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!showTiles} tone="buy"
             title={t("need_buy")} sub={t("need_buy_sub")} placeholder={t("mk_search_ph")} />
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showTiles ? (
