@@ -20,6 +20,12 @@
          Dhundo blue, the same blue as Android's own launch screen, so the
          two join up instead of flashing a tile and then a blank page. -->
     <style>
+      /* Pop-up sheets slide up from the bottom on a phone and sit in the
+         middle of the screen on a computer. */
+      @media (min-width:700px){
+        [role="dialog"][style*="align-items: flex-end"]{align-items:center !important}
+        [role="dialog"][style*="align-items: flex-end"]>div{border-radius:18px !important}
+      }
       #splash{position:fixed;inset:0;z-index:9999;background:#054291;display:flex;flex-direction:column;
         align-items:center;justify-content:center;gap:14px;transition:opacity .35s ease;
         font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
