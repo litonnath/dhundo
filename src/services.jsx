@@ -43,6 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
+import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
 import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
@@ -386,6 +387,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    chatInbox: () => rpc("services_chat_inbox", {}, true),
+    chatMarkRead: (id) => rpc("services_chat_mark_read", { p_booking: id }, true),
     chatOpen: (id) => rpc("services_chat_open", { p_booking: id }, true),
     chatList: (id) => rpc("services_chat_list", { p_booking: id }, true),
     chatSend: (id, body) => rpc("services_chat_send", { p_booking: id, p_body: body }, true),
@@ -2614,6 +2617,9 @@ export default function ServicesPage({
   const [walletOpen, setWalletOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifJobs, setNotifJobs] = useState([]);
+  const [chatItem, setChatItem] = useState(null);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [bookRow, setBookRow] = useState(null);
   const [myTrade, setMyTrade] = useState(null);
@@ -2832,6 +2838,12 @@ export default function ServicesPage({
   }, [api, reloadKey, state]);
 
   const signedIn = !!(user && user.id);
+  const inbox = useInbox(api, signedIn);
+  const openNotif = () => {
+    inbox.markSeen();
+    api.myJobs().then((r) => setNotifJobs(Array.isArray(r) ? r : r ? [r] : [])).catch(() => {});
+    setNotifOpen(true);
+  };
 
   // DOES THIS PERSON ALREADY HAVE A LISTING?
   //
@@ -2947,6 +2959,8 @@ export default function ServicesPage({
         isAdmin={isAdmin}
         place={place}
         onOpenLocation={() => setLocOpen(true)}
+        notifCount={signedIn ? inbox.alerts : 0}
+        onOpenNotifications={signedIn ? openNotif : null}
         mode={mode}
       />
 
@@ -2974,7 +2988,12 @@ export default function ServicesPage({
       )}
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
       {bookRow && signedIn && <BookingSheet api={api} row={bookRow} place={place} onClose={() => setBookRow(null)} />}
-      {requestsOpen && signedIn && <MyRequestsSheet api={api} onClose={() => setRequestsOpen(false)} />}
+      {notifOpen && signedIn && (
+        <NotificationsSheet api={api} items={inbox.items} jobs={notifJobs} onChanged={inbox.reload}
+                            onClose={() => setNotifOpen(false)}
+                            onChat={(x) => { setNotifOpen(false); setChatItem(x); }} />
+      )}
+      {chatItem && signedIn && <ChatScreen api={api} item={chatItem} onChanged={inbox.reload} onClose={() => { setChatItem(null); inbox.reload(); }} />}
       {partnerOpen && <PartnerSheet api={api} signedIn={signedIn} onSignIn={onSignIn} onClose={() => setPartnerOpen(false)} />}
       {verifyOpen && signedIn && (
         <PhoneVerifySheet api={api} phone={user && user.phone}
@@ -3091,7 +3110,14 @@ export default function ServicesPage({
                     perks={[[t("trust_2_t"), t("trust_2_s")], [t("trust_3_t"), t("trust_3_s")]]} />
       )}
 
-      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" &&
+      {tab === "chats" && (signedIn ? (
+        <ChatsPage items={inbox.items} onOpen={(x) => setChatItem(x)} onHome={() => setTab("browse")} alerts={inbox.alerts} onRequests={openNotif} />
+      ) : (
+        <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("ch_tab")} text={t("ch_gate")}
+                    perks={[[t("trust_2_t"), t("trust_2_s")]]} />
+      ))}
+
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && tab !== "chats" &&
        tab !== "market" && tab !== "sell" && !(tab === "add" && !signedIn) && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
           {tab === "add" && (
@@ -3157,7 +3183,6 @@ export default function ServicesPage({
           phoneOk={phoneOk}
           onVerifyPhone={() => setVerifyOpen(true)}
           onOpenWallet={() => setWalletOpen(true)}
-          onOpenRequests={() => setRequestsOpen(true)}
           onSignIn={onSignIn}
           onSignOut={onSignOut}
           onInstall={() => setInstallOpen(true)}
@@ -3189,7 +3214,7 @@ export default function ServicesPage({
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
-                 onMenu={() => setMenuOpen(true)} />
+                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} />
     </div>
   );
 }

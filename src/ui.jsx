@@ -70,6 +70,9 @@ export function Icon({ name, size = 24, style }) {
     other: <><rect {...P} x="4" y="4" width="16" height="16" rx="3" /><path {...P} d="M8 10h8M8 14h5" /></>,
     search: <><circle {...P} cx="11" cy="11" r="6.5" /><path {...P} d="M16 16l4 4" /></>,
     pin: <><path {...P} d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z" /><circle {...P} cx="12" cy="10" r="2.4" /></>,
+    bell: <><path {...P} d="M6 9a6 6 0 0 1 12 0c0 5 2 6.5 2 7H4c0-.5 2-2 2-7z" /><path {...P} d="M10 19a2 2 0 0 0 4 0" /></>,
+    chat: <><path {...P} d="M4 5.5h16v11H10l-4.5 3.5v-3.5H4z" /><path {...P} d="M8 10h8M8 13h5" /></>,
+    send: <><path {...P} d="M4 12L20 4l-5 16-3.5-6.5z" /><path {...P} d="M11.5 13.5L20 4" /></>,
     phone: <><path {...P} d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4 5.2 2 2 0 0 1 6 3z" /></>,
     check: <><circle {...P} cx="12" cy="12" r="8.5" /><path {...P} d="M8.5 12.2l2.4 2.4 4.6-5" /></>,
     back: <><path {...P} d="M15 5l-7 7 7 7" /></>,
@@ -1612,7 +1615,7 @@ export function LocationPill({ place, onOpen, compact }) {
 // Two rows on a phone: identity and location on top, navigation below. The
 // single-row version pushed the tabs onto a wrapped third line and left the
 // location squeezed to three characters.
-export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null }) {
+export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null, notifCount = 0, onOpenNotifications = null }) {
   const { t } = useI18n();
   // One row: who we are, where you are, which language. Everything you DO
   // lives in the bottom bar, within reach of a thumb -- two rows of small
@@ -1638,6 +1641,15 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
         <LocationPill place={place} onOpen={onOpenLocation} />
         <LanguageSwitch />
+        {onOpenNotifications && (
+          <button onClick={onOpenNotifications} aria-label="Notifications" style={{
+            position: "relative", width: 42, height: 42, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.white,
+            color: T.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <Icon name="bell" size={20} />
+            {notifCount > 0 && <span style={{ position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, background: "#DC2626", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: "2px solid #fff", boxSizing: "content-box" }}>{notifCount > 9 ? "9+" : notifCount}</span>}
+          </button>
+        )}
       </div>
 
       {/* An admin's extra tools, on their own row so nobody else sees them. */}
@@ -1661,17 +1673,18 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
 // every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
 // carries a green dot while the worker is online, so they can see from any
 // screen that customers can still find them.
-export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null }) {
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null, chatBadge = 0 }) {
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
-    tab === "account" || tab === "profile" ? "account"
+    tab === "chats" ? "chats"
+    : tab === "account" || tab === "profile" ? "account"
     : mode === "offer" && tab === "sell" ? "sell"
     : tab === "market" || tab === "sell" ? (mode === "need" ? "find" : "market")
     : mode === "offer" && (tab === "mine" || tab === "add") ? "mine"
     : workTabs.includes(tab) || (tab === "add" && !hasListing) ? "work"
     : "find";
-  const item = (key, icon, label, go, dot) => {
+  const item = (key, icon, label, go, dot, badge = 0) => {
     const on = current === key;
     return (
       <button key={key} onClick={go} aria-current={on ? "page" : undefined} style={{
@@ -1692,6 +1705,12 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
               background: "#1FA85A", border: "2px solid #fff",
             }} />
           )}
+          {badge > 0 && (
+            <span style={{
+              position: "absolute", top: -4, right: -2, minWidth: 18, height: 18, borderRadius: 9, background: "#DC2626", color: "#fff",
+              fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: "2px solid #fff", boxSizing: "content-box",
+            }}>{badge > 9 ? "9+" : badge}</span>
+          )}
         </span>
         <span style={{ fontSize: 12, fontWeight: on ? 800 : 600, lineHeight: 1.1 }}>{label}</span>
       </button>
@@ -1708,7 +1727,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
         {mode === "offer" ? (
           <>
             {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
-            {item("mine", "edit", t("nav_mine"), () => setTab(hasListing ? "mine" : "add"))}
+            {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("sell", "tag", t("offer_sell"), () => setTab("sell"))}
             {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
@@ -1716,6 +1735,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
         ) : mode === "need" ? (
           <>
             {item("find", "home", t("nav_home"), () => setTab("browse"))}
+            {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
           </>
@@ -2546,7 +2566,6 @@ export function AccountPage({
         {account && onOpenAds && row("tag", t("mk_my_ads"), onOpenAds, null, t("mk_my_ads_sub"))}
         {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
           <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
-        {account && onOpenRequests && row("check", t("rq_title"), onOpenRequests, null, t("rq_sub"))}
         {row("download", t("install_app"), onInstall)}
         {account && row("back", t("nav_signout"), onSignOut)}
       </div>

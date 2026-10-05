@@ -1,0 +1,71 @@
+-- ===========================================================================
+-- 126_part4.sql -- the chat inbox: every conversation with its last message and
+-- how many are unread, plus the read marker.
+-- ===========================================================================
+create table if not exists public.services_chat_reads (
+  booking_id uuid not null references public.services_bookings(id) on delete cascade,
+  account_id uuid not null references public.services_signups(id) on delete cascade,
+  read_at    timestamptz not null default now(),
+  primary key (booking_id, account_id)
+);
+alter table public.services_chat_reads enable row level security;
+revoke all on public.services_chat_reads from public, anon, authenticated;
+
+drop function if exists public.services_chat_mark_read(uuid);
+create function public.services_chat_mark_read(p_booking uuid)
+returns void
+language sql
+security definer
+set search_path to 'public'
+as $fn$
+  insert into public.services_chat_reads (booking_id, account_id, read_at)
+  select b.id, public.services_account_id(), now()
+    from public.services_bookings b
+    join public.services_workers w on w.id = b.worker_id
+   where b.id = p_booking
+     and (b.customer_id = public.services_account_id() or w.user_id = public.services_account_id())
+  on conflict (booking_id, account_id) do update set read_at = excluded.read_at;
+$fn$;
+revoke all on function public.services_chat_mark_read(uuid) from public, anon, authenticated;
+grant execute on function public.services_chat_mark_read(uuid) to authenticated;
+
+drop function if exists public.services_chat_inbox();
+create function public.services_chat_inbox()
+returns table (id uuid, role text, status text, other_name text, other_phone text, note text,
+               start_at timestamptz, duration_mins int, created_at timestamptz,
+               closes_at timestamptz, last_body text, last_at timestamptz, last_mine boolean, unread int)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $fn$
+  with me as (select public.services_account_id() as id),
+  mine as (
+    select b.*, case when b.customer_id = (select id from me) then 'customer' else 'worker' end as role,
+           w.full_name as wname, w.phone as wphone, c.full_name as cname, c.phone as cphone
+      from public.services_bookings b
+      join public.services_workers w on w.id = b.worker_id
+      join public.services_signups c on c.id = b.customer_id
+     where (b.customer_id = (select id from me) or w.user_id = (select id from me))
+       and (b.closed_at is null or b.closed_at > now() - interval '24 hours')
+  )
+  select m.id, m.role, m.status,
+         (case when m.role = 'customer' then m.wname else m.cname end)::text,
+         (case when m.status = 'accepted' then (case when m.role = 'customer' then m.wphone else m.cphone end) end)::text,
+         m.note, m.start_at, m.duration_mins, m.created_at,
+         m.closed_at + interval '24 hours',
+         l.body::text, l.created_at, (l.sender_id = (select id from me)),
+         (select count(*)::int from public.services_chat_messages x
+           where x.booking_id = m.id and x.sender_id <> (select id from me)
+             and x.created_at > coalesce((select r.read_at from public.services_chat_reads r
+                                           where r.booking_id = m.id and r.account_id = (select id from me)), 'epoch'))
+    from mine m
+    left join lateral (select x.body, x.created_at, x.sender_id from public.services_chat_messages x
+                        where x.booking_id = m.id order by x.created_at desc limit 1) l on true
+   order by coalesce(l.created_at, m.created_at) desc;
+$fn$;
+revoke all on function public.services_chat_inbox() from public, anon, authenticated;
+grant execute on function public.services_chat_inbox() to authenticated;
+
+notify pgrst, 'reload schema';
+select 'part 4 of 4 done' as "126_part4";
