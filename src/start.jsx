@@ -4,7 +4,7 @@
 // remembered, so these show once.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
-import { T, Icon, groupStyle, groupLabel } from "./ui.jsx";
+import { T, Icon, groupStyle, groupLabel, VoiceButton } from "./ui.jsx";
 import { useI18n, tradeName } from "./i18n.jsx";
 import { TileArt } from "./scenes.jsx";
 
@@ -79,11 +79,11 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     list.forEach((x) => {
       let g = byGroup.find((y) => y.g === x.group_name);
       if (!g) { g = { g: x.group_name, items: [] }; byGroup.push(g); }
-      g.items.push({ key: x.slug, label: tradeName(x, lang) });
+      g.items.push({ key: x.slug, label: tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
     });
     return (
       <SubCategories
-        art={picking} title={t(meta[4])} sub={t("offer_what")}
+        art={picking} title={t(meta[4])} sub={t("offer_what")} searchPh={t("st_search")}
         sections={byGroup.map((g) => ({ title: byGroup.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
                                          icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
         onPick={(slug) => onPick(picking, slug)} />
@@ -223,6 +223,40 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
   );
 }
 
+// One line icon per kind of food place or shop, picked from the English name
+// (the database holds the trades, not their pictures).
+const ICON_RULES = [
+  [/tea|snack|chai/, "teacup"], [/bakery|sweet|cake|mithai/, "cake"], [/fast food|biryani|burger|pizza|momo|roll/, "burger"],
+  [/dhaba|curry|meal/, "pot"], [/tiffin|home food|lunch/, "tiffin"], [/cater/, "cloche"], [/hotel|lodge|resort/, "bed"],
+  [/homestay|guest|house stay|stay/, "home"], [/restaurant|food|canteen|mess/, "cutlery"],
+  [/paint/, "roller"], [/cement/, "bag"], [/brick/, "bricks"], [/steel|rod|tmt|iron/, "rods"], [/pipe|tank/, "pipes"],
+  [/tile|marble|granite/, "tiles"], [/electric|wire|bulb|light/, "bolt"], [/sanitary|plumbing|bath/, "tap"],
+  [/ply|timber|wood|door/, "timber"], [/glass|alumin/, "glass"], [/tin|roof/, "sheets"], [/sand|stone|gravel|chips/, "bricks"],
+  [/hardware|tool/, "repairs"],
+];
+export function tradeIcon(tr, fallback) {
+  const k = `${tr.name_en || ""} ${tr.slug || ""}`.toLowerCase();
+  const hit = ICON_RULES.find(([re]) => re.test(k));
+  return hit ? hit[1] : fallback;
+}
+
+// A search box with the microphone, like the one on the Worker screen.
+export function SearchBox({ value, onChange, placeholder }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "4px 6px 4px 14px", margin: "0 0 14px" }}>
+      <Icon name="search" size={19} style={{ color: T.inkFaint }} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
+             style={{ flex: 1, border: "none", outline: "none", fontSize: 16, minHeight: 44, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
+      {value && (
+        <button onClick={() => onChange("")} aria-label="Clear" style={{ border: "none", background: "none", cursor: "pointer", color: T.inkFaint, width: 36, height: 44 }}>
+          <Icon name="close" size={18} />
+        </button>
+      )}
+      <VoiceButton onHeard={onChange} />
+    </div>
+  );
+}
+
 // Which trades belong to which front tile, so every screen agrees.
 const NOT_WORKER = ["Drivers", "Suppliers", "Eat & Stay"];
 export function tradesFor(kind, trades) {
@@ -234,15 +268,18 @@ export function tradesFor(kind, trades) {
 // WHAT DO YOU NEED / WHAT DO YOU OFFER, for the app somebody chose: only that
 // app's own sub-categories, as plain rows with a line icon (or an emoji for
 // the items). No illustrations. Optional banner on top; optional sections.
-export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPick, onAll, allLabel, art }) {
+export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPick, onAll, allLabel, art, searchPh }) {
   const { t } = useI18n();
-  const secs = sections || [{ items }];
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const secs = (sections || [{ items }]).map((sc) => ({ ...sc, items: needle ? sc.items.filter((it) => String(it.label).toLowerCase().includes(needle)) : sc.items })).filter((sc) => sc.items.length);
   return (
     <div>
       {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />}
-      <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>
-      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{sub || t("what_need")}</p>
-      {onAll && (
+      {title && <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>}
+      {title && <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{sub || t("what_need")}</p>}
+      {searchPh && <SearchBox value={q} onChange={setQ} placeholder={searchPh} />}
+      {onAll && !needle && (
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", marginBottom: 10 }}>
           <button onClick={onAll} style={tileStyle(T.brandSoft, T.brandDark)}>
             <span style={iconBox(T.white, T.brandDark)}><Icon name="search" size={20} /></span>

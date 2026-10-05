@@ -10,7 +10,7 @@ import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink } from "./market.jsx";
 import { AlertsCard } from "./alerts.jsx";
-import { SubCategories } from "./start.jsx";
+import { SubCategories, SearchBox, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -94,34 +94,20 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
   }, [api, chip, eat, slugs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = rows
-    .filter((r) => !q.trim() || String(r.display_name || "").toLowerCase().includes(q.trim().toLowerCase()))
+    .filter((r) => !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
-  if (!picked) {
-    const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
-        <SubCategories
-          art={eat ? "need-eat" : "shop"} title={t(eat ? "st_eat_title" : "st_shop_title")} sub={t("what_need")}
-          icon={gs.icon} fg={gs.fg} bg={gs.bg}
-          items={kinds.map((x) => ({ key: x.slug, label: nameOf(x) }))}
-          onPick={(slug) => { setChip(slug); setPicked(true); }}
-          onAll={() => { setChip(null); setPicked(true); }} allLabel={t("st_all")} />
-        {user && user.id && (
-          <button onClick={() => setOrdersOpen(true)} style={{
-            border: `1px solid ${T.line}`, background: T.white, borderRadius: 20, padding: "8px 14px", minHeight: 40, marginTop: 6,
-            fontWeight: 700, fontSize: 14, color: T.brandDark, cursor: "pointer", fontFamily: "inherit",
-          }}>{t("st_orders")}</button>
-        )}
-        {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
-      </div>
-    );
-  }
+  const stage1 = !picked && !q.trim();
+  const gs = groupStyle(eat ? "Eat & Stay" : "Suppliers");
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 130px" }}>
-      <button onClick={() => setPicked(false)} style={{
-        display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
-        color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "10px 0 6px", minHeight: 44, fontFamily: "inherit",
-      }}><Icon name="back" size={17} /> {t(eat ? "st_eat_title" : "st_shop_title")}</button>
+      {stage1 ? (
+        <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 260, marginBottom: 14 }} />
+      ) : (
+        <button onClick={() => { setQ(""); setPicked(false); }} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
+          color: T.brandDark, fontWeight: 700, fontSize: 14.5, padding: "10px 0 6px", minHeight: 44, fontFamily: "inherit",
+        }}><Icon name="back" size={17} /> {t(eat ? "st_eat_title" : "st_shop_title")}</button>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
         <h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t(eat ? "st_eat_title" : "st_shop_title")}</h1>
         {user && user.id && (
@@ -131,12 +117,15 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           }}>{t("st_orders")}</button>
         )}
       </div>
-      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 12px" }}>{t(eat ? "st_eat_sub" : "st_shop_sub")}</p>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "4px 12px", marginBottom: 12 }}>
-        <Icon name="search" size={19} style={{ color: T.inkFaint }} />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("st_search")} aria-label={t("st_search")}
-               style={{ flex: 1, border: "none", outline: "none", fontSize: 16, minHeight: 44, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
-      </div>
+      <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 12px" }}>{t(stage1 ? "what_need" : (eat ? "st_eat_sub" : "st_shop_sub"))}</p>
+      <SearchBox value={q} onChange={setQ} placeholder={t("st_search")} />
+      {stage1 ? (
+        <SubCategories
+          icon={gs.icon} fg={gs.fg} bg={gs.bg}
+          items={kinds.map((x) => ({ key: x.slug, label: nameOf(x), icon: tradeIcon(x, gs.icon) }))}
+          onPick={(slug) => { setChip(slug); setPicked(true); }}
+          onAll={() => { setChip(null); setPicked(true); }} allLabel={t("st_all")} />
+      ) : (<>
       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginBottom: 12, scrollbarWidth: "none" }}>
         <Chip active={!chip} onClick={() => setChip(null)}>{t("st_all")}</Chip>
         {kinds.map((x) => <Chip key={x.slug} active={chip === x.slug} onClick={() => setChip(x.slug)}>{nameOf(x)}</Chip>)}
@@ -162,6 +151,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           </span>
         </button>
       ))}
+      </>)}
       {open && <StorePage api={api} row={open} eat={eat} info={infos[open.id]} place={place} user={user} onSignIn={onSignIn}
                           renderEmpty={renderEmpty} onClose={() => setOpen(null)} onOrdered={() => setOrdersOpen(true)} />}
       {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
