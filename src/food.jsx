@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero } from "./ui.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
-import { shrink } from "./market.jsx";
+import { shrink, ScrollRow } from "./market.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { SubCategories, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -130,9 +130,11 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           onPick={(slug) => { setChip(slug); setPicked(true); }}
           onAll={() => { setChip(null); setPicked(true); }} allLabel={t("st_all")} />
       ) : (<>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginBottom: 12, scrollbarWidth: "none" }}>
-        <Chip active={!chip} onClick={() => setChip(null)}>{t("st_all")}</Chip>
-        {kinds.map((x) => <Chip key={x.slug} active={chip === x.slug} onClick={() => setChip(x.slug)}>{nameOf(x)}</Chip>)}
+      <div style={{ marginBottom: 6 }}>
+        <ScrollRow>
+          <span style={{ flexShrink: 0 }}><Chip active={!chip} onClick={() => setChip(null)}>{t("st_all")}</Chip></span>
+          {kinds.map((x) => <span key={x.slug} style={{ flexShrink: 0, whiteSpace: "nowrap" }}><Chip active={chip === x.slug} onClick={() => setChip(x.slug)}>{nameOf(x)}</Chip></span>)}
+        </ScrollRow>
       </div>
       {loading ? <div style={{ color: T.inkFaint, padding: 16 }}>…</div> : shown.length === 0 ? (
         <div style={{ ...card, textAlign: "center", color: T.inkSoft, padding: 28 }}>{t("st_none")}</div>

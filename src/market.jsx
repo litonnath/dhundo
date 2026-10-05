@@ -118,7 +118,7 @@ function CatChips({ value, onChange, t }) {
 // A row that scrolls sideways, with a round arrow at each end for a
 // computer, where there is no swipe. An arrow shows only while there is
 // more to see that way, and moves the row by most of its width.
-function ScrollRow({ children }) {
+export function ScrollRow({ children }) {
   const ref = useRef(null);
   const [edge, setEdge] = useState({ left: false, right: false });
   const measure = () => {
@@ -131,6 +131,8 @@ function ScrollRow({ children }) {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
+  // The chips can arrive after the first paint, so look again after every render.
+  useEffect(measure);
   const go = (dir) => {
     const el = ref.current;
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
