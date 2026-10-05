@@ -13,6 +13,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
+import { NearbyDrivers } from "./nearmap.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -150,6 +151,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
             <Btn kind="ghost" disabled={busy} onClick={cancel}>{t("rd_cancel")}</Btn>
           </div>
         </div>
+        {!accepted && <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={null} vehicle="any"
+                                     onlineIds={new Set(online.map((d) => d.id))} fares={fares} trip={null} />}
       </div>
     );
   }
@@ -214,6 +217,9 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
+
+      <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={vehicles.map((v) => v.slug)} vehicle={vehicle}
+                     onlineIds={new Set(online.map((d) => d.id))} fares={fares} trip={trip} />
 
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "24px 0 10px" }}>{t("rd_online")}</h2>
       {online.length === 0 ? (
