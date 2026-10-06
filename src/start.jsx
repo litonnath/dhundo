@@ -70,10 +70,12 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
   const types = [
     ["worker", "construction", "#FFF1E6", "#C2410C", "home_worker", "offer_sub_worker"],
     ["ride", "drivers", "#E8F0FE", "#1D4ED8", "home_ride", "offer_sub_ride"],
+    ["hire", "drivers", "#FEF3C7", "#B45309", "offer_hire", "offer_sub_hire"],
+    ["delivery", "drivers", "#E0F2FE", "#0369A1", "offer_delivery", "offer_sub_delivery"],
     ["shop", "suppliers", "#E7F5EC", "#15803D", "home_shop", "offer_sub_shop"],
     ["eat", "food", "#FDF3DC", "#A16207", "home_eat", "offer_sub_eat"],
     ["sell", "tag", "#F3E8FD", "#7E22CE", "offer_sell", "offer_sub_sell"],
-  ];
+  ].filter((x) => x[0] !== "hire" || tradesFor("hire", trades).length > 0).filter((x) => x[0] !== "delivery" || tradesFor("delivery", trades).length > 0);
   // Second step, like the Worker screen on the other side: what exactly do you do.
   const picking = type && tradesFor(type, trades).length > 0 ? type : null;
   const step2 = picking && (() => {
@@ -83,7 +85,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     list.forEach((x) => {
       let g = byGroup.find((y) => y.g === x.group_name);
       if (!g) { g = { g: x.group_name, items: [] }; byGroup.push(g); }
-      g.items.push({ key: x.slug, label: picking === "ride" ? vehicleLabel(x, lang) : tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
+      g.items.push({ key: x.slug, label: picking === "ride" || picking === "hire" ? vehicleLabel(x, lang) : tradeName(x, lang), icon: tradeIcon(x, groupStyle(x.group_name).icon) });
     });
     const searching = oq.trim().length > 0;
     // Worker or Helper has many trades: pick the kind of work first, like the
@@ -119,10 +121,10 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     return (
       <SubCategories
         art={grp && !searching ? null : picking} title={grp && !searching ? groupLabel(grp, lang) : t(meta[4])}
-        sub={t(picking === "ride" ? "offer_which" : "offer_what")} query={oq}
+        sub={t(picking === "ride" || picking === "hire" ? "offer_which" : "offer_what")} query={oq}
         sections={shown.map((g) => ({ title: shown.length > 1 ? groupLabel(g.g, lang) : null, items: g.items,
                                       icon: groupStyle(g.g).icon, fg: groupStyle(g.g).fg, bg: groupStyle(g.g).bg }))}
-        onPick={(slug) => onPick(picking, slug)} />
+        onPick={(slug) => onPick(picking === "hire" ? "ride" : picking, slug)} />
     );
   })();
   const meta2 = picking && types.find((x) => x[0] === picking);
@@ -134,7 +136,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
           padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark,
         }}><Icon name="back" size={16} /> {t("w_back")}</button>
       </div>
-      <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t(picking === "ride" ? "offer_which" : "offer_what")} placeholder={t("st_search")} />
+      <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t(picking === "ride" || picking === "hire" ? "offer_which" : "offer_what")} placeholder={t("st_search")} />
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 120px" }}>{step2}</div>
     </div>
   ) : (
@@ -147,11 +149,11 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>{t("offer_title")}</h1>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
         {types.map(([key, icon, bg, fg, title, sub]) => (
-          <button key={key} onClick={() => (key === "worker" || key === "shop" || key === "eat" || key === "ride" ? setType(key) : onPick(key))} style={{
+          <button key={key} onClick={() => (key === "delivery" ? onPick("ride", tradesFor("delivery", trades)[0].slug) : key === "worker" || key === "shop" || key === "eat" || key === "ride" || key === "hire" ? setType(key) : onPick(key))} style={{
             display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
             borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
           }}>
-            <TileArt k={key} />
+            <TileArt k={key === "hire" || key === "delivery" ? "ride" : key} />
             <span style={{ display: "block", padding: "11px 13px 13px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 32, height: 32, borderRadius: 9, background: fg, color: "#fff", flexShrink: 0,
@@ -328,8 +330,22 @@ export function vehicleLabel(tr, lang) {
   return String(n).replace(/\s+(driver|operator)\b/i, "");
 }
 
+// The Drivers group holds three different services: the rides (bike taxi,
+// taxi / cab, auto), vehicles and machines for hire for work, and the delivery
+// rider. A plain "car driver" is none of them and is not offered.
+export function driverKind(x) {
+  const k = `${x.slug || ""} ${x.name_en || ""}`.toLowerCase();
+  if (/deliver/.test(k)) return "delivery";
+  if (/taxi|cab/.test(k)) return "travel";
+  if (/bike|moto|auto|rick|toto/.test(k)) return "travel";
+  if (/\bcar\b/.test(k)) return "car";
+  return "hire";
+}
+
 export function tradesFor(kind, trades) {
-  if (kind === "ride") return trades.filter((x) => x.group_name === "Drivers");
+  if (kind === "ride") return trades.filter((x) => x.group_name === "Drivers" && driverKind(x) === "travel");
+  if (kind === "hire") return trades.filter((x) => x.group_name === "Drivers" && driverKind(x) === "hire");
+  if (kind === "delivery") return trades.filter((x) => x.group_name === "Drivers" && driverKind(x) === "delivery");
   if (kind === "eat") return trades.filter((x) => x.group_name === "Eat & Stay");
   if (kind === "shop") return trades.filter((x) => (x.kind === "supplier" || x.group_name === "Suppliers") && x.group_name !== "Eat & Stay");
   return trades.filter((x) => x.kind !== "supplier" && !NOT_WORKER.includes(x.group_name));

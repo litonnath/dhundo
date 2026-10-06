@@ -3194,7 +3194,7 @@ export default function ServicesPage({
                 </>
               ) : (
                 <ListingForm api={api} trades={trades} user={user} isAdmin={isAdmin}
-                             startGroup={{ ride: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
+                             startGroup={{ ride: "Drivers", hire: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
                              startTrade={offerTrade}
                              place={place} setPlace={setPlace}
                              onBack={() => setTab(isAdmin ? "browse" : "work")}
