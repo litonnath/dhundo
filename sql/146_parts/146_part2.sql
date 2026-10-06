@@ -20,7 +20,8 @@ begin
   end if;
   select x.* into o from public.services_orders x
    where x.id = p_order and x.status in ('accepted', 'ready') and x.mode in ('delivery', 'shop_delivery')
-     and x.job_id is null
+     and (x.job_id is null or exists (select 1 from public.services_jobs jj where jj.id = x.job_id
+                                      and (jj.status = 'cancelled' or (jj.status = 'open' and jj.expires_at <= now()))))
      and exists (select 1 from public.services_workers w where w.id = x.worker_id and w.user_id = v_me)
    for update;
   if not found then

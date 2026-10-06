@@ -124,7 +124,7 @@ const linkBtn = (bg) => ({
 });
 
 // ------------------------------------------------------------------ SHOP
-export function ShopJobs({ api, hasListing }) {
+export function ShopJobs({ api, hasListing, collapsed = false }) {
   const { t } = useI18n();
   const [f, setF] = useState({ note: "", drop: "", fee: "" });
   const [jobs, setJobs] = useState([]);
@@ -152,8 +152,11 @@ export function ShopJobs({ api, hasListing }) {
   const cancel = async (j) => { try { await api.jobUpdate(j.id, "cancel"); } catch (_) {} load(); };
 
   if (!hasListing) return null;
+  const Wrap = ({ children }) => (collapsed
+    ? <details style={{ marginTop: 18 }}><summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 40, display: "flex", alignItems: "center" }}>{t("jp_more")}</summary><div style={{ marginTop: 8 }}>{children}</div></details>
+    : <div style={{ marginTop: 18 }}>{children}</div>);
   return (
-    <div style={{ marginTop: 18 }}>
+    <Wrap>
       <h2 style={h2}>{t("jp_title")}</h2>
       <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, marginBottom: 10 }}>{t("jp_sub")}</div>
       <input style={{ ...input, marginBottom: 8 }} value={f.note} maxLength={300} placeholder={t("jp_note_ph")} aria-label={t("jp_note")}
@@ -183,7 +186,7 @@ export function ShopJobs({ api, hasListing }) {
           )}
         </div>
       ))}
-    </div>
+    </Wrap>
   );
 }
 

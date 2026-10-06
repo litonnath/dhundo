@@ -886,13 +886,16 @@ export function OwnerFood({ api, shop, onHire }) {
                   <div style={{ fontSize: 13.5, fontWeight: 700, margin: "2px 0 6px" }}>{String(t("ow_rider_is")).replace("{name}", o.rider_name)} {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark }}>{o.rider_phone}</a>}</div>
                 ) : o.job_status === "open" ? (
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "2px 0 6px" }}>{t("ow_rider_wait")}</div>
-                ) : !o.job_status ? (
-                  <div style={{ display: "flex", gap: 8, margin: "4px 0 8px" }}>
+                ) : (!o.job_status || o.job_status === "expired") ? (
+                  <div style={{ margin: "4px 0 8px" }}>
+                    {o.job_status === "expired" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>{t("ow_rider_none")}</div>}
+                    <div style={{ display: "flex", gap: 8 }}>
                     <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
                            value={quote["r" + o.id] !== undefined ? quote["r" + o.id] : String(Math.round((o.delivery_fee_paise || 3000) / 100))}
                            placeholder={t("ow_rider_fee")} aria-label={t("ow_rider_fee")}
                            onChange={(e) => setQuote((q) => ({ ...q, ["r" + o.id]: e.target.value.replace(/\D/g, "") }))} />
                     <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Number(quote["r" + o.id] !== undefined ? quote["r" + o.id] : Math.round((o.delivery_fee_paise || 3000) / 100))); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
+                    </div>
                   </div>
                 ) : null}
                 {o.job_id && ["accepted", "picked_up"].includes(o.job_status) && (

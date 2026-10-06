@@ -20,7 +20,7 @@ as $fn$
          o.created_at, w.delivery_mins,
          case when j.status in ('accepted', 'picked_up') then r.full_name::text end,
          case when j.status in ('accepted', 'picked_up') then r.phone::text end,
-         o.delivery_fee_paise, j.status::text,
+         o.delivery_fee_paise, (case when j.status = 'open' and j.expires_at <= now() then 'expired' else j.status end)::text,
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id
@@ -37,7 +37,7 @@ as $fn$
          o.created_at, w.delivery_mins,
          case when j.status in ('accepted', 'picked_up') then r.full_name::text end,
          case when j.status in ('accepted', 'picked_up') then r.phone::text end,
-         o.delivery_fee_paise, j.status::text,
+         o.delivery_fee_paise, (case when j.status = 'open' and j.expires_at <= now() then 'expired' else j.status end)::text,
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id

@@ -3148,7 +3148,7 @@ export default function ServicesPage({
               return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
             }
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
-              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} /><ShopJobs api={api} hasListing={hasListing} /></>;
+              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />{tr.group_name !== "Eat & Stay" && <ShopJobs api={api} hasListing={hasListing} collapsed />}</>;
             return <RatesCard api={api} />;
           })()}
           top={signedIn && hasListing && !isAdmin ? (isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : myDriverKind === "delivery" ? <RiderJobs api={api} online={avail.online} where={avail.where} /> : null) : null}
