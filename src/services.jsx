@@ -22,7 +22,7 @@
 // ===========================================================================
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  T, Icon, Btn, Chip, Notice, input, Header, Hero, CategoryGrid,
+  T, Icon, Btn, Chip, VoiceButton, Notice, input, Header, Hero, CategoryGrid,
   ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea,
   groupStyle, groupLabel, WalletSheet,
   plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
@@ -1296,6 +1296,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const geo = useMyLocation();
 
   const [step, setStep] = useState(1);
+  const [sub2, setSub2] = useState(1);   // step 2 is two screens: who, then where
   const [group, setGroup] = useState(() => (startTrade && (trades.find((x) => x.slug === startTrade) || {}).group_name) || startGroup);
   // A list, not a single value. A mistri who also tiles was previously
   // choosing which half of his work to advertise at the moment he signed
@@ -1362,6 +1363,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const bad = (key, msg, toStep) => {
     setErr(null);
     setFieldErr({ key, msg });
+    if (key === "name" || key === "biz" || key === "phone") setSub2(1);
+    else if (key === "place") setSub2(2);
     if (toStep) setStep(toStep);
     setTimeout(() => {
       const el = document.getElementById(`fld-${key}`);
@@ -1545,7 +1548,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   };
 
   const reset = () => {
-    setDone(null); setPosFailed(false); setItems([]); setItemsFailed(0); setStep(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
+    setDone(null); setPosFailed(false); setItems([]); setItemsFailed(0); setStep(1); setSub2(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
     setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
                    years_experience: "", day_rate_min: "", day_rate_max: "" }));
   };
@@ -1600,7 +1603,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         {(step > 1 || group || onBack) && (
           <button onClick={() => {
             setErr(null);
-            if (step > 1) setStep(step - 1);
+            if (step === 2 && sub2 === 2) setSub2(1);
+            else if (step > 1) setStep(step - 1);
             else if (group) setGroup(null);
             else if (onBack) onBack();
           }} style={{
@@ -1819,9 +1823,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
           <h2 style={title}>{t("w2_title")}</h2>
           <p style={sub}>{t("w2_sub")}</p>
 
+          {sub2 === 1 && (<>
           <BigField fid="name" error={ferr("name")} label={<>{isBiz ? t("f_owner") : t("w2_name")}<ReqTag /></>}>
-            <input style={bigInput} value={f.full_name} autoComplete="name"
-                   onChange={(e) => set("full_name", e.target.value)} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input style={{ ...bigInput, flex: 1, minWidth: 0 }} value={f.full_name} autoComplete="name"
+                     onChange={(e) => set("full_name", e.target.value)} />
+              <VoiceButton onHeard={(said) => set("full_name", said)} />
+            </div>
           </BigField>
 
           {isBiz && (
@@ -1842,6 +1850,15 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             </div>
           </BigField>
 
+          <Btn full onClick={() => {
+            if (!f.full_name.trim()) return bad("name", t("e_name"));
+            if (isBiz && !String(f.business_name || "").trim()) return bad("biz", t("e_name"));
+            if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"));
+            setErr(null); setFieldErr(null); setSub2(2);
+          }}>{t("w_next")}</Btn>
+          </>)}
+
+          {sub2 === 2 && (<>
           {/* ONE QUESTION: where. Type a road, a shop or a village and tap it,
               or use the phone's position, then move the pin to the exact
               door if it is not already there. The state, the PIN code and
@@ -1864,11 +1881,10 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
           </BigField>
 
           <Btn full onClick={() => {
-            if (!f.full_name.trim()) return bad("name", t("e_name"));
-            if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"));
             if (!lp || (!lp.area && typeof lp.lat !== "number")) return bad("place", t("loc_need"));
             setErr(null); setFieldErr(null); setStep(3);
           }}>{t("w_next")}</Btn>
+          </>)}
         </>
       )}
 
