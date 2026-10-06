@@ -241,7 +241,7 @@ function WhereCard({ where, saved, onChange, onPhone, busy }) {
       <div style={{ fontSize: 12.5, fontWeight: 800, color: T.inkFaint }}>{t("av_where")}</div>
       <div style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, margin: "2px 0 8px" }}>
         {where.saved && saved && (saved.address_line || saved.locality)
-          ? [saved.address_line || saved.locality, saved.city, saved.state].filter(Boolean).join(", ") + (saved.pincode ? " · " + saved.pincode : "")
+          ? (saved.address_line || saved.locality) + (saved.state || saved.pincode ? " · " + [saved.state, saved.pincode].filter(Boolean).join(" ") : "")
           : (name || `${where.lat.toFixed(4)}, ${where.lng.toFixed(4)}`)}
         <span style={{ fontWeight: 600, color: T.inkSoft }}> · {where.saved ? t("av_where_saved") : where.manual ? t("av_where_set") : t("av_where_phone")}</span>
       </div>
