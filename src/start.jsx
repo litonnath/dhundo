@@ -4,7 +4,7 @@
 // remembered, so these show once.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
-import { T, Icon, groupStyle, groupLabel, VoiceButton, Hero } from "./ui.jsx";
+import { T, Icon, groupStyle, groupLabel, VoiceButton, ListenButton, Hero } from "./ui.jsx";
 import { useI18n, tradeName } from "./i18n.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tradeIcon, vividFor } from "./tradeicons.js";
@@ -226,7 +226,10 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
             ))}
           </div>
         )}
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 14px", lineHeight: 1.25 }}>{t("launch_title")}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 10px", lineHeight: 1.25 }}>{t("launch_title")}</h1>
+        <div style={{ margin: "0 0 14px" }}>
+          <ListenButton lines={[t("launch_title"), ...TILES.filter((x) => x[0] !== "partner").map((x) => `${t(x[4])}. ${t(x[5])}`), t("hm_earn")]} />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
           {TILES.filter((x) => x[0] !== "partner").map(([key, icon, fg, bg, label, sub, art]) => (
             <button key={key} onClick={() => onPick(key)} style={{

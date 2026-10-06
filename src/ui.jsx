@@ -18,7 +18,7 @@
 //   * everything inline, no icon library, no font download -- the whole
 //     bundle stays small enough to open on a 3G connection
 // ===========================================================================
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
 import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinLookup, pinForPlace } from "./regions.js";
 import { useMyLocation, useInstallPrompt, isInstalledApp, locErrorKey } from "./device.jsx";
@@ -2871,6 +2871,41 @@ const SPEECH_LANG = {
   en: "en-IN", hi: "hi-IN", bn: "bn-IN", mr: "mr-IN", te: "te-IN", ta: "ta-IN",
   gu: "gu-IN", kn: "kn-IN", ml: "ml-IN", or: "or-IN", pa: "pa-IN", as: "as-IN",
 };
+// Reads the given lines aloud in the chosen language. For people who do not
+// read well: one tap, and the screen talks. Hidden where the phone cannot speak.
+export function ListenButton({ lines, style }) {
+  const { t, lang } = useI18n();
+  const [on, setOn] = useState(false);
+  const ok = typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+  useEffect(() => () => { try { if (ok) window.speechSynthesis.cancel(); } catch (_) {} }, [ok]);
+  if (!ok) return null;
+  const toggle = () => {
+    try {
+      const ss = window.speechSynthesis;
+      if (on) { ss.cancel(); setOn(false); return; }
+      ss.cancel();
+      const list = lines.filter(Boolean);
+      list.forEach((line, i) => {
+        const u = new SpeechSynthesisUtterance(String(line));
+        u.lang = SPEECH_LANG[lang] || "en-IN";
+        u.rate = 0.9;
+        if (i === list.length - 1) u.onend = () => setOn(false);
+        ss.speak(u);
+      });
+      setOn(true);
+    } catch (_) { setOn(false); }
+  };
+  return (
+    <button onClick={toggle} aria-pressed={on} aria-label={t("hm_listen")} style={{
+      display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 16px", borderRadius: 24, cursor: "pointer", fontFamily: "inherit",
+      fontSize: 15, fontWeight: 800, border: `1.5px solid ${T.brandDark}`, background: on ? T.brandDark : T.white, color: on ? "#fff" : T.brandDark, ...style,
+    }}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a8.5 8.5 0 0 1 0 12" /></svg>
+      {t("hm_listen")}
+    </button>
+  );
+}
+
 export function VoiceButton({ onHeard }) {
   const { t, lang } = useI18n();
   const [listening, setListening] = useState(false);
