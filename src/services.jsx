@@ -337,6 +337,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     // checks the code; the database then sees phone_confirmed_at.
     jobPost: (note, drop, fee) => rpc("services_job_post", { p_note: note, p_drop: drop, p_fee_rupees: fee }, true),
     jobsNearby: () => rpc("services_jobs_nearby", {}, true),
+    jobCode: (id) => rpc("services_job_code", { p_job: id }, true),
+    jobVerify: (id, code) => rpc("services_job_verify", { p_job: id, p_code: code }, true),
+    jobChatList: (id) => rpc("services_job_chat_list", { p_job: id }, true),
+    jobChatSend: (id, body) => rpc("services_job_chat_send", { p_job: id, p_body: body }, true),
     jobAccept: (id) => rpc("services_job_accept", { p_job: id }, true),
     jobUpdate: (id, action) => rpc("services_job_update", { p_job: id, p_action: action }, true),
     myJobs: () => rpc("services_my_jobs", {}, true),

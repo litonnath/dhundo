@@ -14,6 +14,7 @@ import { SubCategories, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 import { ContactRow, RequestSheet, foodKind } from "./foodkinds.jsx";
 import { FormSheet } from "./rates.jsx";
+import { RideChat, JobCode } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -644,6 +645,7 @@ export function MyOrdersSheet({ api, onClose }) {
               <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}{" "}
                 {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{o.rider_phone}</a>}</div>
             )}
+            {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" />}
             {o.status === "placed" && (
               <div><button onClick={() => cancel(o)} style={{ background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("st_cancel")}</button></div>
             )}
@@ -891,6 +893,12 @@ export function OwnerFood({ api, shop, onHire }) {
                     <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Number(quote["r" + o.id] !== undefined ? quote["r" + o.id] : Math.round((o.delivery_fee_paise || 3000) / 100))); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
                   </div>
                 ) : null}
+                {o.job_id && ["accepted", "picked_up"].includes(o.job_status) && (
+                  <>
+                    <JobCode api={api} jobId={o.job_id} role="shop" />
+                    <RideChat api={api} rideId={o.job_id} role="shop" kind="job" />
+                  </>
+                )}
                 {o.mode === "shop_delivery" && !o.job_status && onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
               </div>
             )}

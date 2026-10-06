@@ -9,6 +9,7 @@ import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { RouteNav } from "./nearmap.jsx";
+import { RideChat, JobCode } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -88,9 +89,10 @@ export function RiderJobs({ api, online, where = null }) {
               <button onClick={() => setNavFor(j)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
             )}
           </div>
+          <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
+          <RideChat api={api} rideId={j.id} role="rider" kind="job" />
           <div style={{ display: "flex", gap: 8 }}>
-            {j.status === "accepted" && <Btn kind="ghost" disabled={busy === j.id} onClick={() => move(j, "picked_up")}>{t("jb_picked")}</Btn>}
-            <Btn disabled={busy === j.id} onClick={() => move(j, "delivered")}>{t("jb_done")}</Btn>
+            <Btn disabled={busy === j.id || j.status !== "picked_up"} onClick={() => move(j, "delivered")}>{t("jb_done")}</Btn>
           </div>
         </div>
       ))}
@@ -176,6 +178,8 @@ export function ShopJobs({ api, hasListing }) {
               {j.other_phone && <a href={`tel:${j.other_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{j.other_phone}</a>}
             </div>
           )}
+          {["accepted", "picked_up"].includes(j.status) && <JobCode api={api} jobId={j.id} role="shop" />}
+          {["accepted", "picked_up"].includes(j.status) && <RideChat api={api} rideId={j.id} role="shop" kind="job" />}
           {["open", "accepted"].includes(j.status) && (
             <button onClick={() => cancel(j)} style={{ background: "none", border: "none", color: T.red, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("jp_cancel")}</button>
           )}
