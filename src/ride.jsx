@@ -9,6 +9,7 @@ import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
+import { FormSheet } from "./rates.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
@@ -335,17 +336,31 @@ function RiderSettings({ api, onSaved }) {
   }, [api]);
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
-  const save = async () => { try { await api.setRider(f); setSaved(true); onSaved && onSaved(); } catch (_) {} };
-  const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 44, fontSize: 15, fontWeight: 700 };
+  const [open, setOpen] = useState(false);
+  const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, fontSize: 15, fontWeight: 700 };
+  const save = async () => { try { await api.setRider(f); setSaved(true); onSaved && onSaved(); setOpen(false); } catch (_) {} };
+  const on = (v) => (v ? "\u2713" : "\u2013");
   return (
     <div style={card}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{t("rs_title")}</div>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km")}</div>
-      <input style={{ ...input, marginBottom: 8 }} inputMode="numeric" maxLength={3} value={f.perKm} placeholder="12"
-             onChange={(e) => set("perKm", e.target.value.replace(/\D/g, ""))} />
-      <label style={row}><input type="checkbox" checked={f.rides} onChange={(e) => set("rides", e.target.checked)} /> {t("rs_rides")}</label>
-      <label style={row}><input type="checkbox" checked={f.delivery} onChange={(e) => set("delivery", e.target.checked)} /> {t("rs_delivery")}</label>
-      <Btn kind="ghost" onClick={save}>{saved ? t("ow_store_saved") : t("ow_save")}</Btn>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{t("rs_title")}</div>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>
+            {f.perKm ? String(t("rs_km_show")).replace("{n}", f.perKm) : t("rs_per_km")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
+          </div>
+        </div>
+        <Btn kind="ghost" onClick={() => { setSaved(false); setOpen(true); }}>{t("av_change")}</Btn>
+      </div>
+      {open && (
+        <FormSheet title={t("rs_title")} onClose={() => setOpen(false)}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km")}</div>
+          <input style={{ ...input, marginBottom: 10 }} inputMode="numeric" maxLength={3} value={f.perKm} placeholder="12"
+                 onChange={(e) => set("perKm", e.target.value.replace(/\D/g, ""))} />
+          <label style={row}><input type="checkbox" checked={f.rides} onChange={(e) => set("rides", e.target.checked)} /> {t("rs_rides")}</label>
+          <label style={row}><input type="checkbox" checked={f.delivery} onChange={(e) => set("delivery", e.target.checked)} /> {t("rs_delivery")}</label>
+          <div style={{ marginTop: 10 }}><Btn full onClick={save}>{t("ow_save")}</Btn></div>
+        </FormSheet>
+      )}
     </div>
   );
 }
