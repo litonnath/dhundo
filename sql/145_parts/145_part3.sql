@@ -26,7 +26,14 @@ begin
     get diagnostics v_n = row_count;
   elsif p_action = 'accept_quote' then
     update public.services_orders set status = 'accepted', updated_at = now()
-     where id = p_order and customer_id = v_me and status = 'quoted' and mode = 'shop_delivery';
+     where id = p_order and customer_id = v_me and status = 'quoted' and mode in ('shop_delivery', 'pickup');
+    get diagnostics v_n = row_count;
+  elsif p_action = 'refuse_delivery' then
+    -- the shop cannot deliver this one: it becomes a pickup order the customer
+    -- can accept (collect it from the shop) or decline
+    update public.services_orders x set mode = 'pickup', status = 'quoted', delivery_fee_paise = 0, updated_at = now()
+     where x.id = p_order and x.mode = 'shop_delivery' and x.status in ('placed', 'confirmed')
+       and exists (select 1 from public.services_workers w where w.id = x.worker_id and w.user_id = v_me);
     get diagnostics v_n = row_count;
   elsif p_action in ('accept', 'reject', 'ready', 'delivered') then
     update public.services_orders x

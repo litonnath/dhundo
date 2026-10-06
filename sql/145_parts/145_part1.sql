@@ -26,7 +26,8 @@ set search_path to 'public'
 as $fn$
 begin
   if new.status is distinct from old.status and new.status in ('confirmed', 'quoted', 'accepted', 'ready', 'delivered', 'rejected') then
-    perform public.services_notify(new.customer_id, 'order_' || new.status, null);
+    perform public.services_notify(new.customer_id,
+      case when new.status = 'quoted' and new.mode = 'pickup' then 'order_nodelivery' else 'order_' || new.status end, null);
   end if;
   if new.status is distinct from old.status and new.status = 'accepted' and new.mode = 'shop_delivery' then
     perform public.services_notify((select w.user_id from public.services_workers w where w.id = new.worker_id), 'order_quote_ok', null);

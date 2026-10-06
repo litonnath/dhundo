@@ -592,8 +592,8 @@ export function MyOrdersSheet({ api, onClose }) {
             {o.status === "confirmed" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", margin: "6px 0" }}>{t("st_confirmed_msg")}</div>}
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
+                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</div>}
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   <Btn kind="ghost" onClick={() => cancel(o)}>{t("st_quote_decline")}</Btn>
@@ -817,6 +817,7 @@ export function OwnerFood({ api, shop, onHire }) {
             {o.status === "placed" && <>
               <Btn disabled={busy === o.id} onClick={() => act(o, "accept")}>{t("ow_accept")}</Btn>
               <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+              {o.mode === "shop_delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "refuse_delivery")}>{t("ow_refuse")}</Btn>}
             </>}
             {o.status === "confirmed" && (
               <div style={{ width: "100%" }}>
@@ -831,11 +832,13 @@ export function OwnerFood({ api, shop, onHire }) {
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
+                  <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "refuse_delivery")}>{t("ow_refuse")}</Btn>
                   <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
                 </div>
               </div>
             )}
-            {o.status === "quoted" && <>
+            {o.status === "quoted" && o.mode === "pickup" && <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("st_nodeliver_msg")}</div>}
+            {o.status === "quoted" && o.mode !== "pickup" && <>
               <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("ow_quote_wait")} ({rupees(o.delivery_fee_paise)})</div>
               <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
             </>}
