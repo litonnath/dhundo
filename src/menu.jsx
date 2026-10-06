@@ -61,16 +61,16 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
           <CloseButton onClick={onClose} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-          {[["need", "search", t("mode_need")], ["offer", "edit", t("mode_offer")]].map(([m, icon, label]) => (
-            <button key={m} onClick={() => { onMode(m); onClose(); }} aria-pressed={mode === m} style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 48,
-              borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800,
-              border: `1.5px solid ${mode === m ? T.brandDark : T.line}`,
-              background: mode === m ? T.brandDark : T.white, color: mode === m ? "#fff" : T.ink,
-            }}><Icon name={icon} size={18} /> {label}</button>
-          ))}
-        </div>
+        {(() => {
+          const m = mode === "offer" ? "need" : "offer";
+          return (
+            <button onClick={() => { onMode(m); onClose(); }} style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 50,
+              borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800,
+              border: `1.5px solid ${T.brandDark}`, background: T.brandDark, color: "#fff",
+            }}><Icon name={m === "need" ? "search" : "edit"} size={18} /> {m === "need" ? t("hm_findorder") : t("hm_earn")}</button>
+          );
+        })()}
 
         {signedIn && sections.map((sec) => (
           <div key={sec.title} style={{ marginTop: 14 }}>

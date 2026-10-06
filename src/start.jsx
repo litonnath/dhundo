@@ -197,7 +197,7 @@ export function HomeButton({ onClick, label }) {
   );
 }
 
-export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
+export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive }) {
   const { t } = useI18n();
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
@@ -205,52 +205,30 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
-  if (!side) {
-    const cards = [
-      ["need", "mode_need", "start_need_sub", "search", "#1D4ED8", "#E8F0FE", () => setSide("need")],
-      ["offer", "mode_offer", "start_offer_sub", "edit", "#C2410C", "#FFF1E6", onOffer],
-    ];
-    return (
-      <div style={{ minHeight: "calc(100vh - 170px)", display: "flex", flexDirection: "column", justifyContent: "center",
-                    padding: "26px 16px 110px", boxSizing: "border-box" }}>
-        <div style={{ width: "100%", maxWidth: 820, margin: "0 auto" }}>
-          <h1 style={{ fontSize: wide ? 30 : 25, fontWeight: 800, color: T.ink, margin: "0 0 6px", lineHeight: 1.25, textAlign: "center" }}>{t("start_title")}</h1>
-          <p style={{ fontSize: 14.5, color: T.inkSoft, margin: "0 0 20px", textAlign: "center" }}>{t("trust_2_s")}</p>
-          <div style={{ display: "grid", gridTemplateColumns: wide ? "1fr 1fr" : "1fr", gap: 16 }}>
-            {cards.map(([k, title, sub, icon, fg, bg, go]) => (
-              <button key={k} onClick={go} style={{
-                display: "block", padding: 0, overflow: "hidden", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-                borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, boxShadow: "0 6px 20px rgba(15,20,25,0.07)",
+  return (
+    <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
+      <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
+        {liveNow.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 8px" }}>{t("hm_continue")}</div>
+            {liveNow.map((x, i) => (
+              <button key={i} onClick={() => onLive && onLive(x.go)} style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", minHeight: 62, padding: "10px 14px", marginBottom: 8,
+                borderRadius: 14, border: "1.5px solid #1FA85A", background: "#F0FAF4", cursor: "pointer", fontFamily: "inherit",
               }}>
-                <TileArt k={k} pos={k === "need" ? "75% center" : "center 35%"} style={{ aspectRatio: wide ? "2 / 1" : "21 / 9" }} />
-                <span style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px 16px" }}>
-                  <span style={{ width: 46, height: 46, borderRadius: 12, background: fg, color: "#fff", flexShrink: 0,
-                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={22} /></span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: T.ink }}>{t(title)}</span>
-                    <span style={{ display: "block", fontSize: 13, color: T.inkSoft, lineHeight: 1.45, marginTop: 2 }}>{t(sub)}</span>
-                  </span>
-                  <Icon name="chev" size={20} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+                <span style={{ width: 40, height: 40, borderRadius: 12, background: "#1FA85A", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={x.icon} size={20} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink }}>{x.title}</span>
+                  <span style={{ display: "block", fontSize: 13.5, color: "#157A43", fontWeight: 700 }}>{x.sub}</span>
                 </span>
+                <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
               </button>
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div style={{ padding: "26px 16px 120px", boxSizing: "border-box" }}>
-      <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
-        <button onClick={() => setSide(null)} style={{
-          display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
-          color: T.brandDark, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 40, marginBottom: 6,
-        }}><Icon name="back" size={16} /> {t("launch_back")}</button>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 18px", lineHeight: 1.25 }}>
-          {t("launch_title")}
-        </h1>
+        )}
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 14px", lineHeight: 1.25 }}>{t("launch_title")}</h1>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
-          {TILES.map(([key, icon, fg, bg, label, sub, art]) => (
+          {TILES.filter((x) => x[0] !== "partner").map(([key, icon, fg, bg, label, sub, art]) => (
             <button key={key} onClick={() => onPick(key)} style={{
               display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left",
               padding: 0, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
@@ -268,6 +246,17 @@ export function CustomerLauncher({ onPick, onOffer, side, setSide }) {
             </button>
           ))}
         </div>
+        <button onClick={onOffer} style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 76, padding: "12px 16px", marginTop: 16,
+          borderRadius: 16, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit",
+        }}>
+          <span style={{ width: 46, height: 46, borderRadius: 14, background: "#C2410C", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={hasBusiness ? "construction" : "edit"} size={22} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: T.ink }}>{hasBusiness ? t("hm_mybiz") : t("hm_earn")}</span>
+            <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{hasBusiness ? t("hm_mybiz_sub") : t("hm_earn_sub")}</span>
+          </span>
+          <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+        </button>
       </div>
     </div>
   );

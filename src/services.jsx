@@ -543,7 +543,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
 
 // Remembered between visits so Back from Buy something lands on the I need tiles.
 let lastSide = null;
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -903,7 +903,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker" && section !== "ride" && section !== "shop" && section !== "eat") {
-    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} side={side} setSide={setSide} />;
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} />;
   }
   // Worker or Helper: people who come and work. Not drivers (Ride), not
   // shops or suppliers, not food places or stays.
@@ -2882,16 +2882,22 @@ export default function ServicesPage({
   // second hand request waiting for the seller.
   const [ordersBadge, setOrdersBadge] = useState(0);
   const [ordersKey, setOrdersKey] = useState(0);
+  const [liveNow, setLiveNow] = useState([]);
   const openOrders = (sub) => { try { window.localStorage.setItem("dhundo_orders_tab", sub || ""); } catch (_) {} setOrdersKey((k) => k + 1); setTab("orders"); };
   useEffect(() => {
-    if (!signedIn) { setOrdersBadge(0); return undefined; }
+    if (!signedIn) { setOrdersBadge(0); setLiveNow([]); return undefined; }
     let live = true;
     const pull = async () => {
       try {
         const [o, it] = await Promise.all([api.myOrders().catch(() => []), api.myItemOrders ? api.myItemOrders().catch(() => []) : []]);
         const a = (Array.isArray(o) ? o : []).filter((x) => (x.role === "owner" && x.status === "placed") || (x.role === "customer" && x.status === "quoted")).length;
         const b = (Array.isArray(it) ? it : []).filter((x) => x.role === "seller" && x.status === "requested").length;
-        if (live) setOrdersBadge(a + b);
+        const now = [];
+        (Array.isArray(o) ? o : []).filter((x) => x.role === "customer" && !["delivered", "rejected", "cancelled"].includes(x.status)).slice(0, 3)
+          .forEach((x) => now.push({ icon: "bag", title: x.other_name, sub: t("st_status_" + x.status), go: "mine" }));
+        (Array.isArray(it) ? it : []).filter((x) => x.role === "buyer" && ["requested", "accepted"].includes(x.status)).slice(0, 2)
+          .forEach((x) => now.push({ icon: "tag", title: t("mb_mine"), sub: x.status === "accepted" ? t("mb_accepted") : t("mb_wait"), go: "items" }));
+        if (live) { setOrdersBadge(a + b); setLiveNow(now); }
       } catch (_) { /* next tick */ }
     };
     pull();
@@ -3088,7 +3094,7 @@ export default function ServicesPage({
         if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
         if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
         if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
-        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }];
+        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }, { icon: "user", title: t("home_partner"), sub: t("home_partner_sub"), go: () => setPartnerOpen(true) }];
         const sections = [
           { title: t("ms_activity"), rows: activity },
           business.length ? { title: t("ms_business"), rows: business } : null,
@@ -3150,6 +3156,8 @@ export default function ServicesPage({
           onMarket={() => setTab("market")}
           onPartner={() => setPartnerOpen(true)}
           onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
+          hasBusiness={hasListing && !isAdmin}
+          liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
       )}
