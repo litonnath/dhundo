@@ -68,14 +68,15 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // Toll on the route, asked of the routing service for cars and cabs (two
   // wheelers and autos do not pay it). null means unknown, 0 means none.
   const tollVehicle = /car|taxi|cab/.test(vehicle);
+  const anyCab = vehicles.some((v) => /car|taxi|cab/.test(v.slug));
   const [toll, setToll] = useState(null);
   useEffect(() => {
     let live = true;
     setToll(null);
-    if (hire || !tollVehicle || !pick || !drop || typeof pick.lat !== "number" || typeof drop.lat !== "number") return undefined;
+    if (hire || !anyCab || !pick || !drop || typeof pick.lat !== "number" || typeof drop.lat !== "number") return undefined;
     tripKm(pick, drop, { toll: true }).then((r) => { if (live && r && typeof r.toll === "number") setToll(r.toll); }).catch(() => {});
     return () => { live = false; };
-  }, [hire, tollVehicle, pick && pick.lat, pick && pick.lng, drop && drop.lat, drop && drop.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hire, anyCab, pick && pick.lat, pick && pick.lng, drop && drop.lat, drop && drop.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadRide = useCallback(async () => {
     if (!signedIn) return;
@@ -105,35 +106,63 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return () => { live = false; };
   }, [api, vehicle, pick && pick.lat, pick && pick.lng]);
 
-  // Every listed driver near the pickup for this vehicle, online or not: their
-  // per-km rates are the next best thing when nobody of that kind is online.
-  const [listedRates, setListedRates] = useState([]);
+  // Rates of the drivers near the pickup, kept per kind of vehicle: those online
+  // now and those only listed. Each vehicle gets its own price from its own
+  // drivers' per-km rates.
+  const [book, setBook] = useState({});
   useEffect(() => {
-    setListedRates([]);
+    setBook({});
     if (!pick || typeof pick.lat !== "number") return undefined;
     let live = true;
-    api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 20, state: place && place.state })
-      .then((rows) => {
-        const ids = many(rows).filter((r) => (vehicle === "any" ? !/deliver/i.test(`${r.trade_slug} ${r.trade_name || ""}`) : r.trade_slug === vehicle)).map((r) => r.id);
-        if (!ids.length) return null;
-        return api.storeInfos(ids);
-      })
-      .then((inf) => { if (live && inf) setListedRates(many(inf).map((i) => Number(i.per_km_rupees)).filter((n) => n > 0)); })
-      .catch(() => {});
+    const notDelivery = (r) => !/deliver/i.test(`${r.trade_slug} ${r.trade_name || ""}`);
+    Promise.all([
+      api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", trade: null, radiusKm: 8, limit: 30 }).catch(() => []),
+      api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 40, state: place && place.state }).catch(() => []),
+    ]).then(([on, all]) => {
+      const onl = many(on).filter(notDelivery);
+      const lst = many(all).filter(notDelivery);
+      const ids = [...new Set([...onl, ...lst].map((r) => r.id))];
+      if (!ids.length) return null;
+      return api.storeInfos(ids).then((inf) => {
+        const rate = {}; many(inf).forEach((i) => { rate[i.id] = Number(i.per_km_rupees); });
+        const out = {};
+        const add = (rows, kind) => rows.forEach((r) => {
+          if (!(rate[r.id] > 0)) return;
+          const e = out[r.trade_slug] || (out[r.trade_slug] = { online: [], listed: [] });
+          e[kind].push(rate[r.id]);
+        });
+        add(onl, "online"); add(lst, "listed");
+        return out;
+      });
+    }).then((out) => { if (live && out) setBook(out); }).catch(() => {});
     return () => { live = false; };
-  }, [api, vehicle, pick && pick.lat, pick && pick.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, pick && pick.lat, pick && pick.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The fare is worked out, not typed: the distance times a per-km rate. The
-  // rate is, in this order: the middle rate of the drivers online near the
-  // pickup for this vehicle; else of the drivers listed near it; else the
-  // standard rate for the kind of vehicle. Rounded to the nearest 5 rupees.
+  // The price of each vehicle is worked out, not typed: the distance times a
+  // per-km rate, plus the toll for cars and cabs. The rate is, in this order:
+  // the middle rate of that vehicle's drivers online near the pickup; else of
+  // its drivers listed near it; else the standard rate for that kind of vehicle.
+  // Rounded to the nearest 5 rupees.
   const median = (a) => { const x = a.slice().sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; };
-  const onlineRates = online.map((d) => Number(fares[d.id])).filter((n) => n > 0);
-  const STD = /bike|moto/.test(vehicle) ? 8 : /auto|rick|toto/.test(vehicle) ? 12 : /car|taxi|cab/.test(vehicle) ? 15 : 12;
-  const basis = onlineRates.length ? "online" : listedRates.length ? "listed" : "std";
-  const perKm = basis === "online" ? median(onlineRates) : basis === "listed" ? median(listedRates) : STD;
-  const fareOnly = trip && perKm ? Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5) : null;
-  const est = fareOnly != null ? fareOnly + (toll || 0) : null;
+  const priceFor = (slug) => {
+    if (!trip) return null;
+    const e = book[slug] || { online: [], listed: [] };
+    const std = /bike|moto/.test(slug) ? 8 : /auto|rick|toto/.test(slug) ? 12 : /car|taxi|cab/.test(slug) ? 15 : 12;
+    const basis = e.online.length ? "online" : e.listed.length ? "listed" : "std";
+    const perKm = basis === "online" ? median(e.online) : basis === "listed" ? median(e.listed) : std;
+    const fare = Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5);
+    const tl = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
+    return { perKm, basis, fare, toll: tl, total: fare + tl };
+  };
+  const cheapest = (() => {
+    const all = vehicles.map((v) => priceFor(v.slug)).filter(Boolean);
+    return all.length ? Math.min(...all.map((x) => x.total)) : null;
+  })();
+  const cur = vehicle === "any" ? null : priceFor(vehicle);
+  const basis = cur ? cur.basis : "std";
+  const perKm = cur ? cur.perKm : null;
+  const fareOnly = cur ? cur.fare : cheapest;
+  const est = vehicle === "any" ? cheapest : cur ? cur.total : null;
 
   const here = async () => {
     const got = await geo.detect();
@@ -275,7 +304,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
             <span style={{ width: 34, height: 34, borderRadius: 9, background: v.color, color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon name={v.icon} size={19} />
             </span>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, lineHeight: 1.2, minWidth: 0, overflowWrap: "anywhere" }}>{v.label}</span>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.ink, lineHeight: 1.2, minWidth: 0, overflowWrap: "anywhere" }}>{v.label}</span>
+            {(() => {
+              const pr = v.slug === "any" ? (cheapest != null ? { total: cheapest } : null) : priceFor(v.slug);
+              return pr ? <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, flexShrink: 0 }}>{v.slug === "any" ? "\u20B9" + pr.total + "+" : "\u20B9" + pr.total}</span> : null;
+            })()}
           </button>
         ))}
       </div>
@@ -283,12 +316,12 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
-          {tollVehicle && toll !== null && (
+          {tollVehicle && cur && toll !== null && (
             <div style={{ fontSize: 14, fontWeight: 800, color: toll > 0 ? "#B45309" : "#0F6B33", marginTop: 4 }}>
               {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
             </div>
           )}
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km)}</div>
+          {cur && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km)}</div>}
           <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
         </div>
       ) : (
