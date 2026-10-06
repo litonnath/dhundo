@@ -370,6 +370,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       p_open: o.open || null, p_close: o.close || null, p_mins: o.mins || null, p_auto_rider: o.autoRider,
       p_promo: o.promo || null, p_promo_photo: o.promoPhoto || null,
     }, true),
+    fuelPrices: () => rpc("services_fuel_prices", {}),
+    driverPricing: (ids) => rpc("services_driver_pricing", { p_ids: ids }),
+    myFuel: () => rpc("services_my_fuel", {}, true),
+    setFuel: (f) => rpc("services_set_fuel", { p_fuel: f || null }, true),
     myRider: () => rpc("services_my_rider", {}, true),
     setRider: (o) => rpc("services_set_rider", { p_per_km: o.perKm === "" || o.perKm == null ? null : Number(o.perKm), p_rides: !!o.rides, p_delivery: !!o.delivery }, true),
     pushSubscribe: (endpoint, p256dh, auth, lang) => rpc("services_push_subscribe", {

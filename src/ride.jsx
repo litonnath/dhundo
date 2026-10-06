@@ -110,6 +110,12 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // now and those only listed. Each vehicle gets its own price from its own
   // drivers' per-km rates.
   const [book, setBook] = useState({});
+  const [fuels, setFuels] = useState({ petrol: 100, diesel: 90, cng: 80, electric: 9 });
+  useEffect(() => {
+    let live = true;
+    api.fuelPrices().then((r) => { if (!live) return; const o = {}; many(r).forEach((x) => { o[x.fuel] = Number(x.price); }); if (Object.keys(o).length) setFuels((f) => ({ ...f, ...o })); }).catch(() => {});
+    return () => { live = false; };
+  }, [api]);
   useEffect(() => {
     setBook({});
     if (!pick || typeof pick.lat !== "number") return undefined;
@@ -123,13 +129,14 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       const lst = many(all).filter(notDelivery);
       const ids = [...new Set([...onl, ...lst].map((r) => r.id))];
       if (!ids.length) return null;
-      return api.storeInfos(ids).then((inf) => {
-        const rate = {}; many(inf).forEach((i) => { rate[i.id] = Number(i.per_km_rupees); });
+      return api.driverPricing(ids).then((inf) => {
+        const rate = {}, fuelOf = {};
+        many(inf).forEach((i) => { rate[i.id] = Number(i.per_km_rupees); fuelOf[i.id] = i.fuel_type; });
         const out = {};
         const add = (rows, kind) => rows.forEach((r) => {
-          if (!(rate[r.id] > 0)) return;
-          const e = out[r.trade_slug] || (out[r.trade_slug] = { online: [], listed: [] });
-          e[kind].push(rate[r.id]);
+          const e = out[r.trade_slug] || (out[r.trade_slug] = { online: [], listed: [], fuels: [] });
+          if (fuelOf[r.id]) e.fuels.push(fuelOf[r.id]);
+          if (rate[r.id] > 0) e[kind].push(rate[r.id]);
         });
         add(onl, "online"); add(lst, "listed");
         return out;
@@ -144,22 +151,36 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // its drivers listed near it; else the standard rate for that kind of vehicle.
   // Rounded to the nearest 5 rupees.
   const median = (a) => { const x = a.slice().sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; };
+  // The standard rate comes from the price of the fuel the vehicle runs on:
+  // fuel cost per km (price / km per litre, kg or kWh) plus a fixed amount for
+  // the driver's time and the upkeep of the vehicle.
+  const KM_PER = { bike: { petrol: 40, electric: 10 }, auto: { cng: 28, petrol: 25, diesel: 22, electric: 8 }, car: { petrol: 15, diesel: 18, cng: 22, electric: 6 } };
+  const BASE = { bike: 5.5, auto: 9, car: 8.3 };
+  const kindOf = (slug) => (/bike|moto/.test(slug) ? "bike" : /auto|rick|toto/.test(slug) ? "auto" : "car");
   const priceFor = (slug) => {
     if (!trip) return null;
-    const e = book[slug] || { online: [], listed: [] };
-    const std = /bike|moto/.test(slug) ? 8 : /auto|rick|toto/.test(slug) ? 12 : /car|taxi|cab/.test(slug) ? 15 : 12;
-    const basis = e.online.length ? "online" : e.listed.length ? "listed" : "std";
-    const perKm = basis === "online" ? median(e.online) : basis === "listed" ? median(e.listed) : std;
+    const e = book[slug] || { online: [], listed: [], fuels: [] };
+    const kind = kindOf(slug);
+    const typical = kind === "bike" ? "petrol" : kind === "auto" ? "cng" : "petrol";
+    const counts = {}; e.fuels.forEach((f) => { counts[f] = (counts[f] || 0) + 1; });
+    const common = Object.keys(counts).sort((x, y) => counts[y] - counts[x])[0];
+    const fuel = KM_PER[kind][common] ? common : typical;
+    const std = Math.ceil((fuels[fuel] || 100) / KM_PER[kind][fuel] + BASE[kind]);
+    const set = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
+    // A driver's own rate is used when it is not above the standard rate;
+    // above it, the standard rate is shown instead.
+    const basis = set == null ? "fuel" : set <= std ? "driver" : "default";
+    const perKm = set != null && set <= std ? set : std;
     const fare = Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5);
     const tl = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
-    return { perKm, basis, fare, toll: tl, total: fare + tl };
+    return { perKm, basis, fuel, fare, toll: tl, total: fare + tl };
   };
   const cheapest = (() => {
     const all = vehicles.map((v) => priceFor(v.slug)).filter(Boolean);
     return all.length ? Math.min(...all.map((x) => x.total)) : null;
   })();
   const cur = vehicle === "any" ? null : priceFor(vehicle);
-  const basis = cur ? cur.basis : "std";
+  const basis = cur ? cur.basis : "fuel";
   const perKm = cur ? cur.perKm : null;
   const fareOnly = cur ? cur.fare : cheapest;
   const est = vehicle === "any" ? cheapest : cur ? cur.total : null;
@@ -307,7 +328,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.ink, lineHeight: 1.2, minWidth: 0, overflowWrap: "anywhere" }}>{v.label}</span>
             {(() => {
               const pr = v.slug === "any" ? (cheapest != null ? { total: cheapest } : null) : priceFor(v.slug);
-              return pr ? <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, flexShrink: 0 }}>{v.slug === "any" ? "\u20B9" + pr.total + "+" : "\u20B9" + pr.total}</span> : null;
+              return pr ? <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, flexShrink: 0, textAlign: "right" }}>{v.slug === "any" ? "\u20B9" + pr.total + "+" : "\u20B9" + pr.total}{pr.toll > 0 && <span style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: "#B45309" }}>{t("rd_incl_toll")}</span>}</span> : null;
             })()}
           </button>
         ))}
@@ -321,7 +342,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
               {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
             </div>
           )}
-          {cur && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km)}</div>}
+          {cur && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km).replace("{fuel}", `${t("fuel_" + cur.fuel)} \u20B9${fuels[cur.fuel]}/${cur.fuel === "cng" ? "kg" : cur.fuel === "electric" ? "kWh" : "L"}`)}</div>}
           <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
         </div>
       ) : (
@@ -451,13 +472,15 @@ function RiderSettings({ api, onSaved }) {
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
   useEffect(() => {
-    api.myRider().then((r) => { const x = one(r) || {}; setF({ perKm: x.per_km_rupees == null ? "" : String(x.per_km_rupees), rides: x.serves_rides !== false, delivery: x.serves_delivery !== false }); })
-      .catch(() => setF({ perKm: "", rides: true, delivery: true }));
+    Promise.all([api.myRider(), api.myFuel ? api.myFuel().catch(() => null) : null]).then(([r, fu]) => {
+      const x = one(r) || {};
+      setF({ perKm: x.per_km_rupees == null ? "" : String(x.per_km_rupees), rides: x.serves_rides !== false, delivery: x.serves_delivery !== false, fuel: (one(fu) && one(fu).fuel_type) || "" });
+    }).catch(() => setF({ perKm: "", rides: true, delivery: true, fuel: "" }));
   }, [api]);
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
   const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, fontSize: 15, fontWeight: 700 };
-  const save = async () => { try { await api.setRider(f); setSaved(true); onSaved && onSaved(); setOpen(false); } catch (_) {} };
+  const save = async () => { try { await api.setRider(f); if (api.setFuel) await api.setFuel(f.fuel); setSaved(true); onSaved && onSaved(); setOpen(false); } catch (_) {} };
   const on = (v) => (v ? "\u2713" : "\u2013");
   return (
     <div style={card}>
@@ -475,6 +498,11 @@ function RiderSettings({ api, onSaved }) {
           <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km")}</div>
           <input style={{ ...input, marginBottom: 10 }} inputMode="numeric" maxLength={3} value={f.perKm} placeholder="12"
                  onChange={(e) => set("perKm", e.target.value.replace(/\D/g, ""))} />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_fuel")}</div>
+          <select style={{ ...input, marginBottom: 10 }} value={f.fuel} onChange={(e) => set("fuel", e.target.value)}>
+            <option value="">{t("rs_fuel_none")}</option>
+            {["petrol", "diesel", "cng", "electric"].map((x) => <option key={x} value={x}>{t("fuel_" + x)}</option>)}
+          </select>
           <label style={row}><input type="checkbox" checked={f.rides} onChange={(e) => set("rides", e.target.checked)} /> {t("rs_rides")}</label>
           <label style={row}><input type="checkbox" checked={f.delivery} onChange={(e) => set("delivery", e.target.checked)} /> {t("rs_delivery")}</label>
           <div style={{ marginTop: 10 }}><Btn full onClick={save}>{t("ow_save")}</Btn></div>
