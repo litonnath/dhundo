@@ -129,7 +129,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       const lst = many(all).filter(notDelivery);
       const ids = [...new Set([...onl, ...lst].map((r) => r.id))];
       if (!ids.length) return null;
-      return api.driverPricing(ids).then((inf) => {
+      // driverPricing needs sql/139; without it the per-km rates still come from the store info.
+      return api.driverPricing(ids).catch(() => api.storeInfos(ids)).then((inf) => {
         const rate = {}, fuelOf = {};
         many(inf).forEach((i) => { rate[i.id] = Number(i.per_km_rupees); fuelOf[i.id] = i.fuel_type; });
         const out = {};
