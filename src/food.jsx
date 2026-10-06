@@ -617,17 +617,19 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
 }
 
 // ============================================================= MY ORDERS
-export function MyOrdersList({ api }) {
+export function MyOrdersList({ api, view = null, title = null, showEmpty = false }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState(null);
   const load = useCallback(async () => {
-    try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer")); } catch (_) { setOrders((o) => o || []); }
-  }, [api]);
+    try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
+  }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
   const cancel = async (o) => { try { await api.orderUpdate(o.id, "cancel"); } catch (_) {} load(); };
+  if (view && orders && orders.length === 0 && !showEmpty) return null;
   return (
     <div>
-        <AlertsCard api={api} compact />
+        {view && orders && orders.length > 0 && title}
+        {!view && <AlertsCard api={api} compact />}
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : orders.map((o) => (
           <div key={o.id} style={card}>
             <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>

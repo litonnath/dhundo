@@ -76,7 +76,7 @@ export function BuySheet({ api, item, onClose, onSent, onHire }) {
 
 const STATUS_COLOR = { requested: "#B45309", accepted: "#1D4ED8", completed: "#16A34A", declined: "#B91C1C", cancelled: "#6B7280" };
 
-export function ItemOrdersList({ api, onHire }) {
+export function ItemOrdersList({ api, onHire, view = null, title = null }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
   const [fee, setFee] = useState({});
@@ -84,8 +84,8 @@ export function ItemOrdersList({ api, onHire }) {
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState({});
   const load = useCallback(async () => {
-    try { setRows(many(await api.myItemOrders())); } catch (_) { setRows((r) => r || []); }
-  }, [api]);
+    try { setRows(many(await api.myItemOrders()).filter((o) => !view || (view === "active") === ["requested", "accepted"].includes(o.status))); } catch (_) { setRows((r) => r || []); }
+  }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id); }, [load]);
   const act = async (o, action, feeRs) => {
     setBusy(o.id);
@@ -101,8 +101,10 @@ export function ItemOrdersList({ api, onHire }) {
     setBusy(null); load();
   };
   const label = (o) => (o.status === "requested" ? (o.role === "buyer" ? t("mb_wait") : t("mb_new")) : o.status === "accepted" ? t("mb_accepted") : o.status === "completed" ? t("mb_done") : o.status === "declined" ? t("mb_declined") : t("mb_cancelled"));
+  if (view && rows && rows.length === 0) return null;
   return (
     <div>
+      {view && rows && rows.length > 0 && title}
       {rows === null && <div style={{ color: T.inkSoft }}>{"\u2026"}</div>}
       {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("mb_none")}</div>}
       {(rows || []).map((o) => {

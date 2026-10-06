@@ -1,10 +1,7 @@
 // ---------------------------------------------------------------------------
-// ORDERS: one place, on the bottom bar for everyone, for everything that is in
-// progress. What you ordered, what you are buying or selling second hand, and,
-// depending on what you do on Dhundo: the orders your restaurant or shop has
-// received, the delivery jobs for a rider, the ride requests for a driver.
-// Messages, codes and history sit inside each order, so nothing hides under the
-// account or dashboard.
+// ACTIVITY: one list, like Swiggy or Uber. Two choices only: Active (what is
+// happening now) and Past. Everything you ordered, bought or sold, and, if you
+// run a business or drive, the work waiting for you, is on this one screen.
 // ---------------------------------------------------------------------------
 import React, { useState } from "react";
 import { T } from "./ui.jsx";
@@ -14,35 +11,37 @@ import { ItemOrdersList } from "./itemorders.jsx";
 import { RiderJobs } from "./hub.jsx";
 import { RideRequests, RideHistory } from "./ride.jsx";
 
+const head = { fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, margin: "18px 0 8px" };
+
 export function OrdersPage({ api, role, online, where, trades, onHire }) {
   const { t } = useI18n();
-  const [tab, setTab] = useState(() => {
-    let want = null;
-    try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "items" ? "items" : want === "mine" ? "mine" : role ? "work" : "mine";
-  });
-  const pills = [role ? ["work", role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides"] : null, ["mine", "or_mine"], ["items", "mb_mine"]].filter(Boolean);
+  const [view, setView] = useState("active");
+  try { window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 120px" }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 12px", color: T.ink }}>{t("nav_activity")}</h1>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        {pills.map(([k, key]) => (
-          <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k} style={{
-            minHeight: 42, padding: "0 16px", borderRadius: 21, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 14,
-            border: `1.5px solid ${tab === k ? T.brandDark : T.line}`, background: tab === k ? T.brandDark : T.white, color: tab === k ? "#fff" : T.ink,
+      <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+        {[["active", "ac_active"], ["past", "ac_past"]].map(([k, key]) => (
+          <button key={k} onClick={() => setView(k)} aria-pressed={view === k} style={{
+            flex: 1, minHeight: 44, borderRadius: 22, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 15,
+            border: `1.5px solid ${view === k ? T.brandDark : T.line}`, background: view === k ? T.brandDark : T.white, color: view === k ? "#fff" : T.ink,
           }}>{t(key)}</button>
         ))}
       </div>
-      {tab === "work" && role === "owner" && <OwnerOrders api={api} onHire={onHire} />}
-      {tab === "work" && role === "delivery" && <RiderJobs api={api} online={online} where={where} />}
-      {tab === "work" && role === "ride" && (
+
+      {view === "active" && role && (
         <>
-          <RideRequests api={api} online={online} trades={trades} where={where} />
-          <RideHistory api={api} />
+          <div style={head}>{t(role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides")}</div>
+          {role === "owner" && <OwnerOrders api={api} onHire={onHire} />}
+          {role === "delivery" && <RiderJobs api={api} online={online} where={where} />}
+          {role === "ride" && <RideRequests api={api} online={online} trades={trades} where={where} />}
         </>
       )}
-      {tab === "mine" && <MyOrdersList api={api} />}
-      {tab === "items" && <ItemOrdersList api={api} onHire={onHire} />}
+      {view === "past" && role === "ride" && (<><div style={head}>{t("or_rides")}</div><RideHistory api={api} /></>)}
+
+      <MyOrdersList api={api} view={view} showEmpty title={<div style={head}>{t("or_mine")}</div>} />
+      <ItemOrdersList api={api} onHire={onHire} view={view} title={<div style={head}>{t("mb_mine")}</div>} />
     </div>
   );
 }
+
