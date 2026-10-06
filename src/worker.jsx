@@ -24,6 +24,7 @@ import { SignInGate } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 import MapPicker from "./mappicker.jsx";
+import { describePoint } from "./locpicker.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
 
@@ -47,7 +48,7 @@ export function useAvailability(api, enabled) {
   const consent = useConsent();
   const [s, setS] = useState({
     loaded: false, online: false, until: null, seenAt: null,
-    visible: true, busy: false, finding: false, error: null,
+    visible: true, busy: false, finding: false, error: null, where: null,
   });
   const pos = useRef(null);       // latest fix from the phone
   const sent = useRef(null);      // position last sent, and when
@@ -85,7 +86,7 @@ export function useAvailability(api, enabled) {
     sent.current = { ...p, at: Date.now() };
     try {
       const r = one(await api.setAvailability(true, p, null));
-      if (r && r.ok) patch({ seenAt: new Date().toISOString(), until: r.online_until, error: null });
+      if (r && r.ok) patch({ seenAt: new Date().toISOString(), until: r.online_until, error: null, where: { lat: p.lat, lng: p.lng, manual: !!p.manual } });
       else if (r && r.reason === "offline") patch({ online: false, until: null });
     } catch (e) {
       // The database refuses a position with no live-location consent on
@@ -107,8 +108,10 @@ export function useAvailability(api, enabled) {
     if (geo) {
       watch.current = geo.watchPosition(
         (g) => {
+          if (pos.current && pos.current.manual) return; // pinned by hand: keep it
           pos.current = { lat: g.coords.latitude, lng: g.coords.longitude,
                           accuracy: g.coords.accuracy };
+          setS((o) => (o.where ? o : { ...o, where: { lat: pos.current.lat, lng: pos.current.lng, manual: false } }));
           beat(false);
         },
         () => { if (!pos.current) patch({ error: "location" }); },
@@ -136,7 +139,8 @@ export function useAvailability(api, enabled) {
         if (r && r.ok) {
           sent.current = { ...p, at: Date.now() };
           patch({ online: true, until: r.online_until, seenAt: new Date().toISOString(),
-                  visible: r.visible !== false, busy: false, finding: false });
+                  visible: r.visible !== false, busy: false, finding: false,
+                  where: { lat: p.lat, lng: p.lng, manual: !!p.manual } });
         } else {
           patch({ busy: false, finding: false, error: (r && r.reason) || "failed" });
         }
@@ -145,7 +149,7 @@ export function useAvailability(api, enabled) {
       }
     };
     // A position the driver typed or pinned themselves, instead of the phone's.
-    if (manual) { await send({ lat: manual.lat, lng: manual.lng, accuracy: 50 }); return; }
+    if (manual) { await send({ lat: manual.lat, lng: manual.lng, accuracy: 50, manual: true }); return; }
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (!geo) { patch({ busy: false, finding: false, error: "location" }); return; }
     geo.getCurrentPosition(
@@ -181,6 +185,31 @@ function timeOf(iso, lang) {
     return new Date(iso).toLocaleTimeString(lang === "en" ? "en-IN" : lang,
                                             { hour: "numeric", minute: "2-digit" });
   } catch (_) { return ""; }
+}
+
+// Where the driver is shown from while online, with a way to change it.
+function WhereCard({ where, onChange, onPhone, busy }) {
+  const { t } = useI18n();
+  const [name, setName] = useState("");
+  const key = where.lat.toFixed(3) + "," + where.lng.toFixed(3);
+  useEffect(() => {
+    let live = true;
+    describePoint({ lat: where.lat, lng: where.lng }).then((d) => { if (live) setName((d && d.line) || ""); }).catch(() => {});
+    return () => { live = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div style={{ margin: "16px 0 0", padding: "12px 14px", background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, textAlign: "left" }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: T.inkFaint }}>{t("av_where")}</div>
+      <div style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, margin: "2px 0 8px" }}>
+        {name || `${where.lat.toFixed(4)}, ${where.lng.toFixed(4)}`}
+        <span style={{ fontWeight: 600, color: T.inkSoft }}> · {where.manual ? t("av_where_set") : t("av_where_phone")}</span>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Btn kind="ghost" disabled={busy} onClick={onChange}>{t("av_change")}</Btn>
+        {where.manual && <Btn kind="ghost" disabled={busy} onClick={onPhone}>{t("av_use_phone")}</Btn>}
+      </div>
+    </div>
+  );
 }
 
 export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing, extra = null }) {
@@ -288,6 +317,8 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
           </div>
         )}
 
+        {on && avail.where && <WhereCard where={avail.where} onChange={() => setPinOpen(true)} onPhone={() => avail.goOnline(null)} busy={avail.busy} />}
+
         {on && mins !== null && (
           <div style={{ fontSize: 12.5, color: T.inkFaint, marginTop: 12 }}>
             {mins < 1 ? t("av_seen_now") : t("av_seen").replace("{n}", String(mins))}
@@ -296,8 +327,8 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
       </div>
 
       {pinOpen && (
-        <MapPicker start={null} onCancel={() => setPinOpen(false)}
-                   onConfirm={(pt) => { setPinOpen(false); avail.goOnline(hours, pt); }} />
+        <MapPicker start={avail.where} onCancel={() => setPinOpen(false)}
+                   onConfirm={(pt) => { setPinOpen(false); avail.goOnline(on ? null : hours, pt); }} />
       )}
       {avail.error === "location" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("av_need_loc")}</Notice></div>}
       {avail.error === "consent" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("cs_server")}</Notice></div>}
