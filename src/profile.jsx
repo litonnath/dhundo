@@ -671,7 +671,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               if (!(lo > 0) || !(hi > 0) || hi < lo) return badField("rate", t("e_rate"));
               if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return badField("years", t("e_years"));
             }
-            if (!String(f.about || "").trim() || String(f.about).trim() === "-") return badField("about", t("e_about"));
             return save("work", {
             p_trade_slug: f.trade_slug,
             p_other_trades: f.other_trades,
@@ -819,7 +818,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             </>
           )}
 
-          <Row fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
+          <Row fid="about" error={ferr("about")} label={t("w3_about")}>
             <textarea style={{ ...field, minHeight: 90, resize: "vertical" }} value={f.about}
                       placeholder={t(isEatTrade ? "ea_about_ph" : "w3_about_ph")}
                       onChange={(e) => set("work", "about", e.target.value)} />

@@ -1408,7 +1408,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   });
   // Shops and food places are listed under a business name, with no day rate or years of experience.
   const isBiz = isSupplier || formKind === "eat";
-  const hasItemsStep = !isAdmin && (formKind === "shop" || formKind === "eat");
+  // The menu or product list is added after the listing exists, from the dashboard: fewer questions up front.
+  const hasItemsStep = false;
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
   const addItem = () => {
     if (draft.name.trim().length < 2 || !(Number(draft.price) >= 1)) return setErr(t("lf_item_need"));
@@ -1446,7 +1447,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
       if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"), 3);
       if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"), 3);
     }
-    if (!f.about.trim()) return bad("about", t("e_about"), 3);
     // A listing is stored and shown to other people: a yes first. (An admin
     // adding one for somebody else is not the owner and is not asked.)
     if (!isAdmin && !(await consent.ask("listing"))) return;
@@ -1618,7 +1618,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         <span style={{ fontSize: 12, color: T.inkFaint, fontWeight: 700 }}>
           {t("w_step").replace("{n}", String(step))}
         </span>
-        <StepDots step={step} total={hasItemsStep ? 4 : 3} />
+        <StepDots step={step} total={isBiz ? 2 : 3} />
       </div>
 
       {err && <Notice tone="bad">{err}</Notice>}
@@ -1882,8 +1882,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
 
           <Btn full onClick={() => {
             if (!lp || (!lp.area && typeof lp.lat !== "number")) return bad("place", t("loc_need"));
-            setErr(null); setFieldErr(null); setStep(3);
-          }}>{t("w_next")}</Btn>
+            setErr(null); setFieldErr(null);
+            if (isBiz) submit(); else setStep(3);
+          }} disabled={busy}>{isBiz ? (busy ? t("w_sending") : isAdmin ? t("w_submit_admin") : t("w_submit")) : t("w_next")}</Btn>
           </>)}
         </>
       )}
@@ -1917,21 +1918,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             </>
           )}
 
-          {/* Optional, and on the optional step on purpose. Asking for a
-              house number before the listing exists is asking somebody to
-              hand over where they live before they have seen what they get
-              for it. */}
-          <BigField label={t("p_addr_line")}>
-            <input style={bigInput} value={f.address_line} placeholder={t("p_addr_line_ph")}
-                   onChange={(e) => set("address_line", e.target.value)} />
-          </BigField>
-
-          <BigField label={t("p_landmark")} hint={t("p_addr_private_note")}>
-            <input style={bigInput} value={f.landmark} placeholder={t("p_landmark_ph")}
-                   onChange={(e) => set("landmark", e.target.value)} />
-          </BigField>
-
-          <BigField fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
+          <BigField fid="about" error={ferr("about")} label={t("w3_about")}>
             <textarea style={{ ...bigInput, minHeight: 92, resize: "vertical" }} value={f.about}
                       placeholder={t(formKind === "eat" ? "ea_about_ph" : "w3_about_ph")}
                       onChange={(e) => set("about", e.target.value)} />
@@ -1961,7 +1948,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
                 if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"));
                 if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"));
               }
-              if (!f.about.trim()) return bad("about", t("e_about"));
               setErr(null); setFieldErr(null); setStep(4);
             }}>{t("w_next")}</Btn>
           ) : (
