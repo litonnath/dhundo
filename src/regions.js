@@ -1086,9 +1086,9 @@ export async function roadDistances(origin, ids) {
 // when it is set up and within the allowance, otherwise the straight line
 // times 1.35 as a fair road estimate. Returns {km, road}.
 const tripCache = new Map();
-export async function tripKm(a, b) {
+export async function tripKm(a, b, opts = {}) {
   if (!a || !b || typeof a.lat !== "number" || typeof b.lat !== "number") return null;
-  const ck = `${a.lat.toFixed(4)},${a.lng.toFixed(4)}|${b.lat.toFixed(4)},${b.lng.toFixed(4)}`;
+  const ck = `${a.lat.toFixed(4)},${a.lng.toFixed(4)}|${b.lat.toFixed(4)},${b.lng.toFixed(4)}${opts.toll ? "|toll" : ""}`;
   if (tripCache.has(ck)) return tripCache.get(ck);
   let out = null;
   const key = CFG.GOOGLE_MAPS_KEY;
@@ -1098,12 +1098,23 @@ export async function tripKm(a, b) {
         const wp = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
         const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "routes.distanceMeters" },
-          body: JSON.stringify({ origin: wp(a), destination: wp(b), travelMode: "DRIVE" }),
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": opts.toll ? "routes.distanceMeters,routes.travelAdvisory.tollInfo" : "routes.distanceMeters" },
+          body: JSON.stringify(Object.assign({ origin: wp(a), destination: wp(b), travelMode: "DRIVE" },
+            opts.toll ? { extraComputations: ["TOLLS"], routeModifiers: { vehicleInfo: { emissionType: "GASOLINE" } } } : {})),
         });
         const j = res.ok ? await res.json() : null;
-        const m = j && j.routes && j.routes[0] && j.routes[0].distanceMeters;
-        if (typeof m === "number") out = { km: Math.max(0.5, Math.round(m / 100) / 10), road: true };
+        const rt = j && j.routes && j.routes[0];
+        const m = rt && rt.distanceMeters;
+        if (typeof m === "number") {
+          out = { km: Math.max(0.5, Math.round(m / 100) / 10), road: true };
+          if (opts.toll) {
+            // The route came back: no toll info on it means no toll; a price
+            // in rupees is added up. Unknown (null) when the call failed.
+            const ti = rt.travelAdvisory && rt.travelAdvisory.tollInfo;
+            const inr = ((ti && ti.estimatedPrice) || []).filter((x) => x.currencyCode === "INR");
+            out.toll = Math.round(inr.reduce((n, x) => n + Number(x.units || 0) + Number(x.nanos || 0) / 1e9, 0));
+          }
+        }
       }
     } catch (_) { /* the straight line below */ }
   }

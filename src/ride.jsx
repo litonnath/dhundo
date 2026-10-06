@@ -65,6 +65,18 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return () => { live = false; };
   }, [hire, pick && pick.lat, pick && pick.lng, drop && drop.lat, drop && drop.lng]);
 
+  // Toll on the route, asked of the routing service for cars and cabs (two
+  // wheelers and autos do not pay it). null means unknown, 0 means none.
+  const tollVehicle = /car|taxi|cab/.test(vehicle);
+  const [toll, setToll] = useState(null);
+  useEffect(() => {
+    let live = true;
+    setToll(null);
+    if (hire || !tollVehicle || !pick || !drop || typeof pick.lat !== "number" || typeof drop.lat !== "number") return undefined;
+    tripKm(pick, drop, { toll: true }).then((r) => { if (live && r && typeof r.toll === "number") setToll(r.toll); }).catch(() => {});
+    return () => { live = false; };
+  }, [hire, tollVehicle, pick && pick.lat, pick && pick.lng, drop && drop.lat, drop && drop.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadRide = useCallback(async () => {
     if (!signedIn) return;
     try {
@@ -120,7 +132,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const STD = /bike|moto/.test(vehicle) ? 8 : /auto|rick|toto/.test(vehicle) ? 12 : /car|taxi|cab/.test(vehicle) ? 15 : 12;
   const basis = onlineRates.length ? "online" : listedRates.length ? "listed" : "std";
   const perKm = basis === "online" ? median(onlineRates) : basis === "listed" ? median(listedRates) : STD;
-  const est = trip && perKm ? Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5) : null;
+  const fareOnly = trip && perKm ? Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5) : null;
+  const est = fareOnly != null ? fareOnly + (toll || 0) : null;
 
   const here = async () => {
     const got = await geo.detect();
@@ -270,6 +283,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
+          {tollVehicle && toll !== null && (
+            <div style={{ fontSize: 14, fontWeight: 800, color: toll > 0 ? "#B45309" : "#0F6B33", marginTop: 4 }}>
+              {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
+            </div>
+          )}
           <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km)}</div>
           <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
         </div>
