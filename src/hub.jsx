@@ -8,6 +8,7 @@ import { T, Btn, Icon, CloseButton, useDismissable, input, Notice, InvitePanel }
 import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
+import { RouteNav } from "./nearmap.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -30,7 +31,7 @@ export function alertNewJob() {
 const dirUrl = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
 // ----------------------------------------------------------------- RIDER
-export function RiderJobs({ api, online }) {
+export function RiderJobs({ api, online, where = null }) {
   const { t } = useI18n();
   const [jobs, setJobs] = useState([]);
   const [mine, setMine] = useState([]);
@@ -38,6 +39,7 @@ export function RiderJobs({ api, online }) {
   const [msg, setMsg] = useState("");
   const seen = useRef(new Set());
   const first = useRef(true);
+  const [navFor, setNavFor] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -73,6 +75,7 @@ export function RiderJobs({ api, online }) {
 
   return (
     <div style={{ marginTop: 18 }}>
+      {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={{ ...card, border: `2px solid ${T.green}` }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("jb_active")}</div>
@@ -82,7 +85,7 @@ export function RiderJobs({ api, online }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {j.other_phone && <a href={`tel:${j.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}
             {typeof j.pickup_lat === "number" && (
-              <a href={dirUrl(j.pickup_lat, j.pickup_lng)} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("jb_dir")}</a>
+              <button onClick={() => setNavFor(j)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
             )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -105,7 +108,7 @@ export function RiderJobs({ api, online }) {
           </div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0" }}>{j.note}</div>
           <div style={{ fontSize: 14, color: T.ink }}>{t("jb_to")} {j.drop_text}</div>
-          <div style={{ fontSize: 13.5, color: T.brandDark, fontWeight: 700, margin: "6px 0 10px" }}>
+          <div style={{ fontSize: 16, color: T.brandDark, fontWeight: 800, margin: "6px 0 10px" }}>
             {j.fee_paise != null ? String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100)) : t("jb_fee_none")}
           </div>
           <Btn full disabled={busy === j.id} onClick={() => accept(j)}>{busy === j.id ? "…" : t("jb_accept")}</Btn>

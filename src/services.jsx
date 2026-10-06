@@ -45,7 +45,8 @@ import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
-import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
+import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
+import { AlertsCard } from "./alerts.jsx";
 import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -2934,7 +2935,9 @@ export default function ServicesPage({
   // A driver who is online hears about ride requests from anywhere in the
   // app: they count on the bell, sound the alert, and can be accepted from
   // the notification list, not only from the Work screen.
-  const isDriver = (trades.find((x) => x.slug === myTrade) || {}).group_name === "Drivers";
+  const myTradeRow = trades.find((x) => x.slug === myTrade) || {};
+  const myDriverKind = myTradeRow.group_name === "Drivers" ? driverKind(myTradeRow) : null;
+  const isDriver = myDriverKind === "travel";
   const [rideReqs, setRideReqs] = useState([]);
   useEffect(() => {
     if (!(signedIn && hasListing && isDriver && avail.online)) { setRideReqs([]); return undefined; }
@@ -3115,12 +3118,19 @@ export default function ServicesPage({
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
             if (!signedIn || !hasListing || isAdmin) return null;
-            if (tr.group_name === "Drivers") return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /><RiderJobs api={api} online={avail.online} /></>;
+            if (tr.group_name === "Drivers") {
+              const dk = driverKind(tr);
+              // A delivery rider works the delivery jobs of shops and restaurants;
+              // a hire vehicle lists its rates; a ride driver takes ride requests.
+              if (dk === "delivery") return <AlertsCard api={api} />;
+              if (dk === "hire") return <RatesCard api={api} />;
+              return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
+            }
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
               return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return <RatesCard api={api} />;
           })()}
-          top={signedIn && hasListing && !isAdmin && isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : null}
+          top={signedIn && hasListing && !isAdmin ? (isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : myDriverKind === "delivery" ? <RiderJobs api={api} online={avail.online} where={avail.where} /> : null) : null}
           avail={avail} signedIn={signedIn} hasListing={hasListing}
           onSignIn={onSignIn}
           onList={() => setTab("add")}

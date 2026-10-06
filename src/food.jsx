@@ -520,6 +520,9 @@ export function MyOrdersSheet({ api, onClose }) {
             {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
               <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
             )}
+            {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && !o.rider_name && (
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 4 }}>{t("st_finding_rider")}</div>
+            )}
             {o.rider_name && (
               <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}{" "}
                 {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{o.rider_phone}</a>}</div>
