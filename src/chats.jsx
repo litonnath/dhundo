@@ -230,7 +230,7 @@ export function ChatScreen({ api, item, onClose, onChanged }) {
 }
 
 // ----------------------------------------------------------- notifications
-export function NotificationsSheet({ api, items, jobs, onClose, onChat, onChanged }) {
+export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onClose, onChat, onChanged }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [busy, setBusy] = useState(null);
@@ -252,7 +252,18 @@ export function NotificationsSheet({ api, items, jobs, onClose, onChat, onChange
           <h1 style={{ flex: 1, fontSize: 20, fontWeight: 800, margin: 0, color: T.ink }}>{t("nt_title")}</h1>
           <CloseButton onClick={onClose} />
         </div>
-        {items.length === 0 && jobs.length === 0 && <div style={{ textAlign: "center", color: T.inkFaint, fontSize: 14.5, padding: "26px 0" }}>{t("nt_empty")}</div>}
+        {items.length === 0 && jobs.length === 0 && rides.length === 0 && <div style={{ textAlign: "center", color: T.inkFaint, fontSize: 14.5, padding: "26px 0" }}>{t("nt_empty")}</div>}
+        {rides.slice().sort((a, b) => Number(a.pick_km) - Number(b.pick_km)).map((r) => (
+          <div key={"ride" + r.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderLeft: "4px solid #DC2626", borderRadius: 12, padding: "11px 13px", marginBottom: 9 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink }}>{t("rdr_title")} · {String(t("rdr_pick_km")).replace("{n}", r.pick_km)}</div>
+            <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>{r.pick_text}{r.drop_text ? ` → ${r.drop_text}` : ""}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.brandDark, margin: "3px 0 9px" }}>{r.fare_paise != null ? String(t("rdr_fare")).replace("{n}", Math.round(r.fare_paise / 100)) : t("rdr_nofare")}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn disabled={!!busy} onClick={() => act(async () => { await api.rideAccept(r.id); onRides && onRides(); })}>{t("rdr_accept")}</Btn>
+              <Btn kind="ghost" onClick={() => onRides && onRides()}>{t("rdr_title")}</Btn>
+            </div>
+          </div>
+        ))}
         {items.map((x) => (
           <div key={x.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderLeft: `4px solid ${dot(x)}`, borderRadius: 12, padding: "11px 13px", marginBottom: 9 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>

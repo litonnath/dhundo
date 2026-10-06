@@ -46,7 +46,7 @@ import { RatesCard } from "./rates.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate } from "./start.jsx";
-import { RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
+import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
@@ -2918,6 +2918,27 @@ export default function ServicesPage({
   // position keeps going while they look at their listing or wallet.
   const avail = useAvailability(api, signedIn && hasListing && !isAdmin);
 
+  // A driver who is online hears about ride requests from anywhere in the
+  // app: they count on the bell, sound the alert, and can be accepted from
+  // the notification list, not only from the Work screen.
+  const isDriver = (trades.find((x) => x.slug === myTrade) || {}).group_name === "Drivers";
+  const [rideReqs, setRideReqs] = useState([]);
+  useEffect(() => {
+    if (!(signedIn && hasListing && isDriver && avail.online)) { setRideReqs([]); return undefined; }
+    let live = true;
+    const pull = () => api.ridesNearby().then((r) => { if (live) setRideReqs(Array.isArray(r) ? r : r ? [r] : []); }).catch(() => {});
+    pull();
+    const id = setInterval(pull, 8000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, signedIn, hasListing, isDriver, avail.online]);
+  const rideKey = rideReqs.map((r) => r.id).join(",");
+  useEffect(() => {
+    if (!rideKey || tab === "work") return undefined;
+    alertNewJob();
+    const id = setInterval(alertNewJob, 8000);
+    return () => clearInterval(id);
+  }, [rideKey, tab]);
+
   // Attempted on every sign-in, not only on sign-up: the database decides
   // whether a code may be attached, and says no once a person has already
   // been referred or their listing is published. A failure is silent -- a
@@ -2963,7 +2984,7 @@ export default function ServicesPage({
         isAdmin={isAdmin}
         place={place}
         onOpenLocation={() => setLocOpen(true)}
-        notifCount={signedIn ? inbox.alerts : 0}
+        notifCount={signedIn ? inbox.alerts + rideReqs.length : 0}
         onOpenNotifications={signedIn ? openNotif : null}
         mode={mode}
       />
@@ -2993,7 +3014,8 @@ export default function ServicesPage({
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
       {bookRow && signedIn && <BookingSheet api={api} row={bookRow} place={place} onClose={() => setBookRow(null)} />}
       {notifOpen && signedIn && (
-        <NotificationsSheet api={api} items={inbox.items} jobs={notifJobs} onChanged={inbox.reload}
+        <NotificationsSheet api={api} items={inbox.items} jobs={notifJobs} rides={rideReqs}
+                            onRides={() => { setNotifOpen(false); setTab("work"); }} onChanged={inbox.reload}
                             onClose={() => setNotifOpen(false)}
                             onChat={(x) => { setNotifOpen(false); setChatItem(x); }} />
       )}
