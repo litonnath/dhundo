@@ -97,7 +97,7 @@ export function RideCode({ api, rideId, role, onState }) {
     return (
       <div style={{ ...box, background: "#F3F6FA", border: `1px solid ${T.line}`, textAlign: "center" }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("rv_title")}</div>
-        <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: 10, color: T.ink, margin: "4px 0 2px" }}>{st.code || "\u2022\u2022\u2022\u2022"}</div>
+        <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: 10, color: T.ink, margin: "4px 0 2px" }}>{st.code || "\u2026"}</div>
         <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("rv_hint")}</div>
       </div>
     );
