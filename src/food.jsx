@@ -770,6 +770,7 @@ export function OwnerFood({ api, shop, onHire }) {
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const [store, setStoreInfo] = useState(null);
 
@@ -874,7 +875,10 @@ export function OwnerFood({ api, shop, onHire }) {
 
       <div style={{ display: "flex", alignItems: "center", margin: "18px 0 8px" }}>
         <h2 style={{ flex: 1, fontSize: 17, fontWeight: 800, margin: 0 }}>{t(shop ? "ow_prod" : "ow_menu")}</h2>
-        <Btn kind="ghost" onClick={() => setEditing({})}>{t("ow_add")}</Btn>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn kind="ghost" onClick={() => setBulkOpen(true)}>{t("ow_bulk")}</Btn>
+          <Btn kind="ghost" onClick={() => setEditing({})}>{t("ow_add")}</Btn>
+        </div>
       </div>
       {menu.map((m) => (
         <div key={m.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, opacity: m.available ? 1 : 0.55 }}>
@@ -887,8 +891,58 @@ export function OwnerFood({ api, shop, onHire }) {
           <button onClick={() => setEditing(m)} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, cursor: "pointer", minHeight: 40, fontFamily: "inherit" }}>{t("ow_edit")}</button>
         </div>
       ))}
+      {bulkOpen && <BulkAdd api={api} shop={shop} onClose={() => setBulkOpen(false)} onSaved={() => { setBulkOpen(false); load(); }} />}
       {editing && <ItemForm api={api} item={editing} shop={shop} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
+  );
+}
+
+// Several dishes or products in one go: a row each for name, price and
+// category. Rows left empty are skipped; photos and details come later by
+// editing an item.
+function BulkAdd({ api, shop, onClose, onSaved }) {
+  const { t } = useI18n();
+  const blank = () => ({ name: "", price: "", category: "", veg: true });
+  const [rows, setRows] = useState([blank(), blank(), blank(), blank(), blank()]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const set = (i, k, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const ready = rows.filter((x) => x.name.trim().length >= 2 && Number(x.price) >= 1);
+  const save = async () => {
+    setBusy(true); setMsg(null);
+    let done = 0;
+    for (const x of ready) {
+      try {
+        const r = one(await api.menuSave({ category: x.category, name: x.name, price: Number(x.price), veg: shop ? true : x.veg, available: true }));
+        if (r && r.ok) done += 1;
+      } catch (_) { /* the rest still go */ }
+    }
+    setBusy(false);
+    if (done === ready.length) onSaved(); else setMsg(String(t("ow_bulk_saved")).replace("{n}", done) + " / " + ready.length);
+  };
+  return (
+    <FormSheet title={t("ow_bulk")} onClose={onClose}>
+      <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, margin: "0 0 10px" }}>{t("ow_bulk_hint")}</p>
+      {rows.map((x, i) => (
+        <div key={i} style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: "8px 10px", marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+            <input style={{ ...input, flex: 2, marginBottom: 0 }} value={x.name} maxLength={80} placeholder={t("ow_name")} aria-label={t("ow_name")} onChange={(e) => set(i, "name", e.target.value)} />
+            <input style={{ ...input, flex: 1, marginBottom: 0 }} value={x.price} inputMode="numeric" maxLength={5} placeholder={t("ow_price")} aria-label={t("ow_price")} onChange={(e) => set(i, "price", e.target.value.replace(/\D/g, ""))} />
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input style={{ ...input, flex: 1, marginBottom: 0 }} value={x.category} maxLength={40} placeholder={t("ow_cat")} aria-label={t("ow_cat")} onChange={(e) => set(i, "category", e.target.value)} />
+            {!shop && (
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13.5, whiteSpace: "nowrap" }}>
+                <input type="checkbox" checked={x.veg} onChange={(e) => set(i, "veg", e.target.checked)} /> {t("ow_veg")}
+              </label>
+            )}
+          </div>
+        </div>
+      ))}
+      <Btn kind="ghost" onClick={() => setRows((r) => r.concat(blank()))}>{t("ow_bulk_row")}</Btn>
+      {msg && <div style={{ margin: "10px 0 0" }}><Notice tone="bad">{msg}</Notice></div>}
+      <div style={{ marginTop: 12 }}><Btn full disabled={busy || ready.length === 0} onClick={save}>{busy ? "…" : `${t("ow_bulk_save")} (${ready.length})`}</Btn></div>
+    </FormSheet>
   );
 }
 
