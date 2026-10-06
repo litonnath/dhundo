@@ -44,6 +44,13 @@ function metresBetween(a, b) {
 //
 // Lives at page level (ServicesPage), not inside the Work screen, so the
 // position keeps going while the worker looks at their listing or wallet.
+// What the driver chose for where they are shown from, kept on this phone so a
+// reload does not drop it back to GPS: a pinned spot, GPS, or (nothing) the
+// position saved with the listing.
+const POS_KEY = "dhundo_online_pos";
+const readPos = () => { try { return JSON.parse(window.localStorage.getItem(POS_KEY)) || null; } catch (_) { return null; } };
+const writePos = (v) => { try { if (v) window.localStorage.setItem(POS_KEY, JSON.stringify(v)); else window.localStorage.removeItem(POS_KEY); } catch (_) {} };
+
 export function useAvailability(api, enabled) {
   const consent = useConsent();
   const [s, setS] = useState({
@@ -90,6 +97,20 @@ export function useAvailability(api, enabled) {
     }).catch(() => {});
     return () => { alive = false; };
   }, [api, enabled]);
+
+  // Online already (a reload, another tab): go back to the choice made last
+  // time, a pinned spot or the saved listing position, not to GPS.
+  useEffect(() => {
+    if (!enabled || !s.online || (pos.current && pos.current.manual)) return;
+    const c = readPos();
+    let p = null;
+    if (c && c.mode === "pin") p = { lat: c.lat, lng: c.lng, accuracy: 50, manual: true };
+    else if (!(c && c.mode === "gps") && s.saved) p = { lat: s.saved.lat, lng: s.saved.lng, accuracy: 50, manual: true, saved: true };
+    if (!p) return;
+    pos.current = p;
+    patch({ where: { lat: p.lat, lng: p.lng, manual: true, saved: !!p.saved } });
+    beat(true);
+  }, [enabled, s.online, s.saved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const beat = useCallback(async (force) => {
     const p = pos.current;
@@ -149,6 +170,7 @@ export function useAvailability(api, enabled) {
     if (!(await consent.ask("live"))) { patch({ busy: false, finding: false, error: "consent" }); return; }
     const send = async (p) => {
       pos.current = p;
+      writePos(p.saved ? null : p.manual ? { mode: "pin", lat: p.lat, lng: p.lng } : { mode: "gps" });
       try {
         const r = one(await api.setAvailability(true, p, hours));
         if (r && r.ok) {
