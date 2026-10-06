@@ -2881,6 +2881,8 @@ export default function ServicesPage({
   // shop, a delivery charge or pickup waiting for the customer to answer, a
   // second hand request waiting for the seller.
   const [ordersBadge, setOrdersBadge] = useState(0);
+  const [ordersKey, setOrdersKey] = useState(0);
+  const openOrders = (sub) => { try { window.localStorage.setItem("dhundo_orders_tab", sub || ""); } catch (_) {} setOrdersKey((k) => k + 1); setTab("orders"); };
   useEffect(() => {
     if (!signedIn) { setOrdersBadge(0); return undefined; }
     let live = true;
@@ -3061,11 +3063,43 @@ export default function ServicesPage({
         </div>
       )}
 
-      {menuOpen && (
-        <MenuSheet api={api} mode={mode} onMode={switchMode} signedIn={signedIn}
-                   onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
-                   onClose={() => setMenuOpen(false)} />
-      )}
+      {menuOpen && (() => {
+        // Everything in one list, not tucked inside other screens.
+        const biz = hasListing && !isAdmin;
+        const isOwner = biz && (myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier");
+        const isRider = biz && (myDriverKind === "delivery" || myDriverKind === "travel");
+        const go = (tb) => () => setTab(tb);
+        const activity = [
+          { icon: "bag", title: t("or_title"), sub: t("or_mine"), badge: ordersBadge, go: () => openOrders("mine") },
+          { icon: "chat", title: t("ch_tab"), badge: inbox.unread, go: go("chats") },
+          { icon: "bell", title: t("nt_title"), badge: inbox.alerts + rideReqs.length, go: openNotif },
+          { icon: "tag", title: t("mb_mine"), go: () => openOrders("items") },
+          { icon: "tag", title: t("offer_sell"), go: go("sell") },
+        ];
+        const business = [];
+        if (isOwner) {
+          business.push({ icon: "bag", title: t("m_received"), go: () => openOrders("work") });
+          business.push({ icon: "edit", title: t("m_menu_items"), sub: t("m_hours"), go: go("work") });
+        }
+        if (biz && myDriverKind === "delivery") business.push({ icon: "drivers", title: t("m_rider_jobs"), go: () => openOrders("work") });
+        if (biz && myDriverKind === "travel") business.push({ icon: "drivers", title: t("m_rides"), go: () => openOrders("work") });
+        if (isRider) business.push({ icon: "check", title: t("m_online"), sub: avail.online ? t("av_on") : t("av_off"), go: go("work") });
+        if (biz && myDriverKind === "hire") business.push({ icon: "edit", title: t("m_rates"), go: go("work") });
+        if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
+        if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
+        if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
+        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }];
+        const sections = [
+          { title: t("ms_activity"), rows: activity },
+          business.length ? { title: t("ms_business"), rows: business } : null,
+          { title: t("ms_money"), rows: money },
+        ].filter(Boolean);
+        return (
+          <MenuSheet api={api} mode={mode} onMode={switchMode} signedIn={signedIn} sections={sections}
+                     onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
+                     onClose={() => setMenuOpen(false)} />
+        );
+      })()}
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
       {bookRow && signedIn && <BookingSheet api={api} row={bookRow} place={place} onClose={() => setBookRow(null)} />}
       {notifOpen && signedIn && (
@@ -3202,7 +3236,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
@@ -3315,7 +3349,9 @@ export default function ServicesPage({
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
-                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0} />
+                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0}
+                 ordersLabel={hasListing && !isAdmin && (myDriverKind === "delivery" || myDriverKind === "travel") ? t("or_rider") : null}
+                 ordersIcon={hasListing && !isAdmin && (myDriverKind === "delivery" || myDriverKind === "travel") ? "drivers" : "bag"} />
     </div>
   );
 }

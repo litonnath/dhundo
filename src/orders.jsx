@@ -16,7 +16,11 @@ import { RideRequests, RideHistory } from "./ride.jsx";
 
 export function OrdersPage({ api, role, online, where, trades, onHire }) {
   const { t } = useI18n();
-  const [tab, setTab] = useState(role ? "work" : "mine");
+  const [tab, setTab] = useState(() => {
+    let want = null;
+    try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
+    return want === "items" ? "items" : want === "mine" ? "mine" : role ? "work" : "mine";
+  });
   const pills = [role ? ["work", role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides"] : null, ["mine", "or_mine"], ["items", "mb_mine"]].filter(Boolean);
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 120px" }}>

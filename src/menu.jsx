@@ -11,7 +11,7 @@ import { useI18n } from "./i18n.jsx";
 import { useInstallPrompt, isInstalledApp } from "./device.jsx";
 import { AlertsCard } from "./alerts.jsx";
 
-export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, onClose }) {
+export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, onClose, sections = [] }) {
   const { t } = useI18n();
   const { isIos, installed } = useInstallPrompt();
   useDismissable(true, onClose);
@@ -26,7 +26,7 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
   const num = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   const help = num ? `https://wa.me/${num}?text=${encodeURIComponent(t("sh_msg"))}` : null;
 
-  const row = (icon, title, sub, go, href) => {
+  const row = (icon, title, sub, go, href, badge = 0) => {
     const inner = (
       <>
         <span style={{ width: 40, height: 40, borderRadius: 10, background: T.brandSoft, color: T.brandDark,
@@ -37,6 +37,7 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
           <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: T.ink }}>{title}</span>
           {sub && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 1 }}>{sub}</span>}
         </span>
+        {badge > 0 && <span style={{ minWidth: 22, height: 22, borderRadius: 11, background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{badge > 99 ? "99+" : badge}</span>}
         <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
       </>
     );
@@ -71,6 +72,15 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
           ))}
         </div>
 
+        {signedIn && sections.map((sec) => (
+          <div key={sec.title} style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{sec.title}</div>
+            {sec.rows.map((r) => row(r.icon, r.title, r.sub, () => { r.go(); onClose(); }, null, r.badge || 0))}
+          </div>
+        ))}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("ms_more")}</div>
+        </div>
         {signedIn && <AlertsCard api={api} compact />}
         {row("user", signedIn ? t("nav_account") : t("nav_signin"), null, () => { onAccount(); onClose(); })}
         {canInstall && row("download", t("install_app"), t("install_sub"), () => { onClose(); onInstall(); })}
