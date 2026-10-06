@@ -48,7 +48,8 @@ begin
   v_is_rider := exists (select 1 from public.services_workers w where w.id = j.rider_work and w.user_id = v_me);
   if p_action = 'cancel' and j.poster_id = v_me and j.status in ('open', 'accepted') then
     update public.services_jobs set status = 'cancelled', done_at = now() where id = p_job;
-  elsif p_action = 'delivered' and v_is_rider and j.status = 'picked_up' then
+  elsif p_action = 'delivered' and v_is_rider and j.status = 'picked_up'
+        and not exists (select 1 from public.services_orders o where o.job_id = p_job) then
     update public.services_jobs set status = 'delivered', done_at = now() where id = p_job;
     update public.services_orders set status = 'delivered', updated_at = now()
      where job_id = p_job and status in ('accepted', 'ready');

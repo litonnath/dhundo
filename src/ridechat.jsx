@@ -5,7 +5,7 @@
 // database, so the conversation is still there if the screen is reopened.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, input } from "./ui.jsx";
+import { T, Btn, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -170,6 +170,59 @@ export function JobCode({ api, jobId, role, onChanged }) {
         <input style={{ ...input, flex: 1, marginBottom: 0, textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 8 }} inputMode="numeric" maxLength={4} value={val}
                placeholder={"\u2022\u2022\u2022\u2022"} aria-label={t("jv_enter")} onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))} />
         <button disabled={busy || val.length !== 4} onClick={verify} style={{ minHeight: 48, padding: "0 14px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", opacity: val.length !== 4 ? 0.5 : 1 }}>{t("jv_verify")}</button>
+      </div>
+      {msg && <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C", marginTop: 8 }}>{msg}</div>}
+    </div>
+  );
+}
+
+// The delivery code of an order. Customer: shows the four digits to tell the
+// rider at the door. Rider: for an order, asks for them and finishes the
+// delivery when they match; for a job posted by hand, a plain Delivered button.
+export function DeliveryHandover({ api, jobId, role, ready, onChanged }) {
+  const { t } = useI18n();
+  const [st, setSt] = useState(null);
+  const [val, setVal] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    try { const r = many(await api.jobDeliveryCode(jobId))[0]; if (r) setSt(r); } catch (_) { /* next tick */ }
+  }, [api, jobId]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
+  }, [load]);
+  if (!st) return role === "rider" ? null : null;
+  const box = { borderRadius: 14, padding: "12px 14px", margin: "10px 0" };
+  if (role !== "rider") {
+    if (st.delivered) return <div style={{ ...box, background: "#ECFDF3", border: "1px solid #A7E3BE", fontSize: 14.5, fontWeight: 800, color: "#0F6B33" }}>{"\u2713 "}{t("dv_done")}</div>;
+    return (
+      <div style={{ ...box, background: "#F3F6FA", border: `1px solid ${T.line}`, textAlign: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("dv_title")}</div>
+        <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: 10, color: T.ink, margin: "4px 0 2px" }}>{st.code || "\u2026"}</div>
+        <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("dv_hint")}</div>
+      </div>
+    );
+  }
+  if (!st.needs_code) {
+    return <Btn full disabled={!ready || busy} onClick={async () => { setBusy(true); try { await api.jobUpdate(jobId, "delivered"); } catch (_) {} setBusy(false); onChanged && onChanged(); }}>{t("jb_done")}</Btn>;
+  }
+  const verify = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = many(await api.jobDeliver(jobId, val))[0];
+      if (r && r.ok) { setVal(""); await load(); onChanged && onChanged(); } else setMsg(t("rv_wrong"));
+    } catch (_) { setMsg(t("rv_wrong")); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A", opacity: ready ? 1 : 0.55 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7A4A00", marginBottom: 8 }}>{t("dv_enter")}</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input disabled={!ready} style={{ ...input, flex: 1, marginBottom: 0, textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 8 }} inputMode="numeric" maxLength={4} value={val}
+               placeholder={"\u2022\u2022\u2022\u2022"} aria-label={t("dv_enter")} onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))} />
+        <button disabled={!ready || busy || val.length !== 4} onClick={verify} style={{ minHeight: 48, padding: "0 14px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", opacity: val.length !== 4 ? 0.5 : 1 }}>{t("dv_verify")}</button>
       </div>
       {msg && <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C", marginTop: 8 }}>{msg}</div>}
     </div>

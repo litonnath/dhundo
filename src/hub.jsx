@@ -9,7 +9,7 @@ import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { RouteNav } from "./nearmap.jsx";
-import { RideChat, JobCode } from "./ridechat.jsx";
+import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -91,9 +91,7 @@ export function RiderJobs({ api, online, where = null }) {
           </div>
           <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
           <RideChat api={api} rideId={j.id} role="rider" kind="job" />
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn disabled={busy === j.id || j.status !== "picked_up"} onClick={() => move(j, "delivered")}>{t("jb_done")}</Btn>
-          </div>
+          <DeliveryHandover api={api} jobId={j.id} role="rider" ready={j.status === "picked_up"} onChanged={load} />
         </div>
       ))}
       <h2 style={h2}>{t("jb_title")}</h2>
