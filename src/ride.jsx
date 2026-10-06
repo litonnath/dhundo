@@ -168,12 +168,12 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     const fuel = KM_PER[kind][common] ? common : typical;
     const std = Math.ceil((fuels[fuel] || 100) / KM_PER[kind][fuel] + BASE[kind]);
     const set = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
-    // The drivers' own rate is what the passenger sees, worked out over the
-    // distance. The standard rate fills in when no driver has set one, and
-    // replaces a rate that is wildly out of line (over three times standard).
-    const basis = set == null ? "fuel" : set <= std * 3 ? "driver" : "default";
-    const perKm = set != null && set <= std * 3 ? set : std;
-    const fare = Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5);
+    // The riders' own per-km rate is the price: rate x distance, nothing
+    // adjusted or capped. The standard rate only stands in when no rider of
+    // this vehicle has set one.
+    const basis = set == null ? "fuel" : "driver";
+    const perKm = set != null ? set : std;
+    const fare = Math.round(trip.km * perKm);
     const tl = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
     return { perKm, basis, fuel, fare, toll: tl, total: fare + tl };
   };
@@ -339,6 +339,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
+          {cur && <div style={{ fontSize: 14, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{"\u20B9"}{cur.perKm}/km {"\u00D7"} {trip.km} km = {"\u20B9"}{cur.fare}</div>}
           {tollVehicle && cur && toll !== null && (
             <div style={{ fontSize: 14, fontWeight: 800, color: toll > 0 ? "#B45309" : "#0F6B33", marginTop: 4 }}>
               {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
