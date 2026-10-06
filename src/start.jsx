@@ -216,25 +216,30 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
           <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
         </form>
         {biz && (
-          <div style={{ background: biz.online ? "#F0FAF4" : T.white, border: `1.5px solid ${biz.online ? "#1FA85A" : T.line}`, borderRadius: 18, padding: 14, margin: "0 0 18px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ flex: 1, fontSize: 17, fontWeight: 800, color: biz.online ? "#157A43" : T.ink }}>{biz.online ? t("av_on") : t("av_off")}</span>
+          <div style={{ background: T.white, border: `1px solid ${biz.online ? "#1FA85A" : T.line}`, borderRadius: 20, overflow: "hidden", margin: "0 0 20px", boxShadow: "0 4px 16px rgba(15,20,25,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 16px", background: biz.online ? "#F0FAF4" : "#F7F8FA" }}>
+              <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", background: biz.online ? "#1FA85A" : "#9CA3AF", boxShadow: biz.online ? "0 0 0 6px rgba(31,168,90,0.18)" : "none" }}>
+                <Icon name={biz.online ? "check" : "user"} size={22} />
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: biz.online ? "#157A43" : T.ink }}>{biz.online ? t("av_on") : t("av_off")}</span>
+              </span>
               <button onClick={biz.toggle} disabled={biz.busy} style={{
-                minHeight: 50, padding: "0 20px", borderRadius: 25, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 16, color: "#fff",
-                background: biz.online ? "#6B7280" : "#1FA85A", opacity: biz.busy ? 0.6 : 1,
+                minHeight: 52, padding: "0 24px", borderRadius: 26, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 16.5, color: "#fff",
+                background: biz.online ? "#6B7280" : "#1FA85A", opacity: biz.busy ? 0.6 : 1, whiteSpace: "nowrap",
               }}>{biz.busy ? "…" : biz.online ? t("av_stop") : t("hm_goon")}</button>
             </div>
-            {biz.error && <button onClick={biz.onDash} style={{ background: "none", border: "none", padding: "8px 0 0", color: "#B91C1C", fontWeight: 800, fontSize: 14, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{t("hm_fix")}</button>}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}>
-              {[["bag", t("nav_activity"), biz.onOrders, biz.orders], ["edit", t("nav_mine"), biz.onListing, 0], ["plus", t("hm_add"), biz.onSell, 0]].map(([icon, label, go, n]) => (
-                <button key={label} onClick={go} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minHeight: 72, padding: "10px 4px", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit", color: T.brandDark }}>
-                  <Icon name={icon} size={24} />
-                  <span style={{ fontSize: 13, fontWeight: 800, color: T.ink, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
-                  {n > 0 && <span style={{ position: "absolute", top: 4, right: 8, minWidth: 20, height: 20, borderRadius: 10, background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>{n}</span>}
+            {biz.error && <button onClick={biz.onDash} style={{ display: "block", width: "100%", background: "#FEF2F2", border: "none", borderTop: "1px solid #FECACA", padding: "10px 16px", color: "#B91C1C", fontWeight: 800, fontSize: 14, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>{t("hm_fix")}</button>}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: `1px solid ${T.line}` }}>
+              {[["bag", t("nav_activity"), biz.onOrders, biz.orders, "#1D4ED8", "#E8F0FE"], ["edit", t("nav_mine"), biz.onListing, 0, "#C2410C", "#FFF1E6"], ["plus", t("hm_add"), biz.onSell, 0, "#15803D", "#E7F5EC"]].map(([icon, label, go, n, fg, bg], i) => (
+                <button key={label} onClick={go} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minHeight: 96, padding: "14px 6px", border: "none", borderLeft: i ? `1px solid ${T.line}` : "none", background: T.white, cursor: "pointer", fontFamily: "inherit" }}>
+                  <span style={{ width: 44, height: 44, borderRadius: 14, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={23} /></span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+                  {n > 0 && <span style={{ position: "absolute", top: 8, right: "calc(50% - 34px)", minWidth: 22, height: 22, borderRadius: 11, background: "#DC2626", color: "#fff", fontSize: 12.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px", border: "2px solid #fff", boxSizing: "content-box" }}>{n}</span>}
                 </button>
               ))}
             </div>
-            <button onClick={biz.onDash} style={{ display: "block", margin: "10px auto 0", background: "none", border: "none", color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 40, cursor: "pointer", fontFamily: "inherit" }}>{t("hm_dash")}</button>
+            <button onClick={biz.onDash} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "#F7F8FA", border: "none", borderTop: `1px solid ${T.line}`, color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 46, cursor: "pointer", fontFamily: "inherit" }}>{t("hm_dash")} <Icon name="chev" size={16} style={{ transform: "rotate(-90deg)" }} /></button>
           </div>
         )}
         {liveNow.length > 0 && (
