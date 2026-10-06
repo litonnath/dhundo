@@ -10,7 +10,7 @@ import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const TILES = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 function DriverMap({ me, pins, height }) {
   const box = useRef(null);
@@ -24,7 +24,7 @@ function DriverMap({ me, pins, height }) {
       if (!st.current.map) {
         st.current.L = L;
         st.current.map = L.map(box.current, { zoomControl: true, attributionControl: true }).setView([me.lat, me.lng], 13);
-        L.tileLayer(TILES, { subdomains: "abcd", maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(st.current.map);
+        L.tileLayer(TILES, { subdomains: "abc", maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
       const { map, layer } = st.current;
@@ -152,7 +152,7 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
       if (dead || !box.current) return;
       if (!st.current.map) {
         st.current.map = L.map(box.current).setView([pick.lat, pick.lng], 14);
-        L.tileLayer(TILES, { subdomains: "abcd", maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(st.current.map);
+        L.tileLayer(TILES, { subdomains: "abc", maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
       const { map, layer } = st.current;
