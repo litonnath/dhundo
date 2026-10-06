@@ -1,7 +1,8 @@
 -- 145 part 1: a third way to get an order: the shop delivers it itself, for a
 -- charge the shop sets (for things too big for a bike). Orders get a new mode
--- shop_delivery and a new status quoted (the shop has named its delivery
--- charge and waits for the customer to accept).
+-- shop_delivery and two new statuses: confirmed (the shop accepted the order and
+-- will name a delivery charge by distance) and quoted (the charge is named and
+-- waits for the customer to accept).
 do $$
 declare r record;
 begin
@@ -15,7 +16,7 @@ end $$;
 alter table public.services_orders add constraint services_orders_mode_chk
   check (mode in ('delivery', 'pickup', 'shop_delivery'));
 alter table public.services_orders add constraint services_orders_status_chk
-  check (status in ('placed', 'quoted', 'accepted', 'ready', 'delivered', 'rejected', 'cancelled'));
+  check (status in ('placed', 'confirmed', 'quoted', 'accepted', 'ready', 'delivered', 'rejected', 'cancelled'));
 
 create or replace function public.services_trg_order_status()
 returns trigger
@@ -24,7 +25,7 @@ security definer
 set search_path to 'public'
 as $fn$
 begin
-  if new.status is distinct from old.status and new.status in ('quoted', 'accepted', 'ready', 'delivered', 'rejected') then
+  if new.status is distinct from old.status and new.status in ('confirmed', 'quoted', 'accepted', 'ready', 'delivered', 'rejected') then
     perform public.services_notify(new.customer_id, 'order_' || new.status, null);
   end if;
   if new.status is distinct from old.status and new.status = 'accepted' and new.mode = 'shop_delivery' then

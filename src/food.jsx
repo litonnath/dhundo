@@ -74,7 +74,7 @@ function OpenLine({ info, t }) {
 }
 
 const modeLabel = (m, t) => t(m === "pickup" ? "st_pickup" : m === "shop_delivery" ? "sh_shopdel" : "st_delivery");
-const statusColor = { quoted: "#B45309", placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
+const statusColor = { confirmed: "#1D4ED8", quoted: "#B45309", placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
 
 // ============================================================ CUSTOMER HOME
 export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpty, onHire }) {
@@ -589,6 +589,7 @@ export function MyOrdersSheet({ api, onClose }) {
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
             {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</b></div>}
             <OrderTrack o={o} />
+            {o.status === "confirmed" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", margin: "6px 0" }}>{t("st_confirmed_msg")}</div>}
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
@@ -628,8 +629,8 @@ function OrderTrack({ o }) {
   if (["rejected", "cancelled"].includes(o.status)) return null;
   const delivery = o.mode === "delivery";
   if (o.mode === "shop_delivery") {
-    const sd = [t("st_status_placed"), t("st_status_quoted"), t("st_status_accepted"), t("st_status_delivered")];
-    const a = o.status === "delivered" ? 3 : ["accepted", "ready"].includes(o.status) ? 2 : o.status === "quoted" ? 1 : 0;
+    const sd = [t("st_status_placed"), t("st_status_confirmed"), t("st_status_quoted"), t("st_status_accepted"), t("st_status_delivered")];
+    const a = o.status === "delivered" ? 4 : ["accepted", "ready"].includes(o.status) ? 3 : o.status === "quoted" ? 2 : o.status === "confirmed" ? 1 : 0;
     return (
       <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
         {sd.map((label, i) => (
@@ -780,7 +781,8 @@ export function OwnerFood({ api, shop, onHire }) {
   const accepting = menu.length === 0 || menu[0].accepting !== false;
   const toggle = async () => { try { await api.setAccepting(!accepting); } catch (_) {} load(); };
   const [quote, setQuote] = useState({});
-  const active = orders.filter((o) => ["placed", "quoted", "accepted", "ready"].includes(o.status));
+  const active = orders.filter((o) => ["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status));
+  const suggest = (o) => Math.max(50, Math.round((Number(o.dist_km || 0) * 20) / 10) * 10);
 
   return (
     <div style={{ marginTop: 18 }}>
@@ -812,16 +814,20 @@ export function OwnerFood({ api, shop, onHire }) {
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
           <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            {o.status === "placed" && o.mode !== "shop_delivery" && <>
+            {o.status === "placed" && <>
               <Btn disabled={busy === o.id} onClick={() => act(o, "accept")}>{t("ow_accept")}</Btn>
               <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
             </>}
-            {o.status === "placed" && o.mode === "shop_delivery" && (
+            {o.status === "confirmed" && (
               <div style={{ width: "100%" }}>
+                <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5, marginBottom: 6 }}>
+                  {o.dist_km != null ? String(t("ow_dist_hint")).replace("{km}", o.dist_km).replace("{n}", suggest(o)) : t("ow_quote_ph")}
+                </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4} value={quote[o.id] || ""} placeholder={t("ow_quote_ph")} aria-label={t("ow_quote_ph")}
+                  <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
+                         value={quote[o.id] !== undefined ? quote[o.id] : (o.dist_km != null ? String(suggest(o)) : "")} placeholder={t("ow_quote_ph")} aria-label={t("ow_quote_ph")}
                          onChange={(e) => setQuote((q) => ({ ...q, [o.id]: e.target.value.replace(/\D/g, "") }))} />
-                  <Btn disabled={busy === o.id || quote[o.id] === undefined || quote[o.id] === ""} onClick={async () => { setBusy(o.id); try { await api.orderQuote(o.id, Number(quote[o.id])); } catch (_) {} setBusy(null); load(); }}>{t("ow_quote_send")}</Btn>
+                  <Btn disabled={busy === o.id || (quote[o.id] === undefined && o.dist_km == null) || quote[o.id] === ""} onClick={async () => { setBusy(o.id); try { await api.orderQuote(o.id, Number(quote[o.id] !== undefined ? quote[o.id] : suggest(o))); } catch (_) {} setBusy(null); load(); }}>{t("ow_quote_send")}</Btn>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
@@ -833,7 +839,24 @@ export function OwnerFood({ api, shop, onHire }) {
               <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("ow_quote_wait")} ({rupees(o.delivery_fee_paise)})</div>
               <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
             </>}
-            {o.mode === "shop_delivery" && ["accepted", "ready"].includes(o.status) && onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
+            {["accepted", "ready"].includes(o.status) && ["delivery", "shop_delivery"].includes(o.mode) && (
+              <div style={{ width: "100%" }}>
+                {o.rider_name ? (
+                  <div style={{ fontSize: 13.5, fontWeight: 700, margin: "2px 0 6px" }}>{String(t("ow_rider_is")).replace("{name}", o.rider_name)} {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark }}>{o.rider_phone}</a>}</div>
+                ) : o.job_status === "open" ? (
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "2px 0 6px" }}>{t("ow_rider_wait")}</div>
+                ) : !o.job_status ? (
+                  <div style={{ display: "flex", gap: 8, margin: "4px 0 8px" }}>
+                    <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
+                           value={quote["r" + o.id] !== undefined ? quote["r" + o.id] : String(Math.round((o.delivery_fee_paise || 3000) / 100))}
+                           placeholder={t("ow_rider_fee")} aria-label={t("ow_rider_fee")}
+                           onChange={(e) => setQuote((q) => ({ ...q, ["r" + o.id]: e.target.value.replace(/\D/g, "") }))} />
+                    <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Number(quote["r" + o.id] !== undefined ? quote["r" + o.id] : Math.round((o.delivery_fee_paise || 3000) / 100))); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
+                  </div>
+                ) : null}
+                {o.mode === "shop_delivery" && !o.job_status && onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
+              </div>
+            )}
             {o.status === "accepted" && <Btn disabled={busy === o.id} onClick={() => act(o, "ready")}>{t("ow_ready")}</Btn>}
             {["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_delivered")}</Btn>}
           </div>

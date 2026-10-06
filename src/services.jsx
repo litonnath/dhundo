@@ -389,6 +389,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       p_lat: typeof lat === "number" ? lat : null, p_lng: typeof lng === "number" ? lng : null, p_note: note || null,
     }, true),
     myOrders: () => rpc("services_my_orders", {}, true),
+    orderSendRider: (id, rupees) => rpc("services_order_send_rider", { p_order: id, p_fee_rupees: rupees }, true),
     orderQuote: (id, rupees) => rpc("services_order_quote", { p_order: id, p_fee_rupees: rupees }, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
     rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
