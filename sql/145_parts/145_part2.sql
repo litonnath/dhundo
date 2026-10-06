@@ -67,4 +67,4 @@ $fn$;
 revoke all on function public.services_order_place(uuid, jsonb, text, text, double precision, double precision, text) from public, anon, authenticated;
 grant execute on function public.services_order_place(uuid, jsonb, text, text, double precision, double precision, text) to authenticated;
 notify pgrst, 'reload schema';
-select 'part 2 of 3 done' as "145_part2";
+select 'part 2 of 4 done' as "145_part2";
