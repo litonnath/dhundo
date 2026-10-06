@@ -253,33 +253,6 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
-
-      <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={vehicles.map((v) => v.slug)} vehicle={vehicle}
-                     onlineIds={new Set(online.map((d) => d.id))} onlineRows={online} fares={fares} trip={trip} />
-
-      <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "24px 0 10px" }}>{t("rd_online")}</h2>
-      {online.length === 0 ? (
-        <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6 }}>{t("rd_online_none")}</div>
-      ) : online.map((d) => (
-        <div key={d.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#1FA85A", flexShrink: 0 }} />
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink }}>{d.display_name || d.full_name || d.trade_name}</span>
-            <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{d.trade_name}</span>
-          </span>
-          <span style={{ textAlign: "right" }}>
-            {d.distance_km != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", d.distance_km)}</span>}
-            {fares[d.id] != null && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.ink }}>{String(t("rs_km_show")).replace("{n}", fares[d.id])}</span>}
-            {trip && fares[d.id] > 0 && <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.brandDark }}>{String(t("rd_trip_fare")).replace("{n}", Math.max(fares[d.id], Math.round((trip.km * fares[d.id]) / 5) * 5))}</span>}
-          </span>
-        </div>
-      ))}
-      {onBrowse && (
-        <button onClick={onBrowse} style={{
-          background: "none", border: "none", cursor: "pointer", color: T.brandDark, fontWeight: 700, fontSize: 14,
-          padding: "8px 0", minHeight: 44, fontFamily: "inherit",
-        }}>{t("rd_browse")}</button>
-      )}
     </div>
   );
 }
