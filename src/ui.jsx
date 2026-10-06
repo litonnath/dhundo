@@ -450,13 +450,26 @@ export function InstallButton({ onOpen }) {
 // elderly customer. For them the way in is a person, so the sign-up help
 // number is shown before sign-up, with the message already written in their
 // language. Hidden when CONTACT.whatsapp is empty.
-export function SignupHelp({ style }) {
+export function SignupHelp({ style, compact = false }) {
   const { t } = useI18n();
   if (!CONTACT.whatsapp) return null;
   const num = CONTACT.whatsapp.replace(/\D/g, "");
   const shown = num.length === 12 && num.startsWith("91")
     ? `+91 ${num.slice(2, 7)} ${num.slice(7)}` : `+${num}`;
   const href = `https://wa.me/${num}?text=${encodeURIComponent(t("sh_msg"))}`;
+  if (compact) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" style={{
+        display: "flex", alignItems: "center", gap: 10, minHeight: 48, margin: "10px 0 0", padding: "6px 4px",
+        color: "#157A43", fontWeight: 800, fontSize: 14.5, textDecoration: "none", ...style,
+      }}>
+        <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: "50%", background: "#25D366", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.4-.7-2.8-1.1-4.6-4-4.8-4.2-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.1z"/></svg>
+        </span>
+        <span style={{ flex: 1 }}>{t("sh_title")}</span>
+      </a>
+    );
+  }
   return (
     <div style={{
       display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 14px",
@@ -2512,7 +2525,7 @@ export function AccountPage({
           <Btn full onClick={onSignIn} style={{ fontSize: 17, minHeight: 54 }}>
             <Icon name="user" size={19} /> {t("nav_signin")}
           </Btn>
-          <SignupHelp style={{ margin: "14px 0 0" }} />
+          <SignupHelp compact />
         </div>
       ) : (
         <div style={{
