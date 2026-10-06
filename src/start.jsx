@@ -68,13 +68,13 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     return () => window.removeEventListener("resize", on);
   }, []);
   const types = [
-    ["worker", "construction", "#FFF1E6", "#C2410C", "home_worker", "offer_sub_worker"],
-    ["ride", "drivers", "#E8F0FE", "#1D4ED8", "home_ride", "offer_sub_ride"],
-    ["hire", "drivers", "#FEF3C7", "#B45309", "offer_hire", "offer_sub_hire"],
-    ["delivery", "drivers", "#E0F2FE", "#0369A1", "offer_delivery", "offer_sub_delivery"],
-    ["shop", "suppliers", "#E7F5EC", "#15803D", "home_shop", "offer_sub_shop"],
-    ["eat", "food", "#FDF3DC", "#A16207", "home_eat", "offer_sub_eat"],
-    ["sell", "tag", "#F3E8FD", "#7E22CE", "offer_sell", "offer_sub_sell"],
+    ["worker", "construction", "#FFF1E6", "#C2410C", "nm_o_worker", "offer_sub_worker"],
+    ["ride", "drivers", "#E8F0FE", "#1D4ED8", "nm_o_ride", "nm_s_ride"],
+    ["hire", "drivers", "#FEF3C7", "#B45309", "nm_o_hire", "nm_s_hire"],
+    ["delivery", "drivers", "#E0F2FE", "#0369A1", "nm_o_delivery", "nm_s_delivery"],
+    ["shop", "suppliers", "#E7F5EC", "#15803D", "nm_o_shop", "offer_sub_shop"],
+    ["eat", "food", "#FDF3DC", "#A16207", "nm_o_eat", "offer_sub_eat"],
+    ["sell", "tag", "#F3E8FD", "#7E22CE", "nm_o_sell", "offer_sub_sell"],
   ].filter((x) => x[0] !== "hire" || tradesFor("hire", trades).length > 0).filter((x) => x[0] !== "delivery" || tradesFor("delivery", trades).length > 0);
   // Second step, like the Worker screen on the other side: what exactly do you do.
   const picking = type && tradesFor(type, trades).length > 0 ? type : null;
@@ -177,11 +177,11 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
 // a line icon on a soft tint, a title and one line under it. Each opens its
 // own screen. Deliberately flat -- no gradients, no pictures.
 const TILES = [
-  ["worker", "construction", "#C2410C", "#FFF1E6", "home_worker", "offer_sub_worker", "worker"],
-  ["ride", "drivers", "#1D4ED8", "#E8F0FE", "home_ride", "offer_sub_ride", "need-ride"],
-  ["shop", "suppliers", "#15803D", "#E7F5EC", "home_shop", "offer_sub_shop", "shop"],
-  ["eat", "food", "#A16207", "#FDF3DC", "home_eat", "offer_sub_eat", "need-eat"],
-  ["market", "tag", "#7E22CE", "#F3E8FD", "need_buy", "need_buy_sub", "need-market"],
+  ["worker", "construction", "#C2410C", "#FFF1E6", "nm_hire_worker", "offer_sub_worker", "worker"],
+  ["ride", "drivers", "#1D4ED8", "#E8F0FE", "nm_book_ride", "nm_s_ride", "need-ride"],
+  ["shop", "suppliers", "#15803D", "#E7F5EC", "nm_buy_shop", "offer_sub_shop", "shop"],
+  ["eat", "food", "#A16207", "#FDF3DC", "nm_order_food", "offer_sub_eat", "need-eat"],
+  ["market", "tag", "#7E22CE", "#F3E8FD", "nm_buy_used", "need_buy_sub", "need-market"],
   ["partner", "user", "#0F766E", "#E3F4F2", "home_partner", "home_partner_sub", "partner"],
 ];
 

@@ -2104,7 +2104,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           <div style={{
             display: "inline-block", marginTop: 6, fontSize: 13.5, fontWeight: 800,
             color: s.fg, background: s.bg, padding: "4px 10px", borderRadius: 8,
-          }}>{tradeLabel || row.trade_name}</div>
+          }}>{row.trade_slug === "supply-other" && row.about && row.about !== "-" ? String(row.about).slice(0, 40) : (tradeLabel || row.trade_name)}</div>
 
           {/* Rate and experience on their own line, at full ink. These are
               the two numbers people compare on, and they were previously

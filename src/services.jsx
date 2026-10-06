@@ -1364,7 +1364,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const bad = (key, msg, toStep) => {
     setErr(null);
     setFieldErr({ key, msg });
-    if (key === "name" || key === "biz" || key === "phone") setSub2(1);
+    if (key === "name" || key === "biz" || key === "phone" || key === "about") setSub2(1);
     else if (key === "place") setSub2(2);
     if (toStep) setStep(toStep);
     setTimeout(() => {
@@ -1840,6 +1840,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             </BigField>
           )}
 
+          {isBiz && picked[0] === "supply-other" && (
+            <BigField fid="about" error={ferr("about")} label={<>{t("nm_sells")}<ReqTag /></>}>
+              <input style={bigInput} value={f.about} maxLength={60} placeholder={t("nm_sells_ph")}
+                     onChange={(e) => set("about", e.target.value)} />
+            </BigField>
+          )}
+
           <BigField fid="phone" error={ferr("phone")} label={<>{t("w2_phone")}<ReqTag /></>} hint={t("w2_phone_hint")}>
             <div style={{ ...bigInput, display: "flex", alignItems: "center", gap: 9, padding: "0 15px" }}>
               <span style={{ fontSize: 16.5, color: T.inkFaint, fontWeight: 600 }}>+91</span>
@@ -1855,6 +1862,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             if (!f.full_name.trim()) return bad("name", t("e_name"));
             if (isBiz && !String(f.business_name || "").trim()) return bad("biz", t("e_name"));
             if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"));
+            if (picked[0] === "supply-other" && f.about.trim().length < 3) return bad("about", t("nm_sells"));
             setErr(null); setFieldErr(null); setSub2(2);
           }}>{t("w_next")}</Btn>
           </>)}
