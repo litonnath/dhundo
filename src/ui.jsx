@@ -1740,7 +1740,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
       <div style={{ maxWidth: 560, margin: "0 auto", display: "flex" }}>
         {mode === "offer" || mode === "need" ? (
           <>
-            {item(mode === "offer" ? "work" : "find", "home", t("nav_home"), () => setTab(mode === "offer" ? "work" : "browse"), mode === "offer" && online)}
+            {item(current === "work" ? "work" : "find", "home", t("nav_home"), () => setTab("browse"), online)}
             {item("orders", "bag", t("nav_activity"), () => setTab("orders"), false, ordersBadge)}
             {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}

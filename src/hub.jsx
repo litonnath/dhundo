@@ -79,19 +79,26 @@ export function RiderJobs({ api, online, where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={{ ...card, border: `2px solid ${T.green}` }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("jb_active")}</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{j.other_name}</div>
-          <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0" }}>{j.note}</div>
-          <div style={{ fontSize: 14, color: T.ink, marginBottom: 10 }}>{t("jb_to")} {j.drop_text}</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-            {j.other_phone && <a href={`tel:${j.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}
-            {typeof j.pickup_lat === "number" && (
-              <button onClick={() => setNavFor(j)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
-            )}
-          </div>
-          <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
-          <RideChat api={api} rideId={j.id} role="rider" kind="job" />
-          <DeliveryHandover api={api} jobId={j.id} role="rider" ready={j.status === "picked_up"} onChanged={load} />
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{j.status === "picked_up" ? j.drop_text : j.other_name}</div>
+          <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0 10px" }}>{j.note}</div>
+          {j.status !== "picked_up" ? (
+            <>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                {j.other_phone && <a href={`tel:${j.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}
+                {typeof j.pickup_lat === "number" && (
+                  <button onClick={() => setNavFor(j)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
+                )}
+              </div>
+              <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
+            </>
+          ) : (
+            <DeliveryHandover api={api} jobId={j.id} role="rider" ready onChanged={load} />
+          )}
+          <details style={{ marginTop: 10 }}>
+            <summary style={{ cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: T.brandDark, minHeight: 40, display: "flex", alignItems: "center" }}>{t("jb_msgs")}</summary>
+            <RideChat api={api} rideId={j.id} role="rider" kind="job" />
+          </details>
         </div>
       ))}
       <h2 style={h2}>{t("jb_title")}</h2>

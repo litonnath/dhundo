@@ -197,8 +197,9 @@ export function HomeButton({ onClick, label }) {
   );
 }
 
-export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive }) {
+export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, onSearch }) {
   const { t } = useI18n();
+  const [q, setQ] = useState("");
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
   useEffect(() => {
     const on = () => setWide(window.innerWidth >= 600);
@@ -208,6 +209,34 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
   return (
     <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
+        <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1.5px solid ${T.line}`, borderRadius: 16, padding: "4px 6px 4px 14px", margin: "0 0 16px" }}>
+          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hm_search_ph")} aria-label={t("hm_search_ph")}
+                 style={{ flex: 1, border: "none", outline: "none", fontSize: 16.5, minHeight: 50, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
+          <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
+        </form>
+        {biz && (
+          <div style={{ background: biz.online ? "#F0FAF4" : T.white, border: `1.5px solid ${biz.online ? "#1FA85A" : T.line}`, borderRadius: 18, padding: 14, margin: "0 0 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ flex: 1, fontSize: 17, fontWeight: 800, color: biz.online ? "#157A43" : T.ink }}>{biz.online ? t("av_on") : t("av_off")}</span>
+              <button onClick={biz.toggle} disabled={biz.busy} style={{
+                minHeight: 50, padding: "0 20px", borderRadius: 25, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 16, color: "#fff",
+                background: biz.online ? "#6B7280" : "#1FA85A", opacity: biz.busy ? 0.6 : 1,
+              }}>{biz.busy ? "…" : biz.online ? t("av_stop") : t("hm_goon")}</button>
+            </div>
+            {biz.error && <button onClick={biz.onDash} style={{ background: "none", border: "none", padding: "8px 0 0", color: "#B91C1C", fontWeight: 800, fontSize: 14, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>{t("hm_fix")}</button>}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}>
+              {[["bag", t("nav_activity"), biz.onOrders, biz.orders], ["edit", t("nav_mine"), biz.onListing, 0], ["plus", t("hm_add"), biz.onSell, 0]].map(([icon, label, go, n]) => (
+                <button key={label} onClick={go} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minHeight: 72, padding: "10px 4px", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit", color: T.brandDark }}>
+                  <Icon name={icon} size={24} />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: T.ink, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+                  {n > 0 && <span style={{ position: "absolute", top: 4, right: 8, minWidth: 20, height: 20, borderRadius: 10, background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>{n}</span>}
+                </button>
+              ))}
+            </div>
+            <button onClick={biz.onDash} style={{ display: "block", margin: "10px auto 0", background: "none", border: "none", color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 40, cursor: "pointer", fontFamily: "inherit" }}>{t("hm_dash")}</button>
+          </div>
+        )}
         {liveNow.length > 0 && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 8px" }}>{t("hm_continue")}</div>

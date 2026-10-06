@@ -543,7 +543,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
 
 // Remembered between visits so Back from Buy something lands on the I need tiles.
 let lastSide = null;
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -903,7 +903,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker" && section !== "ride" && section !== "shop" && section !== "eat") {
-    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} />;
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} biz={biz}
+      onSearch={(said) => { const tr = matchTrade(said, trades); if (tr) { setSearch(""); setGroup(tr.group_name); setTrade(tr.slug); } else setSearch(said); }} />;
   }
   // Worker or Helper: people who come and work. Not drivers (Ride), not
   // shops or suppliers, not food places or stays.
@@ -3157,6 +3158,7 @@ export default function ServicesPage({
           onPartner={() => setPartnerOpen(true)}
           onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
           hasBusiness={hasListing && !isAdmin}
+          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => setTab("orders"), onListing: () => setTab("mine"), onSell: () => setTab("sell"), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
@@ -3205,7 +3207,7 @@ export default function ServicesPage({
               const dk = driverKind(tr);
               // A delivery rider works the delivery jobs of shops and restaurants;
               // a hire vehicle lists its rates; a ride driver takes ride requests.
-              if (dk === "delivery") return <AlertsCard api={api} />;
+              if (dk === "delivery") return <details style={{ marginTop: 16 }}><summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("ms_more")}</summary><AlertsCard api={api} /></details>;
               if (dk === "hire") return <RatesCard api={api} />;
               return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
             }
