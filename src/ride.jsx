@@ -4,7 +4,7 @@
 // between the two; the app takes no payment.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, Icon, Notice, input, useDismissable } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, useDismissable, ListenButton } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -303,7 +303,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   return (
     <div style={wrap}>
       <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 100, marginBottom: 14 }} />
-      <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0 14px" }}>{t("rd_title")}</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 14px" }}><h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t("rd_title")}</h1><ListenButton compact lines={[t("rd_title")]} /></div>
       {finished && <RideDone ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {[["travel", "rd_mode_travel"], ["hire", "rd_mode_hire"]].map(([k, key]) => (

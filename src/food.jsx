@@ -5,7 +5,7 @@
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink, ScrollRow } from "./market.jsx";
@@ -634,7 +634,8 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
           <div key={o.id} style={card}>
             <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
               <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", background: statusColor[o.status], padding: "4px 12px", borderRadius: 14 }}>{t("st_status_" + o.status)}</span>
+              <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(o.total_paise + (o.delivery_fee_paise || 0))}`]} />
             </div>
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>

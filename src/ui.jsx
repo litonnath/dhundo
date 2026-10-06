@@ -2873,7 +2873,7 @@ const SPEECH_LANG = {
 };
 // Reads the given lines aloud in the chosen language. For people who do not
 // read well: one tap, and the screen talks. Hidden where the phone cannot speak.
-export function ListenButton({ lines, style }) {
+export function ListenButton({ lines, style, compact = false }) {
   const { t, lang } = useI18n();
   const [on, setOn] = useState(false);
   const ok = typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
@@ -2897,11 +2897,11 @@ export function ListenButton({ lines, style }) {
   };
   return (
     <button onClick={toggle} aria-pressed={on} aria-label={t("hm_listen")} style={{
-      display: "inline-flex", alignItems: "center", gap: 8, minHeight: 48, padding: "0 16px", borderRadius: 24, cursor: "pointer", fontFamily: "inherit",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: compact ? 44 : 48, minWidth: compact ? 44 : 0, padding: compact ? 0 : "0 16px", borderRadius: 24, cursor: "pointer", fontFamily: "inherit",
       fontSize: 15, fontWeight: 800, border: `1.5px solid ${T.brandDark}`, background: on ? T.brandDark : T.white, color: on ? "#fff" : T.brandDark, ...style,
     }}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a8.5 8.5 0 0 1 0 12" /></svg>
-      {t("hm_listen")}
+      {!compact && t("hm_listen")}
     </button>
   );
 }
