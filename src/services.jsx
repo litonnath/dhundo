@@ -989,8 +989,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
-            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, marginBottom: 14 }} />
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />
             {liveWorkers.length > 0 && (
@@ -3223,7 +3221,7 @@ export default function ServicesPage({
 
       {tab === "mine" && signedIn && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
-          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("browse")} /></div>
+          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("work")} /></div>
           <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("nav_mine")}</h1>
           <MyListing api={api} trades={trades} isAdmin={isAdmin}
                      onGoAdd={() => setTab("add")} />

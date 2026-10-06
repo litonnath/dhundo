@@ -128,6 +128,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
     }, 60);
   };
   const ferr = (key) => (fieldErr && fieldErr.key === key ? fieldErr.msg : null);
+  const [open, setOpen] = useState(null);
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [pickGroup, setPickGroup] = useState(null);
@@ -233,6 +234,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       if (one && one.ok) {
         setDirty((d) => ({ ...d, [key]: false }));
         setSavedKey(key);
+        if (["work", "contact", "address"].includes(key)) { setOpen(null); setMsg(t("p_saved")); window.scrollTo({ top: 0, behavior: "smooth" }); }
         if (one.reason === "saved_reverify") setMsg(t("p_saved_reverify"));
         if (opts.reload !== false) load();
         // The tick fades, so the page does not accumulate green ticks from
@@ -367,9 +369,12 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const isBizTrade = isSupplierTrade || myTradeRow.group_name === "Eat & Stay";
   const isEatTrade = myTradeRow.group_name === "Eat & Stay";
 
+  // One part at a time: a menu of what can be edited, and only the part you
+  // opened. Nobody scrolls past five forms to reach the one they want.
+  const show = (k) => ({ display: open === k ? "block" : "none" });
   const jump = (key) => {
-    const el = document.getElementById("sec-" + key);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setOpen(key);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 30);
   };
 
   const statusTone =
@@ -457,7 +462,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       {err && <Notice tone="bad">{err}</Notice>}
 
       {/* ------------------------------------------------------- missing */}
-      {blockers.length > 0 && (
+      {!open && blockers.length > 0 && (
         <div style={{
           background: T.redSoft, border: `1.5px solid ${T.red}`, borderRadius: 16,
           padding: "14px 16px", marginBottom: 14,
@@ -486,7 +491,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       )}
 
       {/* --------------------------------------------------------- to-do */}
-      {todo.length > 0 && (
+      {!open && todo.length > 0 && (
         <div style={{
           background: T.brandSoft, border: `1px solid rgba(5,66,145,0.2)`,
           borderRadius: 16, padding: "16px", marginBottom: 14,
@@ -527,8 +532,31 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
         </div>
       )}
 
+      {/* ------------------------------------------------------ edit menu */}
+      {!open ? (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, margin: "4px 0 10px" }}>{t("ml_edit")}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[["face", "user", t("p_face")], ["photos", "camera", t("p_photos")], ["work", "edit", t("p_work")], ["contact", "phone", t("p_contact")], ["address", "pin", t("p_address")], ID_UPLOADS_ENABLED ? ["id", "check", t("p_id")] : null].filter(Boolean).map(([k, icon, label]) => (
+              <button key={k} onClick={() => jump(k)} style={{
+                display: "flex", alignItems: "center", gap: 10, minHeight: 64, padding: "10px 12px", borderRadius: 14, textAlign: "left",
+                border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+              }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, background: T.brandSoft, color: T.brandDark, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={19} /></span>
+                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setOpen(null)} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`, borderRadius: 20,
+          padding: "7px 14px", minHeight: 40, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: T.brandDark, marginBottom: 12,
+        }}><Icon name="back" size={16} /> {t("w_back")}</button>
+      )}
+
       {/* ---------------------------------------------------------- face */}
-      <div id="sec-face">
+      <div id="sec-face" style={show("face")}>
         <Section title={t("p_face")}>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <div style={{
@@ -575,7 +603,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       </div>
 
       {/* -------------------------------------------------------- photos */}
-      <div id="sec-photos">
+      <div id="sec-photos" style={show("photos")}>
         <Section title={t("p_photos")}>
           <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>
             {t("p_photos_hint")}
@@ -629,7 +657,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       </div>
 
       {/* ---------------------------------------------------------- work */}
-      <div id="sec-work">
+      <div id="sec-work" style={show("work")}>
         <Section
           title={t("p_work")}
           dirty={dirty.work} saving={savingKey === "work"} saved={savedKey === "work"}
@@ -800,7 +828,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       </div>
 
       {/* ------------------------------------------------------- contact */}
-      <div id="sec-contact">
+      <div id="sec-contact" style={show("contact")}>
         <Section
           title={t("p_contact")}
           dirty={dirty.contact} saving={savingKey === "contact"} saved={savedKey === "contact"}
@@ -878,7 +906,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
       </div>
 
       {/* ------------------------------------------------------- address */}
-      <div id="sec-address">
+      <div id="sec-address" style={show("address")}>
         <Section
           title={t("p_address")}
           dirty={dirty.address} saving={savingKey === "address"} saved={savedKey === "address"}
@@ -935,7 +963,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
 
       {/* ------------------------------------------------------------ ID */}
       {ID_UPLOADS_ENABLED && (
-        <div id="sec-id">
+        <div id="sec-id" style={show("id")}>
           {/* "(optional)" is a lie for a cook or a driver, and it sat directly
               above a red notice saying so. The label follows the trade. */}
           <Section title={row.requires_id && !row.verified ? <>{t("adm_id_title")}<ReqTag /></> : t("p_id")}>
@@ -1001,7 +1029,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           from anything somebody taps routinely. Quiet until pressed --
           a permanently red block at the bottom of a page teaches people
           to scroll past warnings. */}
-      <div style={{
+      {!open && <div style={{
         marginTop: 30, paddingTop: 20, borderTop: `1px solid ${T.line}`,
         display: "flex", justifyContent: "center",
       }}>
@@ -1014,7 +1042,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           <Icon name="trash" size={17} />
           {t("del_mine_cta")}
         </button>
-      </div>
+      </div>}
 
       {confirmDel && (
         <ConfirmDelete
