@@ -264,6 +264,19 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   }, [api, pick && pick.lat, pick && pick.lng, state, onlineRows.map((r) => r && r.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   // Where each online driver is right now, refreshed every few seconds, not
   // the address on their listing. Drivers who are offline are not on the map.
+  // The account address of each driver (services_signups), shown instead of
+  // the listing address.
+  const [homes, setHomes] = useState({});
+  const homeKey = [...new Set([...onlineRows.map((r) => r && r.id), ...(rows || []).map((r) => r.id)])].filter(Boolean).slice(0, 25).join(",");
+  useEffect(() => {
+    if (!homeKey || !api.driverHomes) return undefined;
+    let live = true;
+    api.driverHomes(homeKey.split(",")).then((got) => {
+      if (!live) return;
+      const o = {}; many(got).forEach((g) => { o[g.id] = g; }); setHomes(o);
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [api, homeKey]);
   const idsKey = [...new Set([...onlineRows.map((r) => r && r.id), ...(rows || []).map((r) => r.id)])].filter(Boolean).slice(0, 25).join(",");
   useEffect(() => {
     if (!idsKey) { setPos({}); return undefined; }
@@ -320,7 +333,8 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
       <div style={{ marginTop: 10 }}>
         {sorted.map((d) => {
           const on = onlineIds.has(d.id);
-          const km = d.distance_km != null ? Number(d.distance_km) : null;
+          const hm = homes[d.id];
+          const km = hm && typeof hm.lat === "number" && pickOk ? kmBetween(pick, hm) : d.distance_km != null ? Number(d.distance_km) : null;
           const rate = Number(fares[d.id]) > 0 ? Number(fares[d.id]) : null;
           const tripFare = trip && rate ? Math.max(rate, Math.round((trip.km * rate) / 5) * 5) : null;
           return (
@@ -328,7 +342,7 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
               <span style={{ width: 44, height: 44, borderRadius: "50%", background: "#F3F4F6", border: `3px solid ${on ? "#16A34A" : "#9CA3AF"}`, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, filter: on ? "none" : "grayscale(1)" }}>{vehicleEmoji(d.trade_slug + " " + d.trade_name)}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.display_name}</span>
-                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{d.trade_name}{d.locality ? ` · ${d.locality}` : ""}</span>
+                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{d.trade_name}{(hm && hm.address) || d.locality ? ` · ${(hm && hm.address) || d.locality}` : ""}</span>
                 <span style={{ display: "inline-block", marginTop: 3, fontSize: 11.5, fontWeight: 800, color: on ? "#0F8A3C" : "#6B7280" }}>{on ? t("rd_on") : t("rd_off")}</span>
               </span>
               <span style={{ textAlign: "right" }}>
