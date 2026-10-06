@@ -2884,6 +2884,8 @@ export default function ServicesPage({
   const [ordersBadge, setOrdersBadge] = useState(0);
   const [ordersKey, setOrdersKey] = useState(0);
   const [liveNow, setLiveNow] = useState([]);
+  const [bizOpen, setBizOpen] = useState(null);
+  const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
   const openOrders = (sub) => { try { window.localStorage.setItem("dhundo_orders_tab", sub || ""); } catch (_) {} setOrdersKey((k) => k + 1); setTab("orders"); };
   useEffect(() => {
     if (!signedIn) { setOrdersBadge(0); setLiveNow([]); return undefined; }
@@ -3087,12 +3089,12 @@ export default function ServicesPage({
         const business = [];
         if (isOwner) {
           business.push({ icon: "bag", title: t("m_received"), go: () => openOrders("work") });
-          business.push({ icon: "edit", title: t("m_menu_items"), sub: t("m_hours"), go: go("bizpage") });
+          business.push({ icon: "edit", title: t("m_menu_items"), sub: t("m_hours"), go: () => openBiz("menu") });
         }
         if (biz && myDriverKind === "delivery") business.push({ icon: "drivers", title: t("m_rider_jobs"), go: () => openOrders("work") });
         if (biz && myDriverKind === "travel") business.push({ icon: "drivers", title: t("m_rides"), go: () => openOrders("work") });
         if (isRider) business.push({ icon: "check", title: t("m_online"), sub: avail.online ? t("av_on") : t("av_off"), go: go("work") });
-        if (biz && !isOwner && myDriverKind !== "delivery") business.push({ icon: "edit", title: t("m_rates"), go: go("bizpage") });
+        if (biz && !isOwner && myDriverKind !== "delivery") business.push({ icon: "edit", title: t("m_rates"), go: () => openBiz("rates") });
         if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
         if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
         if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
@@ -3159,7 +3161,7 @@ export default function ServicesPage({
           onPartner={() => setPartnerOpen(true)}
           onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => setTab("orders"), onListing: () => setTab("mine"), onSell: () => setTab(isOwnerHome ? "bizpage" : "sell"), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => setTab("orders"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
@@ -3194,27 +3196,44 @@ export default function ServicesPage({
                     onEdit={(id) => { setItemOpen(null); setEditItem(id); setTab("sell"); }} />
       )}
 
-      {tab === "bizpage" && signedIn && (
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 120px" }}>
-          <HomeButton onClick={() => setTab("browse")} />
-          <h1 style={{ fontSize: 23, fontWeight: 800, margin: "14px 0 4px" }}>{t("hm_mybiz")}</h1>
-          {(() => {
-                      const tr = trades.find((x) => x.slug === myTrade) || {};
-                      if (!signedIn || !hasListing || isAdmin) return null;
-                      if (tr.group_name === "Drivers") {
-                        const dk = driverKind(tr);
-                        // A delivery rider works the delivery jobs of shops and restaurants;
-                        // a hire vehicle lists its rates; a ride driver takes ride requests.
-                        if (dk === "delivery") return <details style={{ marginTop: 16 }}><summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("ms_more")}</summary><AlertsCard api={api} /></details>;
-                        if (dk === "hire") return <RatesCard api={api} />;
-                        return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
-                      }
-                      if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
-                        return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} onOpenOrders={() => setTab("orders")} />{tr.group_name !== "Eat & Stay" && <ShopJobs api={api} hasListing={hasListing} collapsed />}</>;
-                      return <RatesCard api={api} />;
-                    })()}
-        </div>
-      )}
+      {tab === "bizpage" && signedIn && (() => {
+        const tr = trades.find((x) => x.slug === myTrade) || {};
+        const dk = tr.group_name === "Drivers" ? driverKind(tr) : null;
+        const ownerKind = tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay";
+        const hireIt = () => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); };
+        const parts = [];
+        if (hasListing && !isAdmin) {
+          if (ownerKind) {
+            parts.push({ key: "menu", icon: "edit", label: t("m_menu_items"), node: <OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={hireIt} onOpenOrders={() => setTab("orders")} /> });
+            if (tr.group_name !== "Eat & Stay") parts.push({ key: "rider", icon: "drivers", label: t("jp_title"), node: <ShopJobs api={api} hasListing={hasListing} /> });
+          } else if (dk === "delivery") {
+            parts.push({ key: "alerts", icon: "bell", label: t("nt_title"), node: <AlertsCard api={api} /> });
+          } else {
+            if (dk === "travel") parts.push({ key: "tools", icon: "drivers", label: t("bz_tools"), node: <RideTools api={api} online={avail.online} /> });
+            parts.push({ key: "rates", icon: "edit", label: t("m_rates"), node: <RatesCard api={api} /> });
+          }
+        }
+        const cur = parts.find((x) => x.key === bizOpen) || (parts.length === 1 ? parts[0] : null);
+        return (
+          <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 120px" }}>
+            <HomeButton onClick={() => (cur && parts.length > 1 ? setBizOpen(null) : setTab("browse"))} />
+            <h1 style={{ fontSize: 23, fontWeight: 800, margin: "14px 0 12px" }}>{cur ? cur.label : t("hm_mybiz")}</h1>
+            {cur ? cur.node : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {parts.map((x) => (
+                  <button key={x.key} onClick={() => setBizOpen(x.key)} style={{
+                    display: "flex", alignItems: "center", gap: 10, minHeight: 72, padding: "10px 12px", borderRadius: 14, textAlign: "left",
+                    border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+                  }}>
+                    <span style={{ width: 40, height: 40, borderRadius: 11, background: T.brandSoft, color: T.brandDark, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={x.icon} size={20} /></span>
+                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{x.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {tab === "work" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
