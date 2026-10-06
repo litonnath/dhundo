@@ -329,7 +329,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         </>)}
       </div>
 
-      {(hire || (pick && drop)) && (<>
+      {((hire && pick) || (pick && drop)) && (<>
       <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
       <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", marginBottom: 14 }}>
         {(hire ? [{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }] : []).concat(

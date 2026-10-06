@@ -156,7 +156,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
           title={t(eat ? "st_eat_title" : "st_shop_title")} sub={t(eat ? "st_eat_sub" : "st_shop_sub")} placeholder={t("st_search")} />
     <div style={{ maxWidth: stage1 ? 1000 : 760, margin: "0 auto", padding: "62px 16px 130px" }}>
       {stage1 ? (
-        <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginBottom: 16 }} />
+        <TileArt k={eat ? "need-eat" : "shop"} pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, marginBottom: 16 }} />
       ) : (
         <button onClick={() => { setQ(""); setPicked(false); }} style={{
           display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",

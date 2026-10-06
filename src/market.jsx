@@ -253,7 +253,7 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack, user
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
         {showTiles ? (
           <>
-            <TileArt k="need-market" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, marginBottom: 16 }} />
+            <TileArt k="need-market" pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, marginBottom: 16 }} />
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t("need_buy")}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
@@ -710,7 +710,7 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "10px 16px 40px" }}>
       {onBack && <HomeButton onClick={onBack} label={t("nav_dash")} />}
-      <TileArt k="sell" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 280, margin: "10px 0 16px" }} />
+      <TileArt k="sell" pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, margin: "10px 0 16px" }} />
       <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 4px" }}>{t("mk_sell_title")}</h1>
       <p style={{ fontSize: 14.5, color: T.inkSoft, margin: "0 0 16px", lineHeight: 1.55 }}>{t("mk_sell_sub")}</p>
       {flash && <Notice tone="good">{flash}</Notice>}
