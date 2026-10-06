@@ -93,10 +93,33 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return () => { live = false; };
   }, [api, vehicle, pick && pick.lat, pick && pick.lng]);
 
-  // The fare is worked out, not typed: distance times the usual per-km rate of
-  // the drivers online near the pickup for this kind of vehicle.
-  const rates = online.map((d) => Number(fares[d.id])).filter((n) => n > 0).sort((x, y) => x - y);
-  const perKm = rates.length ? rates[Math.floor(rates.length / 2)] : null;
+  // Every listed driver near the pickup for this vehicle, online or not: their
+  // per-km rates are the next best thing when nobody of that kind is online.
+  const [listedRates, setListedRates] = useState([]);
+  useEffect(() => {
+    setListedRates([]);
+    if (!pick || typeof pick.lat !== "number") return undefined;
+    let live = true;
+    api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 20, state: place && place.state })
+      .then((rows) => {
+        const ids = many(rows).filter((r) => (vehicle === "any" ? !/deliver/i.test(`${r.trade_slug} ${r.trade_name || ""}`) : r.trade_slug === vehicle)).map((r) => r.id);
+        if (!ids.length) return null;
+        return api.storeInfos(ids);
+      })
+      .then((inf) => { if (live && inf) setListedRates(many(inf).map((i) => Number(i.per_km_rupees)).filter((n) => n > 0)); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [api, vehicle, pick && pick.lat, pick && pick.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The fare is worked out, not typed: the distance times a per-km rate. The
+  // rate is, in this order: the middle rate of the drivers online near the
+  // pickup for this vehicle; else of the drivers listed near it; else the
+  // standard rate for the kind of vehicle. Rounded to the nearest 5 rupees.
+  const median = (a) => { const x = a.slice().sort((p, q) => p - q); return x[Math.floor(x.length / 2)]; };
+  const onlineRates = online.map((d) => Number(fares[d.id])).filter((n) => n > 0);
+  const STD = /bike|moto/.test(vehicle) ? 8 : /auto|rick|toto/.test(vehicle) ? 12 : /car|taxi|cab/.test(vehicle) ? 15 : 12;
+  const basis = onlineRates.length ? "online" : listedRates.length ? "listed" : "std";
+  const perKm = basis === "online" ? median(onlineRates) : basis === "listed" ? median(listedRates) : STD;
   const est = trip && perKm ? Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5) : null;
 
   const here = async () => {
@@ -247,6 +270,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km)}</div>
           <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
         </div>
       ) : (
