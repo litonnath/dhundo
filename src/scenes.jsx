@@ -167,7 +167,7 @@ export function TileArt({ k, style, pos = "center" }) {
   return (
     <span style={{ display: "block", position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", ...style }} aria-hidden="true">
       <span style={{ position: "absolute", inset: 0, display: "block" }}>
-        {React.cloneElement(SCENES[k === "sell" ? "market" : String(k).replace(/^need-/, "")] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
+        {React.cloneElement(SCENES[({ sell: "market", hire: "ride", delivery: "ride", "offer-ride": "ride", "offer-eat": "eat" })[k] || String(k).replace(/^need-/, "")] || SCENES.worker, { width: "100%", height: "100%", style: { display: "block" } })}
       </span>
       <img src={`/tiles/${k}.${EXT[ei]}`} key={ei} alt="" onLoad={() => setPhoto(true)}
            onError={() => { setPhoto(false); if (ei < EXT.length - 1) setEi(ei + 1); }}

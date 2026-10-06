@@ -93,7 +93,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
     if (picking === "worker" && byGroup.length > 1 && !grp && !searching) {
       return (
         <>
-          <TileArt k={picking} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
+          <TileArt k={picking === "ride" ? "offer-ride" : picking === "eat" ? "offer-eat" : picking} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
           <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(meta[4])}</h2>
           <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("offer_what")}</p>
           <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
@@ -153,7 +153,7 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
             display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
             borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
           }}>
-            <TileArt k={key === "hire" || key === "delivery" ? "ride" : key} />
+            <TileArt k={key === "ride" ? "offer-ride" : key === "eat" ? "offer-eat" : key} style={{ aspectRatio: "2 / 1" }} />
             <span style={{ display: "block", padding: "11px 13px 13px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 32, height: 32, borderRadius: 9, background: fg, color: "#fff", flexShrink: 0,
