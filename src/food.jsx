@@ -362,11 +362,12 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             {row.distance_km != null ? ` · ${String(t("st_away")).replace("{n}", row.distance_km)}` : ""}
           </div>
           {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
+          {row.about && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.55, margin: "-6px 0 12px", overflowWrap: "anywhere" }}>{row.about}</div>}
           {info && info.promo_text && <Promo info={info} />}
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
           {!catering && kind !== "tiffin" && (
             <div style={{ marginBottom: 12 }}>
-              <Btn full kind="ghost" onClick={() => (user && user.id ? setAskOpen(true) : onSignIn && onSignIn())}>{t("sh_ask")}</Btn>
+              <Btn full kind="ghost" onClick={() => (user && user.id ? setAskOpen(true) : onSignIn && onSignIn())}>{t(eat ? "ea_ask" : "sh_ask")}</Btn>
             </div>
           )}
           {(catering || kind === "tiffin") && (

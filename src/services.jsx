@@ -945,7 +945,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
           }}><Icon name="back" size={16} /> {t("launch_back")}</button>
         </div>
         <StoreHome kind={section} api={api} trades={trades} place={place} user={user} onSignIn={onSignIn}
-                   renderEmpty={renderEmpty}
                    onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); } catch (_) {} setSection("ride"); }} />
       </>
     );
@@ -1405,6 +1404,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     const x = trades.find((y) => y.slug === slug) || {};
     return x.requires_id === undefined ? ["Drivers", "Home & Domestic"].includes(x.group_name) : !!x.requires_id;
   });
+  // Shops and food places are listed under a business name, with no day rate or years of experience.
+  const isBiz = isSupplier || formKind === "eat";
   const hasItemsStep = !isAdmin && (formKind === "shop" || formKind === "eat");
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
   const addItem = () => {
@@ -1437,7 +1438,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     if (!f.full_name.trim()) return bad("name", t("e_name"), 2);
     if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"), 2);
     if (!lp || (!lp.area && typeof lp.lat !== "number")) return bad("place", t("loc_need"), 2);
-    if (!isSupplier) {
+    if (isBiz && !f.business_name.trim()) return bad("biz", t(formKind === "eat" ? "ea_need_name" : "e_name"), 2);
+    if (!isBiz) {
       const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
       if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"), 3);
       if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"), 3);
@@ -1818,13 +1820,13 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
           <h2 style={title}>{t("w2_title")}</h2>
           <p style={sub}>{t("w2_sub")}</p>
 
-          <BigField fid="name" error={ferr("name")} label={<>{isSupplier ? t("f_owner") : t("w2_name")}<ReqTag /></>}>
+          <BigField fid="name" error={ferr("name")} label={<>{isBiz ? t("f_owner") : t("w2_name")}<ReqTag /></>}>
             <input style={bigInput} value={f.full_name} autoComplete="name"
                    onChange={(e) => set("full_name", e.target.value)} />
           </BigField>
 
-          {isSupplier && (
-            <BigField label={t("w2_shop")} hint={t("f_shop_hint")}>
+          {isBiz && (
+            <BigField fid="biz" error={ferr("biz")} label={<>{t(formKind === "eat" ? "ea_name" : "w2_shop")}<ReqTag /></>} hint={t(formKind === "eat" ? "ea_name_hint" : "f_shop_hint")}>
               <input style={bigInput} value={f.business_name}
                      onChange={(e) => set("business_name", e.target.value)} />
             </BigField>
@@ -1880,7 +1882,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
               promise at all. */}
           <p style={sub}>{t("w3_sub_req")}</p>
 
-          {!isSupplier && (
+          {!isBiz && (
             <>
               <BigField fid="rate" error={ferr("rate")} label={<>{formKind === "ride" ? t("w3_rate_drv") : t("w3_rate")}<ReqTag /></>}>
                 <div style={{ display: "flex", gap: 9 }}>
@@ -1916,7 +1918,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
 
           <BigField fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
             <textarea style={{ ...bigInput, minHeight: 92, resize: "vertical" }} value={f.about}
-                      placeholder={t("w3_about_ph")}
+                      placeholder={t(formKind === "eat" ? "ea_about_ph" : "w3_about_ph")}
                       onChange={(e) => set("about", e.target.value)} />
           </BigField>
 
@@ -1939,7 +1941,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
 
           {hasItemsStep ? (
             <Btn full onClick={() => {
-              if (!isSupplier) {
+              if (!isBiz) {
                 const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
                 if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"));
                 if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"));

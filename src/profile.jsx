@@ -109,6 +109,8 @@ function Section({ title, children, onSave, saving, saved, dirty, note }) {
   );
 }
 
+const isBizTradeEarly = (trades, f) => { const x = (trades || []).find((y) => y.slug === f.trade_slug) || {}; return x.kind === "supplier" || x.group_name === "Eat & Stay"; };
+
 export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const consent = useConsent();
   const { t, lang } = useI18n();
@@ -356,10 +358,14 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   }
   if (!f.avatar_url) todo.push({ key: "face", label: t("todo_face") });
   if (!f.photos.length) todo.push({ key: "photos", label: t("todo_photos") });
-  if (!f.day_rate_min && !f.day_rate_max) todo.push({ key: "work", label: t("todo_rate") });
+  if (!f.day_rate_min && !f.day_rate_max && !(isBizTradeEarly(trades, f))) todo.push({ key: "work", label: t("todo_rate") });
   if (!f.locality) todo.push({ key: "contact", label: t("todo_area") });
 
-  const isSupplierTrade = (trades.find((x) => x.slug === f.trade_slug) || {}).kind === "supplier";
+  const myTradeRow = trades.find((x) => x.slug === f.trade_slug) || {};
+  const isSupplierTrade = myTradeRow.kind === "supplier";
+  // Shops and food places are businesses: a name, not a day rate and years of experience.
+  const isBizTrade = isSupplierTrade || myTradeRow.group_name === "Eat & Stay";
+  const isEatTrade = myTradeRow.group_name === "Eat & Stay";
 
   const jump = (key) => {
     const el = document.getElementById("sec-" + key);
@@ -632,7 +638,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             if (row && row.requires_vehicle && !plateLooksRight(f.vehicle_number)) {
               return badField("vehicle", t("e_vehicle"));
             }
-            if (!isSupplierTrade) {
+            if (!isBizTrade) {
               const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
               if (!(lo > 0) || !(hi > 0) || hi < lo) return badField("rate", t("e_rate"));
               if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return badField("years", t("e_years"));
@@ -645,6 +651,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             p_day_rate_min: num(f.day_rate_min),
             p_day_rate_max: num(f.day_rate_max),
             p_years_experience: num(f.years_experience),
+            p_business_name: isBizTrade ? (f.business_name.trim() || null) : null,
             p_about: f.about.trim() || "-",
             });
           }}
@@ -756,6 +763,14 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             </Row>
           )}
 
+          {isBizTrade && (
+            <Row label={t(isEatTrade ? "ea_name" : "w2_shop")} hint={t(isEatTrade ? "ea_name_hint" : "f_shop_hint")}>
+              <input style={field} value={f.business_name} maxLength={80}
+                     onChange={(e) => set("work", "business_name", e.target.value)} />
+            </Row>
+          )}
+          {!isBizTrade && (
+            <>
           <Row fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}{!isSupplierTrade && <ReqTag />}</>}>
             <div style={{ display: "flex", gap: 9 }}>
               <input style={{ ...field, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
@@ -773,9 +788,12 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
                    onChange={(e) => set("work", "years_experience", e.target.value)} />
           </Row>
 
+            </>
+          )}
+
           <Row fid="about" error={ferr("about")} label={<>{t("w3_about")}<ReqTag /></>}>
             <textarea style={{ ...field, minHeight: 90, resize: "vertical" }} value={f.about}
-                      placeholder={t("w3_about_ph")}
+                      placeholder={t(isEatTrade ? "ea_about_ph" : "w3_about_ph")}
                       onChange={(e) => set("work", "about", e.target.value)} />
           </Row>
         </Section>
