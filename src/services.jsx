@@ -989,7 +989,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
             {/* Home, in the order a first-time visitor needs it: the jobs
                 people ask for most as big tiles, one tap to people; who can
                 come right now; then every category. */}
-            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "21 / 8", maxHeight: 190, marginBottom: 14 }} />
+            <TileArt k="worker" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, marginBottom: 14 }} />
             <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{t(SECTION[0])}</h2>
             <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{t("what_need")}</p>
             <CategoryGrid groups={workerGroups} counts={counts} onPick={(g) => { setAllIn(false); setGroup(g); }} />
@@ -3249,7 +3249,7 @@ export default function ServicesPage({
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
         <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("nav_activity")} text={t("or_gate")}
-                    perks={[[t("trust_2_t"), t("trust_2_s")]]} />
+                    perks={[]} />
       ))}
 
       {tab === "chats" && (signedIn ? (
@@ -3257,7 +3257,7 @@ export default function ServicesPage({
                    onDelete={async (x) => { try { await api.chatDelete(x.id); } catch (_) { /* the list reloads */ } inbox.reload(); }} />
       ) : (
         <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("ch_tab")} text={t("ch_gate")}
-                    perks={[[t("trust_2_t"), t("trust_2_s")]]} />
+                    perks={[]} />
       ))}
 
       {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && tab !== "chats" && tab !== "orders" &&
@@ -3349,7 +3349,7 @@ export default function ServicesPage({
 
       {/* The footer is for the website. In the app the bottom bar does its
           job, and the data credit the licences require is on Account. */}
-      {!inApp && (
+      {!inApp && !["orders", "chats", "account", "profile"].includes(tab) && (
         <SiteFooter setTab={setTab} hasListing={hasListing && !isAdmin}
                     onInstall={() => setInstallOpen(true)} />
       )}

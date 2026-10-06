@@ -302,7 +302,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
 
   return (
     <div style={wrap}>
-      <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
+      <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 100, marginBottom: 14 }} />
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0 14px" }}>{t("rd_title")}</h1>
       {finished && <RideDone ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

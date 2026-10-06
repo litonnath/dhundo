@@ -350,7 +350,7 @@ export function SubCategories({ title, sub, icon, fg, bg, items, sections, onPic
   const secs = (sections || [{ items }]).map((sc) => ({ ...sc, items: needle ? sc.items.filter((it) => String(it.label).toLowerCase().includes(needle)) : sc.items })).filter((sc) => sc.items.length);
   return (
     <div>
-      {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />}
+      {art && <TileArt k={art} pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 110, marginBottom: 14 }} />}
       {title && <h2 style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: "0 0 4px" }}>{title}</h2>}
       {title && <p style={{ fontSize: 14, color: T.inkSoft, margin: "0 0 14px" }}>{sub || t("what_need")}</p>}
       {searchPh && query === null && <SearchBox value={q} onChange={setQ} placeholder={searchPh} />}
