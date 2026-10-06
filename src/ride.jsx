@@ -11,6 +11,7 @@ import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideChat, RideCode } from "./ridechat.jsx";
+import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
@@ -348,6 +349,10 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           </button>
         ))}
       </div>
+      {hire ? (
+        <HireNearby api={api} pick={pick} vehicle={vehicle} vehicles={vehicles} place={place} signedIn={signedIn} onSignIn={onSignIn} />
+      ) : (
+        <>
       {est != null ? (
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
@@ -369,6 +374,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
       {signedIn && <RideHistory api={api} />}
+        </>
+      )}
     </div>
   );
 }
