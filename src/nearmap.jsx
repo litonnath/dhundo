@@ -6,7 +6,7 @@
 // when this is first shown, not with the app.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef } from "react";
-import { T, Icon } from "./ui.jsx";
+import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import * as CFG from "./config.js";
 
@@ -154,6 +154,93 @@ export function UberMap({ markers, lines = [], height = "50vh", onSelect, fitKey
   }, [sig, fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
   return <div ref={box} style={{ height, minHeight: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
+}
+
+
+// ---------------------------------------------------------------------------
+// DIRECTIONS INSIDE THE APP: the road route from the driver to the pickup on
+// the app's own map, with the turns listed, instead of handing over to another
+// maps app. Routes come from the OpenStreetMap-based OSRM service.
+// ---------------------------------------------------------------------------
+const OSRM = "https://router.project-osrm.org/route/v1/driving/";
+function stepText(st, t) {
+  const m = st.maneuver || {};
+  const mod = String(m.modifier || "");
+  const road = st.name ? String(t("nav_onto")).replace("{road}", st.name) : "";
+  let arrow = "\u2191", word = t("nav_straight");
+  if (m.type === "arrive") { arrow = "\u2691"; word = t("nav_arrive"); }
+  else if (m.type === "depart") { arrow = "\u2191"; word = t("nav_depart"); }
+  else if (/roundabout|rotary/.test(m.type)) { arrow = "\u21BB"; word = t("nav_round"); }
+  else if (mod === "uturn") { arrow = "\u21B6"; word = t("nav_uturn"); }
+  else if (/left/.test(mod)) { arrow = "\u2190"; word = t("nav_left"); }
+  else if (/right/.test(mod)) { arrow = "\u2192"; word = t("nav_right"); }
+  return { arrow, text: `${word}${road ? " " + road : ""}` };
+}
+export function RouteNav({ from, to, title, onClose }) {
+  const { t } = useI18n();
+  useDismissable(true, onClose);
+  const [start, setStart] = useState(from && typeof from.lat === "number" ? from : null);
+  const [route, setRoute] = useState(null);
+  const [state, setState] = useState("load");
+  useEffect(() => {
+    if (start) return undefined;
+    const geo = typeof navigator !== "undefined" && navigator.geolocation;
+    if (!geo) { setState("fail"); return undefined; }
+    geo.getCurrentPosition((g) => setStart({ lat: g.coords.latitude, lng: g.coords.longitude }), () => setState("fail"), { enableHighAccuracy: true, timeout: 15000 });
+    return undefined;
+  }, [start]);
+  useEffect(() => {
+    if (!start) return undefined;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 9000);
+    setState("load");
+    fetch(`${OSRM}${start.lng},${start.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`, { signal: ctl.signal })
+      .then((r) => r.json())
+      .then((j) => {
+        const r = j && j.routes && j.routes[0];
+        if (!r) { setState("fail"); return; }
+        setRoute({
+          km: r.distance / 1000, min: Math.max(1, Math.round(r.duration / 60)),
+          pts: r.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+          steps: (r.legs || []).flatMap((l) => l.steps || []),
+        });
+        setState("ok");
+      })
+      .catch(() => setState("fail"))
+      .finally(() => clearTimeout(timer));
+    return () => { ctl.abort(); clearTimeout(timer); };
+  }, [start && start.lat, start && start.lng, to.lat, to.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const markers = start ? [{ id: "me", kind: "me", ...start }, { id: "to", kind: "pickup", lat: to.lat, lng: to.lng }] : [{ id: "to", kind: "pickup", lat: to.lat, lng: to.lng }];
+  const lines = route ? [{ pts: route.pts }] : start ? [{ pts: [[start.lat, start.lng], [to.lat, to.lng]], dashed: true }] : [];
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 590, background: "#F4F6F8", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", padding: "12px 14px", background: T.white, borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{title}</div>
+          {route && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 1 }}>{route.min} {t("nav_min")} {"\u00B7"} {route.km < 10 ? route.km.toFixed(1) : Math.round(route.km)} km</div>}
+        </div>
+        <CloseButton onClick={onClose} />
+      </div>
+      <div style={{ padding: "10px 12px 0" }}>
+        <UberMap markers={markers} lines={lines} height="42vh" fitKey={route ? "r" : "l"} />
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px 24px" }}>
+        {state === "load" && <div style={{ fontSize: 14, color: T.inkSoft, padding: "8px 4px" }}>{t("nav_loading")}</div>}
+        {state === "fail" && <div style={{ fontSize: 14, color: "#B91C1C", padding: "8px 4px", lineHeight: 1.5 }}>{t("nav_failed")}</div>}
+        {route && route.steps.map((st, i) => {
+          const x = stepText(st, t);
+          const d = st.distance || 0;
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 7 }}>
+              <span style={{ width: 34, height: 34, borderRadius: 10, background: "#111827", color: "#fff", fontSize: 19, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{x.arrow}</span>
+              <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.3, overflowWrap: "anywhere" }}>{x.text}</span>
+              {d > 0 && <span style={{ fontSize: 12.5, fontWeight: 800, color: T.inkSoft, flexShrink: 0 }}>{d < 1000 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : `${(d / 1000).toFixed(1)} km`}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onlineRows = [], fares, trip, height = 250, drop = null, between = null }) {

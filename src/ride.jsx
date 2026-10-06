@@ -14,7 +14,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive, UberMap } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -408,6 +408,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
   // until the driver answers, silences it, or the requests are gone.
   const [muted, setMuted] = useState(false);
   const [selId, setSelId] = useState(null);
+  const [navFor, setNavFor] = useState(null);
   const sorted = rides.slice().sort((a, b) => Number(a.pick_km) - Number(b.pick_km));
   const idsKey = sorted.map((r) => r.id).join(",");
   const busyNow = mine.length > 0;
@@ -435,6 +436,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
 
   return (
     <div style={{ marginTop: 4 }}>
+      {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
       {mine.map((r) => (
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
@@ -443,7 +445,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
           <Route pick={r.pick_text} drop={r.drop_text} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("rdr_call_pax")}</a>}
-            <a href={dirUrl(r.pick_lat, r.pick_lng)} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("rdr_dir_pick")}</a>
+            <button onClick={() => setNavFor(r)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("rdr_dir_pick")}</button>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Btn kind="ghost" disabled={busy === r.id} onClick={() => move(r, "release")}>{t("rdr_release")}</Btn>

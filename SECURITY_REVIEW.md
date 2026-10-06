@@ -55,7 +55,7 @@ add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "geolocation=(self), camera=(self), microphone=()" always;
 add_header Strict-Transport-Security "max-age=31536000" always;
-add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://tile.googleapis.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com https://overpass-api.de https://overpass.kumi.systems https://photon.komoot.io https://nominatim.openstreetmap.org; script-src 'self'; frame-ancestors 'none'" always;
+add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://tile.googleapis.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com https://overpass-api.de https://overpass.kumi.systems https://photon.komoot.io https://nominatim.openstreetmap.org https://router.project-osrm.org; script-src 'self'; frame-ancestors 'none'" always;
 ```
 Test in a private window after adding; if the map or a font stops loading, the browser console names the blocked address.
 
