@@ -67,3 +67,58 @@ export function RideChat({ api, rideId, role }) {
     </div>
   );
 }
+
+// The pickup code. Passenger: shows the four digits. Driver: asks for them
+// and starts the ride when they match. onStarted tells the screen to unlock
+// "Ride finished".
+export function RideCode({ api, rideId, role, onState }) {
+  const { t } = useI18n();
+  const [st, setSt] = useState(null);
+  const [val, setVal] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    try {
+      const r = many(await api.rideCode(rideId))[0];
+      if (r) { setSt(r); onState && onState(!!r.started); }
+    } catch (_) { /* next tick */ }
+  }, [api, rideId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 4000);
+    return () => clearInterval(id);
+  }, [load]);
+  if (!st) return null;
+  const box = { borderRadius: 14, padding: "12px 14px", margin: "10px 0" };
+  if (st.started) {
+    return <div style={{ ...box, background: "#ECFDF3", border: "1px solid #A7E3BE", fontSize: 14.5, fontWeight: 800, color: "#0F6B33" }}>{"\u2713 "}{t(role === "driver" ? "rv_ok" : "rv_started")}</div>;
+  }
+  if (role !== "driver") {
+    return (
+      <div style={{ ...box, background: "#F3F6FA", border: `1px solid ${T.line}`, textAlign: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("rv_title")}</div>
+        <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: 10, color: T.ink, margin: "4px 0 2px" }}>{st.code || "\u2022\u2022\u2022\u2022"}</div>
+        <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("rv_hint")}</div>
+      </div>
+    );
+  }
+  const verify = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = many(await api.rideVerify(rideId, val))[0];
+      if (r && r.ok) { setVal(""); await load(); } else setMsg(t("rv_wrong"));
+    } catch (_) { setMsg(t("rv_wrong")); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A" }}>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7A4A00", marginBottom: 8 }}>{t("rv_enter")}</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input style={{ ...input, flex: 1, marginBottom: 0, textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 8 }} inputMode="numeric" maxLength={4} value={val}
+               placeholder={"\u2022\u2022\u2022\u2022"} aria-label={t("rv_enter")} onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))} />
+        <button disabled={busy || val.length !== 4} onClick={verify} style={{ minHeight: 48, padding: "0 14px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", opacity: val.length !== 4 ? 0.5 : 1 }}>{t("rv_verify")}</button>
+      </div>
+      {msg && <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C", marginTop: 8 }}>{msg}</div>}
+    </div>
+  );
+}
