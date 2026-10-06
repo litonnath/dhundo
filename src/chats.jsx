@@ -103,6 +103,7 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
                         <span style={{ flex: 1, fontSize: 16, fontWeight: x.unread ? 800 : 700, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name}</span>
                         <span style={{ fontSize: 12, color: T.inkFaint, flexShrink: 0 }}>{when(x.last_at || x.created_at)}</span>
                       </span>
+                      {x.trade_name && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.brandDark, marginTop: 1 }}>{t("ch_for")}: {x.trade_name}</span>}
                       <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
                         <span style={{ flex: 1, fontSize: 13.5, color: x.unread ? T.ink : T.inkSoft, fontWeight: x.unread ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {x.last_body ? `${x.last_mine ? `${t("ch_you")}: ` : ""}${x.last_body}` : (x.note || t("ch_req_sent"))}
@@ -180,11 +181,12 @@ export function ChatScreen({ api, item, onClose, onChanged }) {
           <Avatar name={item.other_name} size={42} />
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.other_name}</span>
-            <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: statusColor[status] || T.inkSoft }}>{t("bk_status_" + status)}</span>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: statusColor[status] || T.inkSoft }}>{t("bk_status_" + status)}{item.trade_name ? ` \u00B7 ${item.trade_name}` : ""}</span>
           </span>
           {phone && <a href={`tel:${phone}`} aria-label={t("fk_call")} style={{ width: 42, height: 42, borderRadius: "50%", background: "#0F8A3C", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="phone" size={20} /></a>}
         </div>
         <div style={{ background: T.white, borderBottom: `1px solid ${T.line}`, padding: "8px 14px", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5 }}>
+          {item.trade_name && <><b style={{ color: T.ink }}>{t("ch_for")}: {item.trade_name}</b><br /></>}
           {item.start_at && <b style={{ color: T.ink }}>{when(item.start_at, true)}{item.duration_mins ? ` · ${fmtLength(item.duration_mins, t)}` : ""}</b>}
           {item.note ? <><br />{item.note}</> : null}
         </div>
@@ -270,6 +272,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
               <Avatar name={x.other_name} size={38} />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: T.ink, lineHeight: 1.35 }}>{line(x)}</span>
+                {x.trade_name && <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.brandDark, marginTop: 2 }}>{t("ch_for")}: {x.trade_name}</span>}
                 <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>
                   {x.start_at ? when(x.start_at, true) : ""}{x.duration_mins ? ` · ${fmtLength(x.duration_mins, t)}` : ""}
                 </span>
