@@ -343,8 +343,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
               {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
             </div>
           )}
-          {cur && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, lineHeight: 1.45, marginTop: 4 }}>{String(t("rd_how_" + basis)).replace("{r}", perKm).replace("{km}", trip.km).replace("{fuel}", `${t("fuel_" + cur.fuel)} \u20B9${fuels[cur.fuel]}/${cur.fuel === "cng" ? "kg" : cur.fuel === "electric" ? "kWh" : "L"}`)}</div>}
-          <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginTop: 2 }}>{t("rd_fare_note")}</div>
+          
         </div>
       ) : (
         <input style={{ ...input, marginBottom: 8 }} value={fare} inputMode="numeric" maxLength={5}
