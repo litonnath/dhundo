@@ -167,10 +167,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     const fuel = KM_PER[kind][common] ? common : typical;
     const std = Math.ceil((fuels[fuel] || 100) / KM_PER[kind][fuel] + BASE[kind]);
     const set = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
-    // A driver's own rate is used when it is not above the standard rate;
-    // above it, the standard rate is shown instead.
-    const basis = set == null ? "fuel" : set <= std ? "driver" : "default";
-    const perKm = set != null && set <= std ? set : std;
+    // The drivers' own rate is what the passenger sees, worked out over the
+    // distance. The standard rate fills in when no driver has set one, and
+    // replaces a rate that is wildly out of line (over three times standard).
+    const basis = set == null ? "fuel" : set <= std * 3 ? "driver" : "default";
+    const perKm = set != null && set <= std * 3 ? set : std;
     const fare = Math.max(perKm, Math.round((trip.km * perKm) / 5) * 5);
     const tl = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
     return { perKm, basis, fuel, fare, toll: tl, total: fare + tl };
