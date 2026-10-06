@@ -732,6 +732,7 @@ export default {
   rd_note: "ভাড়া আপুনি আৰু চালকে নিজেই ঠিক কৰক। এপে কোনো টকা নলয়।",
   rd_searching: "আপোনাৰ ওচৰত চালক বিচাৰি আছে…",
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
+  nav_activity: "কাৰ্যকলাপ",
   ms_activity: "কাৰ্যকলাপ",
   ms_business: "মোৰ ব্যৱসায়",
   ms_money: "টকা-পইচা",

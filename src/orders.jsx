@@ -24,7 +24,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire }) {
   const pills = [role ? ["work", role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides"] : null, ["mine", "or_mine"], ["items", "mb_mine"]].filter(Boolean);
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 120px" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 12px", color: T.ink }}>{t("or_title")}</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 12px", color: T.ink }}>{t("nav_activity")}</h1>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {pills.map(([k, key]) => (
           <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k} style={{

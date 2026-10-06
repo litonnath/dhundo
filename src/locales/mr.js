@@ -732,6 +732,7 @@ export default {
   rd_note: "भाडे तुम्ही आणि चालक आपापसात ठरवा. अ‍ॅप पैसे घेत नाही.",
   rd_searching: "तुमच्या जवळ चालक शोधत आहोत…",
   rd_alerts_more: "अॅप बंद असताना अलर्ट",
+  nav_activity: "हालचाल",
   ms_activity: "हालचाल",
   ms_business: "माझा व्यवसाय",
   ms_money: "पैसे",

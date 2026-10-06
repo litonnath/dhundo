@@ -732,6 +732,7 @@ export default {
   rd_note: "ଭଡ଼ା ଆପଣ ଓ ଚାଳକ ନିଜେ ଠିକ୍ କରନ୍ତୁ। ଆପ୍ ଟଙ୍କା ନିଏ ନାହିଁ।",
   rd_searching: "ଆପଣଙ୍କ ପାଖରେ ଚାଳକ ଖୋଜୁଛୁ…",
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
+  nav_activity: "କାର୍ଯ୍ୟକଳାପ",
   ms_activity: "କାର୍ଯ୍ୟକଳାପ",
   ms_business: "ମୋ ବ୍ୟବସାୟ",
   ms_money: "ଟଙ୍କା",

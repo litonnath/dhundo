@@ -732,6 +732,7 @@ export default {
   rd_note: "ભાડું તમે અને ડ્રાઇવર જાતે નક્કી કરો. એપ કોઈ ચુકવણી લેતી નથી.",
   rd_searching: "તમારી નજીક ડ્રાઇવર શોધી રહ્યા છીએ…",
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
+  nav_activity: "પ્રવૃત્તિ",
   ms_activity: "પ્રવૃત્તિ",
   ms_business: "મારો ધંધો",
   ms_money: "પૈસા",

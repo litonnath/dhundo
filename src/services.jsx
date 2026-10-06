@@ -3240,7 +3240,7 @@ export default function ServicesPage({
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
-        <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("or_tab")} text={t("or_gate")}
+        <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("nav_activity")} text={t("or_gate")}
                     perks={[[t("trust_2_t"), t("trust_2_s")]]} />
       ))}
 

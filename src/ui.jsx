@@ -1725,19 +1725,10 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
       paddingBottom: "env(safe-area-inset-bottom)",
     }}>
       <div style={{ maxWidth: 560, margin: "0 auto", display: "flex" }}>
-        {mode === "offer" ? (
+        {mode === "offer" || mode === "need" ? (
           <>
-            {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
-            {item("orders", ordersIcon, ordersLabel || t("or_tab"), () => setTab("orders"), false, ordersBadge)}
-            {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
-            {item("sell", "tag", t("offer_sell"), () => setTab("sell"))}
-            {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
-            {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
-          </>
-        ) : mode === "need" ? (
-          <>
-            {item("find", "home", t("nav_home"), () => setTab("browse"))}
-            {item("orders", ordersIcon, ordersLabel || t("or_tab"), () => setTab("orders"), false, ordersBadge)}
+            {item(mode === "offer" ? "work" : "find", "home", t("nav_home"), () => setTab(mode === "offer" ? "work" : "browse"), mode === "offer" && online)}
+            {item("orders", "bag", t("nav_activity"), () => setTab("orders"), false, ordersBadge)}
             {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
