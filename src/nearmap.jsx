@@ -258,15 +258,26 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
         const list = many(await api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 40, state }));
         if (!live) return;
         setRows(list);
-        const ids = [...new Set([...onlineIdsRef.current, ...list.map((r) => r.id)])].filter(Boolean).slice(0, 25);
-        if (ids.length) {
-          const got = many(await api.publicPositions(ids));
-          if (live) { const o = {}; got.forEach((g) => { o[g.id] = g; }); setPos(o); }
-        }
       } catch (_) { if (live) setRows([]); }
     })();
     return () => { live = false; };
   }, [api, pick && pick.lat, pick && pick.lng, state, onlineRows.map((r) => r && r.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Where each online driver is right now, refreshed every few seconds, not
+  // the address on their listing. Drivers who are offline are not on the map.
+  const idsKey = [...new Set([...onlineRows.map((r) => r && r.id), ...(rows || []).map((r) => r.id)])].filter(Boolean).slice(0, 25).join(",");
+  useEffect(() => {
+    if (!idsKey) { setPos({}); return undefined; }
+    let live = true;
+    const pull = async () => {
+      try {
+        const got = many(await api.liveDriverPositions(idsKey.split(",")));
+        if (live) { const o = {}; got.forEach((g) => { o[g.id] = g; }); setPos(o); }
+      } catch (_) { /* the next tick */ }
+    };
+    pull();
+    const id = setInterval(pull, 6000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, idsKey]);
   if (!pick || typeof pick.lat !== "number") return null;
   // Drivers who are online right now are always included, even when the
   // ordinary search did not return them.
@@ -278,9 +289,9 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   const hasDrop = drop && typeof drop.lat === "number";
   const markers = [{ id: "me", kind: "me", lat: pick.lat, lng: pick.lng }].concat(hasDrop ? [{ id: "drop", kind: "drop", lat: drop.lat, lng: drop.lng }] : []).concat(
     sorted.filter((r) => pos[r.id]).map((r) => ({
-      id: r.id, kind: "driver", lat: pos[r.id].lat, lng: pos[r.id].lng, online: onlineIds.has(r.id),
+      id: r.id, kind: "driver", lat: pos[r.id].lat, lng: pos[r.id].lng, online: true,
       emoji: vehicleEmoji(r.trade_slug + " " + r.trade_name), selected: sel === r.id,
-      label: r.distance_km != null ? `${etaMin(r.distance_km)} min` : "",
+      label: `${etaMin(kmBetween(pick, pos[r.id]))} min`,
     })));
   return (
     <div style={{ marginTop: 18 }}>
