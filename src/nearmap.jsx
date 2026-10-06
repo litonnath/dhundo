@@ -19,7 +19,7 @@ const TILES = CFG.CARTO_KEY
 const SUBS = CFG.CARTO_KEY ? "abcd" : "abc";
 const CREDIT = CFG.CARTO_KEY ? "&copy; OpenStreetMap contributors &copy; CARTO" : "&copy; OpenStreetMap contributors";
 
-function DriverMap({ me, pins, height }) {
+export function DriverMap({ me, pins, height }) {
   const box = useRef(null);
   const st = useRef({});
   useEffect(() => {
@@ -45,7 +45,7 @@ function DriverMap({ me, pins, height }) {
       pins.forEach((p) => {
         const icon = L.divIcon({
           className: "",
-          html: `<div style="width:30px;height:30px;border-radius:50%;background:${p.online ? "#16A34A" : "#6B7280"};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font:800 13px sans-serif">${String(p.name || "?").trim().charAt(0).toUpperCase()}</div>`,
+          html: `<div style="width:30px;height:30px;border-radius:50%;background:${p.color || (p.online ? "#16A34A" : "#6B7280")};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font:800 13px sans-serif">${String(p.name || "?").trim().charAt(0).toUpperCase()}</div>`,
           iconSize: [30, 30], iconAnchor: [15, 15],
         });
         const m = L.marker([p.lat, p.lng], { icon }).addTo(layer);

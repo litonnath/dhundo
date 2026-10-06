@@ -13,7 +13,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, DriverMap } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -373,6 +373,12 @@ export function RideRequests({ api, online, trades = [] }) {
       <RiderSettings api={api} onSaved={loadRider} />
       <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>
+      {online && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (
+        <div style={{ margin: "0 0 10px" }}>
+          <DriverMap me={{ lat: sorted[0].my_lat, lng: sorted[0].my_lng }} height={220}
+                     pins={sorted.filter((r) => typeof r.pick_lat === "number").map((r, i) => ({ id: r.id, name: String(i + 1), vehicle: r.pick_text, km: r.pick_km, lat: r.pick_lat, lng: r.pick_lng, color: "#DC2626", online: true }))} />
+        </div>
+      )}
       {msg && <Notice tone="bad">{msg}</Notice>}
       {!online ? (
         <Notice tone="info">{t("jb_offline")}</Notice>
@@ -390,7 +396,7 @@ export function RideRequests({ api, online, trades = [] }) {
         <div key={r.id} style={{ ...card, border: i === 0 && sorted.length > 1 ? `2px solid ${T.green}` : card.border }}>
           {i === 0 && sorted.length > 1 && <div style={{ display: "inline-block", fontSize: 11.5, fontWeight: 800, color: "#fff", background: T.green, borderRadius: 6, padding: "2px 8px", marginBottom: 6 }}>{t("rdr_nearest")}</div>}
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.brandDark }}>{String(t("rdr_pick_km")).replace("{n}", r.pick_km)}</span>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.brandDark }}>#{i + 1} · {String(t("rdr_pick_km")).replace("{n}", r.pick_km)}</span>
             {r.trip_km != null && <span style={{ fontSize: 12.5, color: T.inkFaint }}>{String(t("rdr_trip")).replace("{n}", r.trip_km)}</span>}
           </div>
           <Route pick={r.pick_text} drop={r.drop_text} />
