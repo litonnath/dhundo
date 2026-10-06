@@ -54,6 +54,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const [msg, setMsg] = useState(null);
   const [finished, setFinished] = useState(false);
   const wasActive = useRef(false);
+  const lastRide = useRef(null);
   const [trip, setTrip] = useState(null);
   // Distance from the chosen pickup to the destination, for the fare.
   useEffect(() => {
@@ -68,7 +69,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     if (!signedIn) return;
     try {
       const r = many(await api.myRide()).find((x) => x.role === "passenger") || null;
-      if (r) wasActive.current = true;
+      if (r) { wasActive.current = true; lastRide.current = r; }
       else if (wasActive.current) { wasActive.current = false; setFinished(true); }
       setRide(r);
     } catch (_) { /* the next tick tries again */ }
@@ -200,7 +201,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     <div style={wrap}>
       <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "2 / 1", maxHeight: 240, marginBottom: 14 }} />
       <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0 14px" }}>{t("rd_title")}</h1>
-      {finished && <div style={{ marginBottom: 12 }}><Notice tone="good">{t("rd_done")}</Notice></div>}
+      {finished && <RideDone ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {[["travel", "rd_mode_travel"], ["hire", "rd_mode_hire"]].map(([k, key]) => (
           <button key={k} onClick={() => { setMode(k); setVehicle("any"); }} aria-pressed={mode === k} style={{
@@ -256,6 +257,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
+      {signedIn && <RideHistory api={api} />}
     </div>
   );
 }
@@ -299,6 +301,58 @@ function Timeline({ pick, drop }) {
       <div style={{ height: 14 }} />
       {row(drop, "sq", "#DC2626", t("rd_drop"))}
     </div>
+  );
+}
+
+// Shown to both sides when a ride has been finished: a clear success message
+// with the trip and the fare.
+function RideDone({ ride, who, onClose }) {
+  const { t } = useI18n();
+  return (
+    <div style={{ background: "#ECFDF3", border: "2px solid #34B36B", borderRadius: 18, padding: "20px 16px 16px", margin: "0 0 14px", textAlign: "center" }}>
+      <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#16A34A", color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: "64px", margin: "0 auto 10px" }}>{"\u2713"}</div>
+      <div style={{ fontSize: 21, fontWeight: 800, color: "#0F6B33" }}>{t("rdn_title")}</div>
+      <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.5, margin: "6px 0 4px" }}>{t(who === "driver" ? "rdn_drv" : "rdn_pax")}</div>
+      {ride && ride.fare_paise != null && <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0" }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</div>}
+      {ride && <div style={{ textAlign: "left", margin: "8px 0 12px" }}><Timeline pick={ride.pick_text} drop={ride.drop_text} /></div>}
+      <Btn full onClick={onClose}>{t("rdn_ok")}</Btn>
+    </div>
+  );
+}
+
+// Past rides, for both sides: a button that opens the list.
+export function RideHistory({ api }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState(null);
+  const show = async () => {
+    setOpen(true);
+    try { setRows(many(await api.rideHistory())); } catch (_) { setRows([]); }
+  };
+  const col = { done: "#16A34A", cancelled: "#B91C1C", expired: "#6B7280" };
+  return (
+    <>
+      <button onClick={show} style={{ display: "block", width: "100%", minHeight: 48, margin: "12px 0 0", borderRadius: 12, border: `1.5px solid ${T.line}`, background: T.white, color: T.ink, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>{t("rh_title")}</button>
+      {open && (
+        <FormSheet title={t("rh_title")} onClose={() => setOpen(false)}>
+          {rows === null && <div style={{ fontSize: 14, color: T.inkSoft }}>{"\u2026"}</div>}
+          {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("rh_none")}</div>}
+          {(rows || []).map((r) => (
+            <div key={r.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${col[r.status] || T.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: col[r.status] || T.inkSoft }}>{t("rh_" + r.status)}</span>
+                {r.fare_paise != null && <span style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(r.fare_paise / 100)}</span>}
+              </div>
+              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "1px 0 2px" }}>
+                {new Date(r.done_at || r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                {r.other_name ? ` \u00B7 ${t(r.role === "driver" ? "rh_drv" : "rh_pax")} ${r.other_name}` : ""}
+              </div>
+              <Route pick={r.pick_text} drop={r.drop_text} />
+            </div>
+          ))}
+        </FormSheet>
+      )}
+    </>
   );
 }
 
@@ -365,6 +419,7 @@ export function RideTools({ api, online }) {
       ] : []} />
       <RiderSettings api={api} onSaved={loadRider} />
       <AlertsCard api={api} />
+      <RideHistory api={api} />
     </div>
   );
 }
@@ -396,6 +451,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
   const [selId, setSelId] = useState(null);
   const [navFor, setNavFor] = useState(null);
   const [started, setStarted] = useState(false);
+  const [doneRide, setDoneRide] = useState(null);
   const sorted = rides.slice().sort((a, b) => Number(a.pick_km) - Number(b.pick_km));
   const idsKey = sorted.map((r) => r.id).join(",");
   const busyNow = mine.length > 0;
@@ -417,12 +473,16 @@ export function RideRequests({ api, online, trades = [], where = null }) {
   };
   const move = async (r, action) => {
     setBusy(r.id);
-    try { await api.rideUpdate(r.id, action); } catch (_) {}
+    try {
+      const x = one(await api.rideUpdate(r.id, action));
+      if (action === "done" && x && x.ok) setDoneRide(r);
+    } catch (_) {}
     setBusy(null); load();
   };
 
   return (
     <div style={{ marginTop: 4 }}>
+      {doneRide && <RideDone ride={doneRide} who="driver" onClose={() => setDoneRide(null)} />}
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
       {mine.map((r) => (
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>

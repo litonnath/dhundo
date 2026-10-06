@@ -391,6 +391,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     chatDelete: (id) => rpc("services_chat_delete", { p_booking: id }, true),
     rideDriverPos: (id) => rpc("services_ride_driver_position", { p_ride: id }, true),
     publicPositions: (ids) => rpc("services_public_positions", { p_ids: ids }),
+    rideHistory: () => rpc("services_ride_history", {}, true),
     rideCode: (id) => rpc("services_ride_code", { p_ride: id }, true),
     rideVerify: (id, code) => rpc("services_ride_verify", { p_ride: id, p_code: code }, true),
     rideChatList: (id) => rpc("services_ride_chat_list", { p_ride: id }, true),
