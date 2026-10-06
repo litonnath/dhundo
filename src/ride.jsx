@@ -4,7 +4,7 @@
 // between the two; the app takes no payment.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, Icon, Notice, input } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, useDismissable } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -308,14 +308,18 @@ function Timeline({ pick, drop }) {
 // with the trip and the fare.
 function RideDone({ ride, who, onClose }) {
   const { t } = useI18n();
+  useDismissable(true, onClose);
   return (
-    <div style={{ background: "#ECFDF3", border: "2px solid #34B36B", borderRadius: 18, padding: "20px 16px 16px", margin: "0 0 14px", textAlign: "center" }}>
-      <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#16A34A", color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: "64px", margin: "0 auto 10px" }}>{"\u2713"}</div>
-      <div style={{ fontSize: 21, fontWeight: 800, color: "#0F6B33" }}>{t("rdn_title")}</div>
-      <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.5, margin: "6px 0 4px" }}>{t(who === "driver" ? "rdn_drv" : "rdn_pax")}</div>
-      {ride && ride.fare_paise != null && <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "6px 0" }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</div>}
-      {ride && <div style={{ textAlign: "left", margin: "8px 0 12px" }}><Timeline pick={ride.pick_text} drop={ride.drop_text} /></div>}
-      <Btn full onClick={onClose}>{t("rdn_ok")}</Btn>
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+         style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: T.white, borderRadius: 22, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box", padding: "24px 18px 18px", textAlign: "center", boxShadow: "0 18px 50px rgba(0,0,0,0.35)" }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#16A34A", color: "#fff", fontSize: 42, fontWeight: 800, lineHeight: "72px", margin: "0 auto 12px", boxShadow: "0 0 0 10px rgba(22,163,74,0.15)" }}>{"\u2713"}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: "#0F6B33" }}>{t("rdn_title")}</div>
+        <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.5, margin: "6px 0 4px" }}>{t(who === "driver" ? "rdn_drv" : "rdn_pax")}</div>
+        {ride && ride.fare_paise != null && <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: "8px 0" }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</div>}
+        {ride && <div style={{ textAlign: "left", margin: "8px 0 14px", background: "#F7F9FB", borderRadius: 14, padding: "4px 12px" }}><Timeline pick={ride.pick_text} drop={ride.drop_text} /></div>}
+        <Btn full onClick={onClose}>{t("rdn_ok")}</Btn>
+      </div>
     </div>
   );
 }
