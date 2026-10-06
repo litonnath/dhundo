@@ -3108,7 +3108,7 @@ export default function ServicesPage({
               return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return <RatesCard api={api} />;
           })()}
-          top={signedIn && hasListing && !isAdmin && isDriver ? <RideRequests api={api} online={avail.online} trades={trades} /> : null}
+          top={signedIn && hasListing && !isAdmin && isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : null}
           avail={avail} signedIn={signedIn} hasListing={hasListing}
           onSignIn={onSignIn}
           onList={() => setTab("add")}

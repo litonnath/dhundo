@@ -383,7 +383,7 @@ export function RideTools({ api, online }) {
   );
 }
 
-export function RideRequests({ api, online, trades = [] }) {
+export function RideRequests({ api, online, trades = [], where = null }) {
   const { t, lang } = useI18n();
   const [rides, setRides] = useState([]);
   const [mine, setMine] = useState([]);
@@ -439,11 +439,11 @@ export function RideRequests({ api, online, trades = [] }) {
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{r.other_name}</div>
-          <DriverLive api={api} ride={r} />
+          <DriverLive api={api} ride={r} where={where} />
           <Route pick={r.pick_text} drop={r.drop_text} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-            {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}
-            <a href={dirUrl(r.pick_lat, r.pick_lng)} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("jb_dir")}</a>
+            {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("rdr_call_pax")}</a>}
+            <a href={dirUrl(r.pick_lat, r.pick_lng)} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("rdr_dir_pick")}</a>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Btn kind="ghost" disabled={busy === r.id} onClick={() => move(r, "release")}>{t("rdr_release")}</Btn>

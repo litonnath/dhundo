@@ -329,12 +329,17 @@ export function PassengerLive({ api, ride }) {
 
 // The driver's view: own position and heading from the phone, sent every few
 // seconds while the ride is on, with the pickup in view.
-export function DriverLive({ api, ride }) {
+export function DriverLive({ api, ride, where = null }) {
   const { t } = useI18n();
   const [me, setMe] = useState(null);
   const last = useRef(null);
   const sent = useRef(0);
+  // One position for the driver everywhere: when the driver chose a spot (the
+  // saved address or a pin) that spot is used here and sent to the passenger;
+  // the phone is only read when the driver is on live GPS.
+  const pinned = where && where.manual;
   useEffect(() => {
+    if (pinned) return undefined;
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (!geo) return undefined;
     const id = geo.watchPosition((g) => {
@@ -349,14 +354,15 @@ export function DriverLive({ api, ride }) {
       }
     }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
     return () => geo.clearWatch(id);
-  }, [api]);
+  }, [api, pinned]);
   if (typeof ride.pick_lat !== "number") return null;
   const pick = { lat: ride.pick_lat, lng: ride.pick_lng };
-  const km = me ? kmBetween(me, pick) : null;
+  const here = pinned ? { lat: where.lat, lng: where.lng, heading: bearing({ lat: where.lat, lng: where.lng }, pick) } : me;
+  const km = here ? kmBetween(here, pick) : null;
   return (
     <div>
-      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={me} />
-      {me && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t("rd_pick_in")).replace("{n}", fmtKm(km))}</div>}
+      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={here} />
+      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t("rd_pick_in")).replace("{n}", fmtKm(km))}</div>}
     </div>
   );
 }
