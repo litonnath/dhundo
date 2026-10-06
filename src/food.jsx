@@ -866,7 +866,7 @@ export function OwnerFood({ api, shop, onHire }) {
       ] : []} />
       <StoreSettings api={api} shop={shop} onSaved={load} />
       <AlertsCard api={api} />
-      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}</h2>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}{active.length ? ` (${active.length})` : ""}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
         <div key={o.id} style={{ ...card, border: `1.5px solid ${statusColor[o.status]}` }}>
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
@@ -939,6 +939,33 @@ export function OwnerFood({ api, shop, onHire }) {
           </div>
         </div>
       ))}
+
+      {(() => {
+        const past = orders.filter((o) => !["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status));
+        return (
+          <details style={{ marginTop: 10 }}>
+            <summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 40, display: "flex", alignItems: "center" }}>
+              {t("ow_history")}{past.length ? ` (${past.length})` : ""}
+            </summary>
+            {past.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, padding: "6px 0" }}>{t("ow_hist_none")}</div>}
+            {past.map((o) => (
+              <div key={o.id} style={{ ...card, borderLeft: `4px solid ${statusColor[o.status] || T.line}` }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                  <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{o.other_name}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "1px 0 4px" }}>
+                  {new Date(o.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} {"\u00B7"} {modeLabel(o.mode, t)}
+                </div>
+                <Lines lines={o.lines} />
+                <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>
+                  {rupees(o.total_paise)}{o.delivery_fee_paise > 0 ? ` + ${rupees(o.delivery_fee_paise)} ${t("st_fee").toLowerCase()}` : ""}
+                </div>
+              </div>
+            ))}
+          </details>
+        );
+      })()}
 
       <div style={{ display: "flex", alignItems: "center", margin: "18px 0 8px" }}>
         <h2 style={{ flex: 1, fontSize: 17, fontWeight: 800, margin: 0 }}>{t(shop ? "ow_prod" : "ow_menu")}</h2>
