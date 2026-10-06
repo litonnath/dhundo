@@ -13,6 +13,7 @@ import { AlertsCard } from "./alerts.jsx";
 import { SubCategories, tradeIcon } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 import { ContactRow, RequestSheet, foodKind } from "./foodkinds.jsx";
+import { FormSheet } from "./rates.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -75,7 +76,7 @@ function OpenLine({ info, t }) {
 const statusColor = { placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
 
 // ============================================================ CUSTOMER HOME
-export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpty }) {
+export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpty, onHire }) {
   const { t, lang } = useI18n();
   const eat = kind === "eat";
   const [chip, setChip] = useState(null);
@@ -255,7 +256,7 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
         </button>
       ))}
       </>)}
-      {open && <StorePage api={api} row={open} eat={eat} info={infos[open.id]} place={place} user={user} onSignIn={onSignIn}
+      {open && <StorePage api={api} row={open} eat={eat} info={infos[open.id]} place={place} user={user} onSignIn={onSignIn} onHire={onHire}
                           renderEmpty={renderEmpty} onClose={() => setOpen(null)} onOrdered={() => setOrdersOpen(true)} />}
       {ordersOpen && <MyOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
     </div>
@@ -287,13 +288,14 @@ function Cover({ row, eat, height }) {
 }
 
 // ====================================================== STORE PAGE (menu)
-function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, onClose, onOrdered }) {
+function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, onClose, onOrdered, onHire }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [menu, setMenu] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
   const kind = eat ? foodKind(row.trade_slug) : "plain";
   const catering = kind === "catering";
 
@@ -333,6 +335,11 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
           {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
           {info && info.promo_text && <Promo info={info} />}
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
+          {!catering && kind !== "tiffin" && (
+            <div style={{ marginBottom: 12 }}>
+              <Btn full kind="ghost" onClick={() => (user && user.id ? setAskOpen(true) : onSignIn && onSignIn())}>{t("sh_ask")}</Btn>
+            </div>
+          )}
           {(catering || kind === "tiffin") && (
             <div style={{ marginBottom: 12 }}>
               <Btn full onClick={() => (user && user.id ? setReqOpen(true) : onSignIn && onSignIn())}>{t(catering ? "fk_cat_btn" : "fk_plan_btn")}</Btn>
@@ -360,6 +367,7 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
                     </span>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 3 }}>{rupees(m.price_paise)}</span>
                     {m.about && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 3, lineHeight: 1.45 }}>{m.about}</span>}
+                    {m.bike_ok === false && <span style={{ display: "inline-block", marginTop: 5, fontSize: 11.5, fontWeight: 800, color: "#B45309", background: "#FFF3D6", borderRadius: 8, padding: "2px 8px" }}>{t("sh_big")}</span>}
                   </span>
                   <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     {m.photo_url && <span style={{ width: 92, height: 92, borderRadius: 12, background: `center/cover url(${m.photo_url}) ${T.line}` }} />}
@@ -382,12 +390,49 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
         </div>
       )}
       {reqOpen && <RequestSheet api={api} row={row} kind={kind} place={place} onClose={() => setReqOpen(false)} />}
+      {askOpen && <AskSheet api={api} row={row} onClose={() => setAskOpen(false)} />}
       {cartOpen && (
-        <CartSheet api={api} row={row} eat={eat} kind={kind} info={info} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
+        <CartSheet api={api} row={row} eat={eat} kind={kind} info={info} onHire={onHire} lines={lines} cart={cart} setQty={setQty} total={total} place={place} user={user}
                    onSignIn={onSignIn} onClose={() => setCartOpen(false)}
                    onDone={() => { setCartOpen(false); setCart({}); onClose(); onOrdered && onOrdered(); }} />
       )}
     </div>
+  );
+}
+
+// A message to the shop: it opens a chat that appears under Chats, where the
+// shop replies. Used to ask about a product, its price or whether it is in stock.
+function AskSheet({ api, row, onClose }) {
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [sent, setSent] = useState(false);
+  const send = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r = one(await api.bookingRequest(row.id, new Date(Date.now() + 5 * 60000).toISOString(), 60, ("Enquiry: " + text.trim()).slice(0, 300)));
+      if (r && r.ok) setSent(true);
+      else setMsg(r && r.reason === "already_open" ? t("sh_ask_open") : t("e_save"));
+    } catch (e) { setMsg((e && e.message) || t("e_save")); }
+    setBusy(false);
+  };
+  return (
+    <FormSheet title={t("sh_ask")} onClose={onClose}>
+      {sent ? (
+        <>
+          <Notice tone="good">{t("sh_ask_sent")}</Notice>
+          <div style={{ marginTop: 12 }}><Btn full onClick={onClose}>{t("rdn_ok")}</Btn></div>
+        </>
+      ) : (
+        <>
+          <textarea style={{ ...input, minHeight: 96, resize: "vertical", marginBottom: 10 }} value={text} maxLength={250} placeholder={t("sh_ask_ph")} aria-label={t("sh_ask_ph")}
+                    onChange={(e) => setText(e.target.value)} />
+          {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
+          <Btn full disabled={busy || text.trim().length < 2} onClick={send}>{busy ? "…" : t("sh_ask_send")}</Btn>
+        </>
+      )}
+    </FormSheet>
   );
 }
 
@@ -411,10 +456,14 @@ function Stepper({ qty, onAdd, onMinus, disabled, label }) {
 }
 
 // ============================================================ CART / ORDER
-function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
+function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
-  const [mode, setMode] = useState("delivery");
+  // An item the shop marked as too big for a bike cannot go by delivery rider:
+  // the customer collects it, or hires a vehicle to carry it.
+  const tooBig = lines.some((m) => m.bike_ok === false);
+  const [mode, setMode] = useState(() => (lines.some((m) => m.bike_ok === false) ? "pickup" : "delivery"));
+  useEffect(() => { if (tooBig) setMode("pickup"); }, [tooBig]);
   const [addr, setAddr] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [note, setNote] = useState("");
   const [needBy, setNeedBy] = useState("");
@@ -435,7 +484,7 @@ function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, plac
         mode === "delivery" ? addrText : null, addr && addr.lat, addr && addr.lng,
         (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note));
       if (r && r.ok) onDone();
-      else setMsg(r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
+      else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
   };
@@ -470,12 +519,19 @@ function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, plac
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {[["delivery", "st_delivery"], ["pickup", "st_pickup"]].map(([k, label]) => (
-            <button key={k} onClick={() => setMode(k)} aria-pressed={mode === k} style={{
+            <button key={k} disabled={k === "delivery" && tooBig} onClick={() => setMode(k)} aria-pressed={mode === k} style={{ opacity: k === "delivery" && tooBig ? 0.4 : 1,
               flex: 1, minHeight: 44, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 14.5,
               border: `1.5px solid ${mode === k ? T.brandDark : T.line}`, background: mode === k ? T.brandSoft : T.white, color: mode === k ? T.brandDark : T.ink,
             }}>{t(label)}</button>
           ))}
         </div>
+        {tooBig && (
+          <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "-2px 0 12px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7A4A00" }}>{t("sh_too_big")}</div>
+            <div style={{ fontSize: 13, color: "#7A4A00", lineHeight: 1.5, margin: "3px 0 8px" }}>{t("sh_hire_hint")}</div>
+            {onHire && <Btn kind="ghost" onClick={onHire}>{t("sh_hire")}</Btn>}
+          </div>
+        )}
         {mode === "delivery" && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("st_address")}</div>
@@ -764,7 +820,7 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
   const [f, setF] = useState({
     name: item.name || "", price: item.price_paise ? String(Math.round(item.price_paise / 100)) : "",
     category: item.category || "", about: item.about || "", veg: item.veg !== false, available: item.available !== false,
-    photo: item.photo_url || "",
+    photo: item.photo_url || "", bikeOk: item.bike_ok !== false,
   });
   const [busy, setBusy] = useState(false);
   const [upBusy, setUpBusy] = useState(false);
@@ -780,7 +836,7 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
   const save = async () => {
     setBusy(true); setMsg(null);
     try {
-      const r = one(await api.menuSave({ id: item.id || null, category: f.category, name: f.name, about: f.about, price: Number(f.price), veg: f.veg, available: f.available, photo: f.photo }));
+      const r = one(await api.menuSave({ id: item.id || null, category: f.category, name: f.name, about: f.about, price: Number(f.price), veg: f.veg, available: f.available, photo: f.photo, bikeOk: shop ? f.bikeOk : undefined }));
       if (r && r.ok) onSaved(); else setMsg(t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
@@ -813,6 +869,14 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
           <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, fontSize: 15 }}>
             <input type="checkbox" checked={f.veg} onChange={(e) => set("veg", e.target.checked)} /> {t("ow_veg")}
           </label>
+        )}
+        {shop && (
+          <div style={{ marginBottom: 6 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, fontSize: 15 }}>
+              <input type="checkbox" checked={f.bikeOk} onChange={(e) => set("bikeOk", e.target.checked)} /> {t("sh_bike_q")}
+            </label>
+            <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, margin: "-4px 0 6px" }}>{t("sh_bike_hint")}</div>
+          </div>
         )}
         <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44, fontSize: 15, marginBottom: 8 }}>
           <input type="checkbox" checked={f.available} onChange={(e) => set("available", e.target.checked)} /> {t("ow_avail")}

@@ -38,7 +38,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // work (JCB, truck, tractor, crane): no destination, a place to work at.
   const isDelivery = (x) => /deliver/i.test(`${x.slug} ${x.name_en || ""}`);
   const isTravel = (x) => !isDelivery(x) && /\b(bike|auto|car|cab|taxi|rickshaw|toto|scooter|e-?rickshaw)\b/i.test(`${x.slug} ${x.name_en || ""}`);
-  const [mode, setMode] = useState("travel");
+  // Coming from a shop that needs a vehicle to carry an order, it opens on hire.
+  const [mode, setMode] = useState(() => { try { const m = window.localStorage.getItem("dhundo_ride_mode"); if (m) { window.localStorage.removeItem("dhundo_ride_mode"); return m === "hire" ? "hire" : "travel"; } } catch (_) {} return "travel"; });
   const hire = mode === "hire";
   // A delivery rider is another service altogether, booked by shops through
   // delivery jobs: not a ride and not a machine for hire.

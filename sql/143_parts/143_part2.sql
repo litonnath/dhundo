@@ -1,4 +1,7 @@
--- 143 part 2: placing an order stores the delivery fee. Replaces 117 part 6.
+-- 143 part 2: placing an order stores the delivery fee, and refuses a delivery
+-- order that has an item the shop marked as too big for a bike. Replaces 117 part 6.
+alter table public.services_menu_items add column if not exists bike_ok boolean not null default true;
+
 create or replace function public.services_order_place(
   p_worker uuid, p_lines jsonb, p_mode text, p_address text,
   p_lat double precision, p_lng double precision, p_note text)
@@ -32,16 +35,20 @@ begin
     return query select false, 'closed'::text, null::uuid, null::int;
     return;
   end if;
-  create temporary table if not exists _ord_lines (item uuid, qty int, nm text, pr int) on commit drop;
+  create temporary table if not exists _ord_lines (item uuid, qty int, nm text, pr int, bk boolean) on commit drop;
   delete from _ord_lines;
   insert into _ord_lines
-    select m.id, least(greatest((l ->> 'qty')::int, 1), 20), m.name, m.price_paise
+    select m.id, least(greatest((l ->> 'qty')::int, 1), 20), m.name, m.price_paise, m.bike_ok
       from jsonb_array_elements(p_lines) l
       join public.services_menu_items m
         on m.id = (l ->> 'id')::uuid and m.worker_id = p_worker and m.available;
   select count(*), coalesce(sum(qty * pr), 0) into v_n, v_total from _ord_lines;
   if v_n = 0 or v_n <> jsonb_array_length(p_lines) then
     return query select false, 'bad_items'::text, null::uuid, null::int;
+    return;
+  end if;
+  if p_mode = 'delivery' and exists (select 1 from _ord_lines where not bk) then
+    return query select false, 'too_big'::text, null::uuid, null::int;
     return;
   end if;
   if p_mode = 'delivery' then

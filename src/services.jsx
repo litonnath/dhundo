@@ -354,6 +354,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     menuSave: (m) => rpc("services_menu_save", {
       p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
       p_price_rupees: m.price, p_veg: m.veg, p_available: m.available, p_photo: m.photo || null,
+      ...(m.bikeOk === undefined ? {} : { p_bike_ok: !!m.bikeOk }),
     }, true),
     // Shops or food places within the radius of a person, with the dishes or
     // goods that match what they typed. Nothing outside the radius comes back.
@@ -929,7 +930,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
           }}><Icon name="back" size={16} /> {t("launch_back")}</button>
         </div>
         <StoreHome kind={section} api={api} trades={trades} place={place} user={user} onSignIn={onSignIn}
-                   renderEmpty={renderEmpty} />
+                   renderEmpty={renderEmpty}
+                   onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); } catch (_) {} setSection("ride"); }} />
       </>
     );
   }
