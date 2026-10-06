@@ -13,7 +13,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive, DriverMap } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, UberMap } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -323,6 +323,7 @@ export function RideRequests({ api, online, trades = [] }) {
   // beeping and buzzing every few seconds, nearest request first in the list,
   // until the driver answers, silences it, or the requests are gone.
   const [muted, setMuted] = useState(false);
+  const [selId, setSelId] = useState(null);
   const sorted = rides.slice().sort((a, b) => Number(a.pick_km) - Number(b.pick_km));
   const idsKey = sorted.map((r) => r.id).join(",");
   const busyNow = mine.length > 0;
@@ -373,12 +374,29 @@ export function RideRequests({ api, online, trades = [] }) {
       <RiderSettings api={api} onSaved={loadRider} />
       <AlertsCard api={api} />
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>
-      {online && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (
-        <div style={{ margin: "0 0 10px" }}>
-          <DriverMap me={{ lat: sorted[0].my_lat, lng: sorted[0].my_lng }} height={220}
-                     pins={sorted.filter((r) => typeof r.pick_lat === "number").map((r, i) => ({ id: r.id, name: String(i + 1), vehicle: r.pick_text, km: r.pick_km, lat: r.pick_lat, lng: r.pick_lng, color: "#DC2626", online: true }))} />
-        </div>
-      )}
+      {online && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (() => {
+        const cur = sorted.find((r) => r.id === selId) || sorted[0];
+        const me = { lat: sorted[0].my_lat, lng: sorted[0].my_lng };
+        const fare = (r) => (r.fare_paise != null ? `\u20B9${Math.round(r.fare_paise / 100)}` : "");
+        const markers = [{ id: "me", kind: "me", ...me }].concat(
+          sorted.filter((r) => typeof r.pick_lat === "number").map((r) => ({
+            id: r.id, kind: "pickup", lat: r.pick_lat, lng: r.pick_lng, selected: r.id === cur.id,
+            label: r.id === cur.id ? `${fare(r) || t("rdr_title")} \u00B7 ${r.pick_km} km` : fare(r),
+          })));
+        const lines = [];
+        if (typeof cur.pick_lat === "number") {
+          lines.push({ pts: [[me.lat, me.lng], [cur.pick_lat, cur.pick_lng]], dashed: true });
+          if (typeof cur.drop_lat === "number") {
+            markers.push({ id: "drop", kind: "drop", lat: cur.drop_lat, lng: cur.drop_lng, label: cur.trip_km != null ? `${cur.trip_km} km` : "" });
+            lines.push({ pts: [[cur.pick_lat, cur.pick_lng], [cur.drop_lat, cur.drop_lng]] });
+          }
+        }
+        return (
+          <div style={{ margin: "0 0 10px" }}>
+            <UberMap markers={markers} lines={lines} height="52vh" fitKey={cur.id} onSelect={(id) => { if (id !== "me" && id !== "drop") setSelId(id); }} />
+          </div>
+        );
+      })()}
       {msg && <Notice tone="bad">{msg}</Notice>}
       {!online ? (
         <Notice tone="info">{t("jb_offline")}</Notice>
@@ -393,10 +411,10 @@ export function RideRequests({ api, online, trades = [] }) {
           </div>
         )}
         {sorted.map((r, i) => (
-        <div key={r.id} style={{ ...card, border: i === 0 && sorted.length > 1 ? `2px solid ${T.green}` : card.border }}>
+        <div key={r.id} onClick={() => setSelId(r.id)} style={{ ...card, cursor: "pointer", border: (selId ? selId === r.id : i === 0) ? `2px solid ${T.green}` : card.border }}>
           {i === 0 && sorted.length > 1 && <div style={{ display: "inline-block", fontSize: 11.5, fontWeight: 800, color: "#fff", background: T.green, borderRadius: 6, padding: "2px 8px", marginBottom: 6 }}>{t("rdr_nearest")}</div>}
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.brandDark }}>#{i + 1} · {String(t("rdr_pick_km")).replace("{n}", r.pick_km)}</span>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T.brandDark }}>#{i + 1} · {String(t("rdr_pick_km")).replace("{n}", Number(r.pick_km) < 0.1 ? "<0.1" : r.pick_km)}</span>
             {r.trip_km != null && <span style={{ fontSize: 12.5, color: T.inkFaint }}>{String(t("rdr_trip")).replace("{n}", r.trip_km)}</span>}
           </div>
           <Route pick={r.pick_text} drop={r.drop_text} />

@@ -65,10 +65,102 @@ export function DriverMap({ me, pins, height }) {
   return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
 }
 
+
+// ---------------------------------------------------------------------------
+// The ride-app map: your blue dot, vehicles as icons with a minutes-away
+// label, a green pickup pin with the fare, a red drop pin, and the route.
+// Clean (no zoom buttons, pinch or scroll to zoom), tall, tappable.
+// ---------------------------------------------------------------------------
+export function vehicleEmoji(txt) {
+  const x = String(txt || "").toLowerCase();
+  if (/bike|moto|two/.test(x)) return "\u{1F3CD}\u{FE0F}";
+  if (/auto|rick|tuk|toto|e-?rick/.test(x)) return "\u{1F6FA}";
+  if (/taxi|cab|car|sedan|suv|jeep|van/.test(x)) return "\u{1F695}";
+  if (/truck|tempo|lorry|jcb|tractor|loader/.test(x)) return "\u{1F69A}";
+  return "\u{1F697}";
+}
+export const etaMin = (km) => Math.max(1, Math.round((Number(km) / 22) * 60));
+const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const STYLE_ID = "dhundo-map-css";
+function ensureCss() {
+  if (document.getElementById(STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = STYLE_ID;
+  el.textContent = "@keyframes dhPulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}.dh-pulse{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:rgba(37,99,235,.45);animation:dhPulse 2s ease-out infinite}";
+  document.head.appendChild(el);
+}
+
+// markers: { id, lat, lng, kind: "me"|"driver"|"pickup"|"drop", emoji, label, sub, online, selected }
+// lines:   { pts: [[lat,lng],...], dashed }
+export function UberMap({ markers, lines = [], height = "50vh", onSelect, fitKey }) {
+  const box = useRef(null);
+  const st = useRef({});
+  const keyRef = useRef("");
+  const sig = JSON.stringify([markers.map((m) => [m.id, m.lat, m.lng, m.label, m.selected, m.online]), lines.map((l) => l.pts)]);
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet/dist/leaflet.css");
+      if (dead || !box.current) return;
+      ensureCss();
+      if (!st.current.map) {
+        st.current.map = L.map(box.current, { zoomControl: false, attributionControl: true }).setView([markers[0].lat, markers[0].lng], 14);
+        st.current.map.attributionControl.setPrefix(false);
+        L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
+        st.current.layer = L.layerGroup().addTo(st.current.map);
+      }
+      const { map, layer } = st.current;
+      layer.clearLayers();
+      const pill = (txt, bg, fg) => `<div style="margin-top:3px;background:${bg};color:${fg};font:800 12px/1 sans-serif;padding:4px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35)">${esc(txt)}</div>`;
+      lines.forEach((l) => {
+        L.polyline(l.pts, { color: "#fff", weight: 8, opacity: 0.9, lineCap: "round" }).addTo(layer);
+        L.polyline(l.pts, { color: l.dashed ? "#2563EB" : "#111827", weight: 4, dashArray: l.dashed ? "2 9" : null, lineCap: "round" }).addTo(layer);
+      });
+      const pts = [];
+      markers.forEach((m) => {
+        let html, size, anchor;
+        if (m.kind === "me") {
+          html = '<div style="position:relative;width:22px;height:22px"><div class="dh-pulse"></div><div style="position:absolute;inset:0;border-radius:50%;background:#2563EB;border:4px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.45)"></div></div>';
+          size = [22, 22]; anchor = [11, 11];
+        } else if (m.kind === "driver") {
+          const d = m.selected ? 50 : 42;
+          html = `<div style="display:flex;flex-direction:column;align-items:center;width:84px"><div style="width:${d}px;height:${d}px;border-radius:50%;background:#fff;border:3px solid ${m.online ? "#16A34A" : "#9CA3AF"};box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:${m.selected ? 26 : 21}px;${m.online ? "" : "filter:grayscale(1);opacity:.85"}">${m.emoji || ""}</div>${m.label ? pill(m.label, m.selected ? "#111827" : "#fff", m.selected ? "#fff" : "#111827") : ""}</div>`;
+          size = [84, 70]; anchor = [42, d / 2];
+        } else {
+          const pick = m.kind === "pickup";
+          const c = pick ? "#16A34A" : "#DC2626";
+          html = `<div style="display:flex;flex-direction:column;align-items:center;width:110px">${m.label ? pill(m.label, "#111827", "#fff") : ""}<div style="width:18px;height:18px;margin-top:3px;border-radius:${pick ? "50%" : "4px"};background:${c};border:4px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.45)"></div></div>`;
+          size = [110, 52]; anchor = [55, m.label ? 42 : 9];
+        }
+        const mk = L.marker([m.lat, m.lng], {
+          zIndexOffset: m.kind === "me" ? 900 : m.selected ? 800 : m.kind === "driver" ? 100 : 500,
+          icon: L.divIcon({ className: "", html, iconSize: size, iconAnchor: anchor }),
+        }).addTo(layer);
+        if (onSelect && m.id) mk.on("click", () => onSelect(m.id));
+        pts.push([m.lat, m.lng]);
+      });
+      // Re-fit only when what is shown changes, not on every refresh, so the
+      // map does not jump about while someone is looking at it.
+      const fk = fitKey != null ? String(fitKey) : markers.map((m) => m.id).join(",");
+      if (keyRef.current !== fk) {
+        keyRef.current = fk;
+        if (pts.length > 1) map.fitBounds(pts, { padding: [60, 40], maxZoom: 16, animate: false });
+        else map.setView(pts[0], 15, { animate: false });
+      }
+      setTimeout(() => map.invalidateSize(), 50);
+    })();
+    return () => { dead = true; };
+  }, [sig, fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
+  return <div ref={box} style={{ height, minHeight: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
+}
+
 export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onlineRows = [], fares, trip, height = 250 }) {
   const { t, lang } = useI18n();
   const [rows, setRows] = useState(null);
   const [pos, setPos] = useState({});
+  const [sel, setSel] = useState(null);
   const onlineIdsRef = useRef([]);
   onlineIdsRef.current = onlineRows.map((r) => r && r.id).filter(Boolean);
   useEffect(() => {
@@ -96,13 +188,16 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
   const sorted = shown.slice().sort((a, b) => (onlineIds.has(b.id) ? 1 : 0) - (onlineIds.has(a.id) ? 1 : 0)
     || (Number(a.distance_km ?? 1e9) - Number(b.distance_km ?? 1e9)));
-  const pins = sorted.filter((r) => pos[r.id]).map((r) => ({
-    id: r.id, name: r.display_name, vehicle: r.trade_name, km: r.distance_km, online: onlineIds.has(r.id), lat: pos[r.id].lat, lng: pos[r.id].lng,
-  }));
+  const markers = [{ id: "me", kind: "me", lat: pick.lat, lng: pick.lng }].concat(
+    sorted.filter((r) => pos[r.id]).map((r) => ({
+      id: r.id, kind: "driver", lat: pos[r.id].lat, lng: pos[r.id].lng, online: onlineIds.has(r.id),
+      emoji: vehicleEmoji(r.trade_slug + " " + r.trade_name), selected: sel === r.id,
+      label: r.distance_km != null ? `${etaMin(r.distance_km)} min` : "",
+    })));
   return (
     <div style={{ marginTop: 18 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 10px" }}>{t("rd_nearby")}{sorted.length ? ` (${sorted.length})` : ""}</h2>
-      <DriverMap me={{ lat: pick.lat, lng: pick.lng }} pins={pins} height={height} />
+      <UberMap markers={markers} height="46vh" onSelect={(id) => setSel(id)} />
       {rows !== null && sorted.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6, marginTop: 10 }}>{t("rd_nearby_none")}</div>}
       <div style={{ marginTop: 10 }}>
         {sorted.map((d) => {
@@ -111,15 +206,15 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
           const rate = Number(fares[d.id]) > 0 ? Number(fares[d.id]) : null;
           const tripFare = trip && rate ? Math.max(rate, Math.round((trip.km * rate) / 5) * 5) : null;
           return (
-            <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-              <span style={{ width: 40, height: 40, borderRadius: "50%", background: on ? "#16A34A" : "#6B7280", color: "#fff", fontWeight: 800, fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{String(d.display_name || "?").trim().charAt(0).toUpperCase()}</span>
+            <div key={d.id} onClick={() => setSel(d.id)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 12, background: T.white, border: sel === d.id ? "2px solid #111827" : `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
+              <span style={{ width: 44, height: 44, borderRadius: "50%", background: "#F3F4F6", border: `3px solid ${on ? "#16A34A" : "#9CA3AF"}`, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, filter: on ? "none" : "grayscale(1)" }}>{vehicleEmoji(d.trade_slug + " " + d.trade_name)}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.display_name}</span>
                 <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{d.trade_name}{d.locality ? ` · ${d.locality}` : ""}</span>
                 <span style={{ display: "inline-block", marginTop: 3, fontSize: 11.5, fontWeight: 800, color: on ? "#0F8A3C" : "#6B7280" }}>{on ? t("rd_on") : t("rd_off")}</span>
               </span>
               <span style={{ textAlign: "right" }}>
-                {km != null && <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", km < 10 ? km.toFixed(1) : Math.round(km))}</span>}
+                {km != null && <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: T.brandDark }}>{String(t("rd_away")).replace("{n}", km < 10 ? km.toFixed(1) : Math.round(km))}{` · ${etaMin(km)} min`}</span>}
                 {rate && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{String(t("rs_km_show")).replace("{n}", rate)}</span>}
                 {tripFare && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.ink }}>{String(t("rd_trip_fare")).replace("{n}", tripFare)}</span>}
               </span>
