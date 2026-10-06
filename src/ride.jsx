@@ -45,7 +45,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // Travel offers three vehicles, in this order: bike taxi, taxi / cab, auto.
   // A plain "car" is not a separate choice, and there is no "any".
   const rank = (x) => { const k = `${x.slug} ${x.name_en || ""}`.toLowerCase(); return /bike|moto|scooter/.test(k) ? 0 : /taxi|cab/.test(k) ? 1 : 2; };
-  const isPlainCar = (x) => /^car$/i.test(String(x.slug || "").trim()) || /^car$/i.test(String(x.name_en || "").trim());
+  const isPlainCar = (x) => { const k = `${x.slug || ""} ${x.name_en || ""}`; return /\bcar\b/i.test(k) && !/taxi|cab/i.test(k); };
   const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? !isTravel(x) : isTravel(x) && !isPlainCar(x)))
     .sort((a, b) => (hire ? 0 : rank(a) - rank(b)));
   const geo = useMyLocation();
