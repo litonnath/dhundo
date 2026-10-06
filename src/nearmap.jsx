@@ -8,9 +8,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import * as CFG from "./config.js";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+// CARTO Voyager when CARTO_KEY is set in src/config.js (the key is public by
+// design but is kept out of git); otherwise plain OpenStreetMap tiles.
+const TILES = CFG.CARTO_KEY
+  ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=" + CFG.CARTO_KEY
+  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const SUBS = CFG.CARTO_KEY ? "abcd" : "abc";
+const CREDIT = CFG.CARTO_KEY ? "&copy; OpenStreetMap contributors &copy; CARTO" : "&copy; OpenStreetMap contributors";
 
 function DriverMap({ me, pins, height }) {
   const box = useRef(null);
@@ -24,7 +31,7 @@ function DriverMap({ me, pins, height }) {
       if (!st.current.map) {
         st.current.L = L;
         st.current.map = L.map(box.current, { zoomControl: true, attributionControl: true }).setView([me.lat, me.lng], 13);
-        L.tileLayer(TILES, { subdomains: "abc", maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(st.current.map);
+        L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
       const { map, layer } = st.current;
@@ -152,7 +159,7 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
       if (dead || !box.current) return;
       if (!st.current.map) {
         st.current.map = L.map(box.current).setView([pick.lat, pick.lng], 14);
-        L.tileLayer(TILES, { subdomains: "abc", maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(st.current.map);
+        L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
       const { map, layer } = st.current;
