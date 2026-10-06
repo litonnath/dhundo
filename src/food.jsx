@@ -127,6 +127,19 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
     return () => { alive = false; };
   }, [api, chip, eat, slugs, near, qs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A peek at what each place sells, on its card, so people can see the items
+  // before opening the page: the first few from its menu or product list.
+  const [peek, setPeek] = useState({});
+  const peekKey = rows.slice(0, 14).map((r) => r.id).join(",");
+  useEffect(() => {
+    if (!peekKey) return undefined;
+    let alive = true;
+    peekKey.split(",").forEach((id) => {
+      api.menuGet(id).then((m) => { if (alive) setPeek((o) => (o[id] ? o : { ...o, [id]: many(m) })); }).catch(() => {});
+    });
+    return () => { alive = false; };
+  }, [api, peekKey]);
+
   const shown = rows
     .filter((r) => near || !q.trim() || `${r.display_name || ""} ${r.trade_name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (infos[b.id] && infos[b.id].open_now ? 1 : 0) - (infos[a.id] && infos[a.id].open_now ? 1 : 0));
@@ -250,6 +263,20 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
                     <b>{it.name}</b> {rupees(it.price_paise)}
                   </span>
                 ))}
+              </span>
+            )}
+            {!(Array.isArray(r.items) && r.items.length > 0) && peek[r.id] && peek[r.id].length > 0 && (
+              <span style={{ display: "block", marginTop: 8 }}>
+                <span style={{ display: "flex", gap: 8, overflow: "hidden" }}>
+                  {peek[r.id].slice(0, 4).map((it) => (
+                    <span key={it.id} style={{ flex: "0 0 auto", width: 74, textAlign: "center" }}>
+                      <span style={{ display: "block", width: 74, height: 56, borderRadius: 10, background: it.photo_url ? `center/cover url(${it.photo_url}) ${T.line}` : T.brandSoft }} />
+                      <span style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: T.ink, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
+                      <span style={{ display: "block", fontSize: 11.5, color: T.inkSoft }}>{rupees(it.price_paise)}</span>
+                    </span>
+                  ))}
+                </span>
+                {peek[r.id].length > 4 && <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.brandDark, marginTop: 4 }}>{String(t("st_more")).replace("{n}", peek[r.id].length - 4)}</span>}
               </span>
             )}
             {infos[r.id] && infos[r.id].promo_text && <Promo info={infos[r.id]} small />}
