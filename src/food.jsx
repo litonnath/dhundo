@@ -670,7 +670,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{o.rider_phone}</a>}</div>
             )}
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
-            {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" />}
+            {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
             {o.status === "placed" && (
               <div><button onClick={() => cancel(o)} style={{ background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("st_cancel")}</button></div>
             )}
@@ -913,7 +913,7 @@ export function OwnerOrders({ api, onHire }) {
                 {o.job_id && ["accepted", "picked_up"].includes(o.job_status) && (
                   <>
                     <JobCode api={api} jobId={o.job_id} role="shop" />
-                    <RideChat api={api} rideId={o.job_id} role="shop" kind="job" />
+                    <RideChat api={api} rideId={o.job_id} role="shop" kind="job" startOpen={false} />
                   </>
                 )}
                 {o.mode === "shop_delivery" && !o.job_status && onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}

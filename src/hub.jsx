@@ -187,7 +187,7 @@ export function ShopJobs({ api, hasListing, collapsed = false }) {
             </div>
           )}
           {["accepted", "picked_up"].includes(j.status) && <JobCode api={api} jobId={j.id} role="shop" />}
-          {["accepted", "picked_up"].includes(j.status) && <RideChat api={api} rideId={j.id} role="shop" kind="job" />}
+          {["accepted", "picked_up"].includes(j.status) && <RideChat api={api} rideId={j.id} role="shop" kind="job" startOpen={false} />}
           {["open", "accepted"].includes(j.status) && (
             <button onClick={() => cancel(j)} style={{ background: "none", border: "none", color: T.red, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("jp_cancel")}</button>
           )}

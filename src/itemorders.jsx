@@ -160,7 +160,7 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
                 {msg[o.id] && <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C", marginTop: 8 }}>{msg[o.id]}</div>}
               </div>
             )}
-            {["requested", "accepted"].includes(o.status) && <RideChat api={api} rideId={o.id} role={o.role} kind="buy" />}
+            {["requested", "accepted"].includes(o.status) && <RideChat api={api} rideId={o.id} role={o.role} kind="buy" startOpen={false} />}
             {["requested", "accepted"].includes(o.status) && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
                 {o.role === "buyer" && o.mode === "delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "switch_pickup")}>{t("mb_pick_myself")}</Btn>}

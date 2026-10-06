@@ -10,12 +10,12 @@ import { useI18n } from "./i18n.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 
-export function RideChat({ api, rideId, role, kind = "ride" }) {
+export function RideChat({ api, rideId, role, kind = "ride", startOpen = true }) {
   const { t } = useI18n();
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(startOpen);
   const end = useRef(null);
   const load = useCallback(async () => {
     try { setMsgs(many(await (kind === "job" ? api.jobChatList(rideId) : kind === "buy" ? api.itemChatList(rideId) : api.rideChatList(rideId)))); } catch (_) { /* next tick */ }
