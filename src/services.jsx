@@ -389,6 +389,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       p_lat: typeof lat === "number" ? lat : null, p_lng: typeof lng === "number" ? lng : null, p_note: note || null,
     }, true),
     myOrders: () => rpc("services_my_orders", {}, true),
+    orderQuote: (id, rupees) => rpc("services_order_quote", { p_order: id, p_fee_rupees: rupees }, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
     rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
     bookingRequest: (worker, startIso, minutes, note) =>
@@ -533,7 +534,8 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
   // Which front tile this person entered: null shows the six tiles.
-  const [section, setSection] = useState(null);
+  // A shop owner who chose to hire a vehicle for an order lands on the hire screen.
+  const [section, setSection] = useState(() => { try { const x = window.localStorage.getItem("dhundo_open_section"); if (x) { window.localStorage.removeItem("dhundo_open_section"); return x; } } catch (_) {} return null; });
   // The very first choice: I need / I offer. Stays on "need" while browsing tiles.
   const [side, setSideState] = useState(lastSide);
   const setSide = (v) => { lastSide = v; setSideState(v); };
@@ -3129,7 +3131,7 @@ export default function ServicesPage({
               return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
             }
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
-              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
+              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return <RatesCard api={api} />;
           })()}
           top={signedIn && hasListing && !isAdmin ? (isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : myDriverKind === "delivery" ? <RiderJobs api={api} online={avail.online} where={avail.where} /> : null) : null}

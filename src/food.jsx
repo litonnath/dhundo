@@ -73,7 +73,8 @@ function OpenLine({ info, t }) {
   );
 }
 
-const statusColor = { placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
+const modeLabel = (m, t) => t(m === "pickup" ? "st_pickup" : m === "shop_delivery" ? "sh_shopdel" : "st_delivery");
+const statusColor = { quoted: "#B45309", placed: "#B45309", accepted: "#1D4ED8", ready: GREEN, delivered: GREEN, rejected: RED, cancelled: T.inkFaint };
 
 // ============================================================ CUSTOMER HOME
 export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpty, onHire }) {
@@ -462,8 +463,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   // An item the shop marked as too big for a bike cannot go by delivery rider:
   // the customer collects it, or hires a vehicle to carry it.
   const tooBig = lines.some((m) => m.bike_ok === false);
-  const [mode, setMode] = useState(() => (lines.some((m) => m.bike_ok === false) ? "pickup" : "delivery"));
-  useEffect(() => { if (tooBig) setMode("pickup"); }, [tooBig]);
+  const [mode, setMode] = useState(() => (lines.some((m) => m.bike_ok === false) ? "shop_delivery" : "delivery"));
+  useEffect(() => { if (tooBig && mode === "delivery") setMode("shop_delivery"); }, [tooBig]); // eslint-disable-line react-hooks/exhaustive-deps
   const [addr, setAddr] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [note, setNote] = useState("");
   const [needBy, setNeedBy] = useState("");
@@ -477,11 +478,11 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
-    if (mode === "delivery" && addrText.trim().length < 3) { setMsg(t("st_need_addr")); return; }
+    if (mode !== "pickup" && addrText.trim().length < 3) { setMsg(t("st_need_addr")); return; }
     setBusy(true); setMsg(null);
     try {
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
-        mode === "delivery" ? addrText : null, addr && addr.lat, addr && addr.lng,
+        mode !== "pickup" ? addrText : null, addr && addr.lat, addr && addr.lng,
         (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note));
       if (r && r.ok) onDone();
       else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
@@ -518,8 +519,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
           </>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          {[["delivery", "st_delivery"], ["pickup", "st_pickup"]].map(([k, label]) => (
-            <button key={k} disabled={k === "delivery" && tooBig} onClick={() => setMode(k)} aria-pressed={mode === k} style={{ opacity: k === "delivery" && tooBig ? 0.4 : 1,
+          {[[tooBig ? "shop_delivery" : "delivery", tooBig ? "sh_shopdel" : "st_delivery"], ["pickup", "st_pickup"]].map(([k, label]) => (
+            <button key={k} onClick={() => setMode(k)} aria-pressed={mode === k} style={{
               flex: 1, minHeight: 44, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 14.5,
               border: `1.5px solid ${mode === k ? T.brandDark : T.line}`, background: mode === k ? T.brandSoft : T.white, color: mode === k ? T.brandDark : T.ink,
             }}>{t(label)}</button>
@@ -532,7 +533,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             {onHire && <Btn kind="ghost" onClick={onHire}>{t("sh_hire")}</Btn>}
           </div>
         )}
-        {mode === "delivery" && (
+        {mode === "shop_delivery" && <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, margin: "-4px 0 10px" }}>{t("sh_shopdel_hint")}</p>}
+        {mode !== "pickup" && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("st_address")}</div>
             <PlaceField value={addr} onChange={setAddr} sheetPlace={addr || place} />
@@ -584,9 +586,19 @@ export function MyOrdersSheet({ api, onClose }) {
               <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
             </div>
             <Lines lines={o.lines} />
-            <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {t(o.mode === "pickup" ? "st_pickup" : "st_delivery")}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
             {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</b></div>}
             <OrderTrack o={o} />
+            {o.status === "quoted" && (
+              <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
+                  <Btn kind="ghost" onClick={() => cancel(o)}>{t("st_quote_decline")}</Btn>
+                </div>
+              </div>
+            )}
             {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ color: T.brandDark, fontWeight: 700, fontSize: 14 }}>{o.other_phone}</a>}
             {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
               <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
@@ -615,6 +627,21 @@ function OrderTrack({ o }) {
   const { t } = useI18n();
   if (["rejected", "cancelled"].includes(o.status)) return null;
   const delivery = o.mode === "delivery";
+  if (o.mode === "shop_delivery") {
+    const sd = [t("st_status_placed"), t("st_status_quoted"), t("st_status_accepted"), t("st_status_delivered")];
+    const a = o.status === "delivered" ? 3 : ["accepted", "ready"].includes(o.status) ? 2 : o.status === "quoted" ? 1 : 0;
+    return (
+      <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
+        {sd.map((label, i) => (
+          <div key={i} style={{ flex: 1, textAlign: "center", position: "relative" }}>
+            {i > 0 && <span style={{ position: "absolute", top: 9, right: "50%", width: "100%", height: 3, background: i <= a ? "#16A34A" : "#E1E5EA" }} />}
+            <span style={{ position: "relative", display: "inline-block", width: 20, height: 20, borderRadius: "50%", background: i <= a ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: "20px" }}>{i <= a ? "\u2713" : ""}</span>
+            <div style={{ fontSize: 11, fontWeight: i === a ? 800 : 600, color: i <= a ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 3 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
   const steps = delivery
     ? [t("st_status_placed"), t("st_status_accepted"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
     : [t("st_status_placed"), t("st_status_accepted"), t("st_status_ready"), t("st_status_delivered")];
@@ -731,7 +758,7 @@ function StoreSettings({ api, shop, onSaved }) {
   );
 }
 
-export function OwnerFood({ api, shop }) {
+export function OwnerFood({ api, shop, onHire }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
@@ -752,7 +779,8 @@ export function OwnerFood({ api, shop }) {
   const act = async (o, action) => { setBusy(o.id); try { await api.orderUpdate(o.id, action); } catch (_) {} setBusy(null); load(); };
   const accepting = menu.length === 0 || menu[0].accepting !== false;
   const toggle = async () => { try { await api.setAccepting(!accepting); } catch (_) {} load(); };
-  const active = orders.filter((o) => ["placed", "accepted", "ready"].includes(o.status));
+  const [quote, setQuote] = useState({});
+  const active = orders.filter((o) => ["placed", "quoted", "accepted", "ready"].includes(o.status));
 
   return (
     <div style={{ marginTop: 18 }}>
@@ -779,15 +807,33 @@ export function OwnerFood({ api, shop }) {
             <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
           </div>
           <Lines lines={o.lines} />
-          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)} · {t(o.mode === "pickup" ? "st_pickup" : "st_delivery")}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
           {o.address_text && <div style={{ fontSize: 13.5, color: T.ink }}>{o.address_text}</div>}
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
           <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            {o.status === "placed" && <>
+            {o.status === "placed" && o.mode !== "shop_delivery" && <>
               <Btn disabled={busy === o.id} onClick={() => act(o, "accept")}>{t("ow_accept")}</Btn>
               <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
             </>}
+            {o.status === "placed" && o.mode === "shop_delivery" && (
+              <div style={{ width: "100%" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4} value={quote[o.id] || ""} placeholder={t("ow_quote_ph")} aria-label={t("ow_quote_ph")}
+                         onChange={(e) => setQuote((q) => ({ ...q, [o.id]: e.target.value.replace(/\D/g, "") }))} />
+                  <Btn disabled={busy === o.id || quote[o.id] === undefined || quote[o.id] === ""} onClick={async () => { setBusy(o.id); try { await api.orderQuote(o.id, Number(quote[o.id])); } catch (_) {} setBusy(null); load(); }}>{t("ow_quote_send")}</Btn>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
+                  <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+                </div>
+              </div>
+            )}
+            {o.status === "quoted" && <>
+              <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("ow_quote_wait")} ({rupees(o.delivery_fee_paise)})</div>
+              <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+            </>}
+            {o.mode === "shop_delivery" && ["accepted", "ready"].includes(o.status) && onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
             {o.status === "accepted" && <Btn disabled={busy === o.id} onClick={() => act(o, "ready")}>{t("ow_ready")}</Btn>}
             {["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_delivered")}</Btn>}
           </div>
