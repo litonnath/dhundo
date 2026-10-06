@@ -6,6 +6,8 @@
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { T, Btn, Notice, input } from "./ui.jsx";
+import { FormSheet } from "./rates.jsx";
+import { fmtLength } from "./hub.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BookingSheet } from "./hub.jsx";
 import { kmBetween, vehicleEmoji } from "./nearmap.jsx";
@@ -22,6 +24,11 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   const [book, setBook] = useState(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(null);
+  const [mine, setMine] = useState([]);
+  const [histOpen, setHistOpen] = useState(false);
+  const loadMine = async () => { if (!signedIn || !api.myHireRequests) return; try { setMine(many(await api.myHireRequests())); } catch (_) {} };
+  useEffect(() => { loadMine(); }, [api, signedIn, book]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stamp = (iso) => new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
   const slugs = vehicles.map((v) => v.slug);
   const key = `${pick && pick.lat},${pick && pick.lng},${vehicle},${slugs.join(",")}`;
   useEffect(() => {
@@ -79,6 +86,11 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   return (
     <div style={{ marginTop: 6 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "6px 0 8px" }}>{t("hr_title")}</h2>
+      {signedIn && (
+        <button onClick={() => { loadMine(); setHistOpen(true); }} style={{ display: "block", width: "100%", minHeight: 46, margin: "0 0 12px", borderRadius: 12, border: `1.5px solid ${T.line}`, background: T.white, color: T.ink, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>
+          {t("hq_title")}{mine.length ? ` (${mine.length})` : ""}
+        </button>
+      )}
       <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, marginBottom: 6 }}>{t("hr_hours")}</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {[1, 2, 4, 8].map((h) => (
@@ -118,13 +130,39 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
                 </>
               )}
             </div>
+            {(() => {
+              const prev = mine.find((m) => m.worker_id === r.id);
+              return prev ? (
+                <div style={{ marginTop: 10, padding: "8px 11px", background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 10, fontSize: 13, fontWeight: 800, color: "#7A4A00" }}>
+                  {String(t("hq_asked")).replace("{when}", stamp(prev.created_at))} {"\u00B7"} {t("bk_status_" + prev.status)}
+                </div>
+              ) : null;
+            })()}
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Btn kind="call" disabled={busy === r.id} onClick={() => call(r)}>{t("fk_call")}</Btn>
-              <Btn onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } setBook(r); }}>{t("hr_book")}</Btn>
+              <Btn onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } setBook(r); }}>{mine.some((m) => m.worker_id === r.id) ? t("hq_again") : t("hr_book")}</Btn>
             </div>
           </div>
         );
       })}
+      {histOpen && (
+        <FormSheet title={t("hq_title")} onClose={() => setHistOpen(false)}>
+          {mine.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("hq_empty")}</div>}
+          {mine.map((m) => (
+            <div key={m.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${m.status === "accepted" ? "#16A34A" : m.status === "requested" ? "#F59E0B" : "#9CA3AF"}`, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: T.ink }}>{m.other_name}{m.trade_name ? ` \u00B7 ${m.trade_name}` : ""}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: m.status === "accepted" ? "#16A34A" : T.inkSoft }}>{t("bk_status_" + m.status)}</span>
+              </div>
+              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "2px 0" }}>{stamp(m.created_at)}</div>
+              {m.start_at && <div style={{ fontSize: 13.5, color: T.ink }}>{t("hq_when")}: {stamp(m.start_at)}</div>}
+              {m.duration_mins ? <div style={{ fontSize: 13.5, color: T.ink }}>{t("hq_for")}: {fmtLength(m.duration_mins, t)}</div> : null}
+              {m.note && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2, overflowWrap: "anywhere" }}>{t("hq_note")}: {m.note}</div>}
+              {m.other_phone && <a href={`tel:${m.other_phone}`} style={{ display: "inline-block", marginTop: 6, minHeight: 40, lineHeight: "40px", padding: "0 16px", borderRadius: 12, background: "#0F8A3C", color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>{t("hq_call")} {m.other_phone}</a>}
+            </div>
+          ))}
+        </FormSheet>
+      )}
       {book && <BookingSheet api={api} row={book} place={place} onClose={() => setBook(null)} />}
     </div>
   );

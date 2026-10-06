@@ -408,6 +408,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     chatList: (id) => rpc("services_chat_list", { p_booking: id }, true),
     chatSend: (id, body) => rpc("services_chat_send", { p_booking: id, p_body: body }, true),
     bookingCancel: (id) => rpc("services_booking_cancel", { p_id: id }, true),
+    myHireRequests: () => rpc("services_my_hire_requests", {}, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
