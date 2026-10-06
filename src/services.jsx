@@ -2987,6 +2987,7 @@ export default function ServicesPage({
   // the notification list, not only from the Work screen.
   const myTradeRow = trades.find((x) => x.slug === myTrade) || {};
   const myDriverKind = myTradeRow.group_name === "Drivers" ? driverKind(myTradeRow) : null;
+  const isRiderHome = myDriverKind === "delivery" || myDriverKind === "travel";
   const isOwnerHome = myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier" || myDriverKind === "hire";
   const isDriver = myDriverKind === "travel";
   const [rideReqs, setRideReqs] = useState([]);
@@ -3161,7 +3162,7 @@ export default function ServicesPage({
           onPartner={() => setPartnerOpen(true)}
           onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => setTab("orders"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
@@ -3274,7 +3275,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage key={ordersKey} api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} badge={ordersBadge} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (

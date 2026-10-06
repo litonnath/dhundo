@@ -302,7 +302,6 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
 
   return (
     <div style={wrap}>
-      <TileArt k="need-ride" pos="center top" style={{ borderRadius: 14, aspectRatio: "4 / 1", maxHeight: 100, marginBottom: 14 }} />
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 14px" }}><h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t("rd_title")}</h1><ListenButton compact lines={[t("rd_title")]} /></div>
       {finished && <RideDone ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -330,6 +329,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         </>)}
       </div>
 
+      {(hire || (pick && drop)) && (<>
       <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
       <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", marginBottom: 14 }}>
         {(hire ? [{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }] : []).concat(
@@ -371,12 +371,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
                placeholder={t("rd_offer")} aria-label={t("rd_offer")}
                onChange={(e) => setFare(e.target.value.replace(/\D/g, ""))} />
       )}
-      <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("rd_note")}</p>
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
-      {signedIn && <RideHistory api={api} />}
         </>
       )}
+      </>)}
     </div>
   );
 }
