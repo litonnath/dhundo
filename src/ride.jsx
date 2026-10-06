@@ -328,6 +328,7 @@ function Route({ pick, drop }) {
 // ------------------------------------------------- the driver's side
 function RiderSettings({ api, onSaved }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(false);
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
   useEffect(() => {
@@ -336,7 +337,6 @@ function RiderSettings({ api, onSaved }) {
   }, [api]);
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
-  const [open, setOpen] = useState(false);
   const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, fontSize: 15, fontWeight: 700 };
   const save = async () => { try { await api.setRider(f); setSaved(true); onSaved && onSaved(); setOpen(false); } catch (_) {} };
   const on = (v) => (v ? "\u2713" : "\u2013");
