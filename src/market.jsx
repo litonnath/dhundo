@@ -814,6 +814,7 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
     brand: "", model_year: "", km_driven: "", description: "", whatsapp: true, photos: [],
   });
   const [loaded, setLoaded] = useState(!editId);
+  const [step, setStep] = useState(1);
   const [uploading, setUploading] = useState(0);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -912,12 +913,14 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
 
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 40px" }}>
-      <button onClick={onCancel} style={{
+      <button onClick={() => { setErr(null); if (step > 1) setStep(step - 1); else onCancel(); }} style={{
         display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none",
         color: T.brandDark, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "6px 0", fontFamily: "inherit",
       }}><Icon name="back" size={18} /> {t("w_back")}</button>
       <h1 style={{ fontSize: 23, fontWeight: 800, margin: "4px 0 0" }}>{editId ? t("mk_edit") : t("mk_new_ad")}</h1>
 
+      <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, margin: "6px 0 0" }}>{step} / 3</div>
+      {step === 1 && (<>
       {label(t("mk_photos"), t("mk_photos_hint"))}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {f.photos.map((src, i) => (
@@ -971,6 +974,10 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
         })}
       </div>
 
+      {err && <Notice tone="bad">{err}</Notice>}
+      <Btn full onClick={() => { if (!f.photos.length) return setErr(t("mk_e_photos")); if (!f.category) return setErr(t("mk_e_category")); setErr(null); setStep(2); }} style={{ minHeight: 56, fontSize: 17, borderRadius: 14, marginTop: 20 }}>{t("w_next")}</Btn>
+      </>)}
+      {step === 2 && (<>
       {label(t("mk_title"))}
       <input style={field} value={f.title} maxLength={80} placeholder={t("mk_title_ph")}
              onChange={(e) => set("title", e.target.value)} />
@@ -1003,6 +1010,12 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
         })}
       </div>
 
+      {err && <Notice tone="bad">{err}</Notice>}
+      <Btn full onClick={() => { if (f.title.trim().length < 3) return setErr(t("mk_e_title")); if (f.price === "" || Number.isNaN(Number(f.price))) return setErr(t("mk_e_price")); setErr(null); setStep(3); }} style={{ minHeight: 56, fontSize: 17, borderRadius: 14, marginTop: 20 }}>{t("w_next")}</Btn>
+      </>)}
+      {step === 3 && (<>
+      <details style={{ marginTop: 14 }}>
+        <summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("mk_more_det")}</summary>
       {label(t("mk_brand") + ` (${t("optional")})`)}
       <input style={field} value={f.brand} maxLength={60} onChange={(e) => set("brand", e.target.value)} />
 
@@ -1029,6 +1042,7 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
       <textarea style={{ ...field, minHeight: 110, resize: "vertical", lineHeight: 1.55 }} value={f.description}
                 maxLength={2000} placeholder={t("mk_desc_ph")} onChange={(e) => set("description", e.target.value)} />
 
+      </details>
       {label(t("mk_location"))}
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.white, border: `1px solid ${T.line}`,
                     borderRadius: 11, padding: "10px 12px" }}>
@@ -1050,6 +1064,7 @@ function SellForm({ api, user, place, editId, onPickLocation, onCancel, onDone }
       <Btn full onClick={submit} disabled={busy || uploading > 0} style={{ minHeight: 56, fontSize: 17, borderRadius: 14 }}>
         {busy ? "…" : editId ? t("mk_save") : t("mk_post")}
       </Btn>
+      </>)}
     </div>
   );
 }

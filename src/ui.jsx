@@ -2098,11 +2098,6 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
                 <LiveDot light />
                 {isSupplier ? t("av_badge_shop") : t("av_badge")}
               </span>
-              {liveMins !== null && (
-                <span style={{ fontSize: 12, color: T.inkFaint }}>
-                  {liveMins < 1 ? t("av_seen_now") : t("av_seen").replace("{n}", String(liveMins))}
-                </span>
-              )}
             </div>
           )}
 
@@ -2126,7 +2121,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
                   two lines and the dot was left stranded at the end of the
                   first, reading as a typo. A wider gap separates them on one
                   line and nothing is orphaned on two. */}
-              {rate && <span style={{ fontWeight: 800 }}>{rate}</span>}
+              {rate && <span style={{ fontWeight: 800, fontSize: 17 }}>{rate}</span>}
               {row.years_experience
                 ? <span style={{ color: T.inkSoft }}>
                     {row.years_experience} {t("yrs_exp")}
