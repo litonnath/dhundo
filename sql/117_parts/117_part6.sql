@@ -37,7 +37,7 @@ begin
     return;
   end if;
   create temporary table if not exists _ord_lines (item uuid, qty int, nm text, pr int) on commit drop;
-  delete from _ord_lines;
+  delete from _ord_lines where true;
   insert into _ord_lines
     select m.id, least(greatest((l ->> 'qty')::int, 1), 20), m.name, m.price_paise
       from jsonb_array_elements(p_lines) l
