@@ -13,6 +13,7 @@
 //   SellPage     -- post an ad, and manage your own
 //   AdminAds     -- reported ads for the admin
 // ===========================================================================
+import { BuySheet, ItemOrdersSheet } from "./itemorders.jsx";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable, VoiceButton, Hero } from "./ui.jsx";
 import { useI18n, stateName } from "./i18n.jsx";
@@ -227,9 +228,10 @@ const grid = {
 // ------------------------------------------------------------ Buy & Sell tab
 // Its own page, apart from the services: a search box for things, the
 // categories, the ads nearest first, and one clear way to sell.
-export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
+export function MarketPage({ api, place, state, onOpenItem, onSell, onBack, user, onHire }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
+  const [ordersOpen, setOrdersOpen] = useState(false);
   // "purana bike" or "পুরনো মোবাইল" is a category, not words to find in a
   // title; anything else is searched as typed.
   const typedCat = itemCategoryFor(q);
@@ -239,7 +241,13 @@ export function MarketPage({ api, place, state, onOpenItem, onSell, onBack }) {
   const showTiles = catPick === undefined && !q.trim();
   return (
     <div>
-      {onBack && <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}><HomeButton onClick={onBack} /></div>}
+      {onBack && (
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <HomeButton onClick={onBack} />
+          {user && <button onClick={() => setOrdersOpen(true)} style={{ minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1px solid ${T.line}`, background: T.white, color: T.brandDark, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("mb_mine")}</button>}
+        </div>
+      )}
+      {ordersOpen && <ItemOrdersSheet api={api} onHire={onHire} onClose={() => setOrdersOpen(false)} />}
       <Hero search={q} setSearch={setQ} onVoice={setQ} compact={!showTiles} tone="buy"
             title={t("need_buy")} sub={t("need_buy_sub")} placeholder={t("mk_search_ph")} />
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 60px" }}>
@@ -364,7 +372,7 @@ export function MarketHome({ api, place, state, query = "", category: initialCat
 }
 
 // ------------------------------------------------------------- one ad
-export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn, onEdit }) {
+export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn, onEdit, onHire }) {
   const { t, lang } = useI18n();
   const ago = useAgo();
   useDismissable(true, onClose);
@@ -375,6 +383,7 @@ export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState(null);
   const [reporting, setReporting] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
   const [photoIx, setPhotoIx] = useState(0);
   const strip = useRef(null);
 
@@ -593,16 +602,21 @@ export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn
                     textDecoration: "none", minHeight: 52, padding: "0 16px",
                   }}>WhatsApp</a>
                 )}
+                <Btn onClick={() => setBuyOpen(true)} style={{ minHeight: 52 }}>{t("mb_buy")}</Btn>
               </>
             ) : (
-              <Btn kind="call" full onClick={reveal} disabled={busy} style={{ minHeight: 52, fontSize: 16.5, borderRadius: 12 }}>
-                <Icon name="phone" size={18} /> {busy ? "…" : user ? t("mk_call") : t("mk_signin_call")}
-              </Btn>
+              <>
+                <Btn kind="call" full onClick={reveal} disabled={busy} style={{ minHeight: 52, fontSize: 16.5, borderRadius: 12 }}>
+                  <Icon name="phone" size={18} /> {busy ? "…" : user ? t("mk_call") : t("mk_signin_call")}
+                </Btn>
+                <Btn onClick={() => (user ? setBuyOpen(true) : onSignIn())} style={{ minHeight: 52, borderRadius: 12, whiteSpace: "nowrap" }}>{t("mb_buy")}</Btn>
+              </>
             )}
           </div>
         </div>
       )}
 
+      {buyOpen && it && <BuySheet api={api} item={it} onHire={onHire} onClose={() => setBuyOpen(false)} />}
       {reporting && <ReportSheet api={api} id={id} onClose={(done) => { setReporting(false); if (done) setNote(t("mk_reported")); }} />}
     </div>
   );
@@ -663,6 +677,7 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
   const [mine, setMine] = useState(null);
   const [reload, setReload] = useState(0);
   const [flash, setFlash] = useState(null);
+  const [ordersOpen, setOrdersOpen] = useState(false);
 
   useEffect(() => { if (editId) setMode("edit"); }, [editId]);
   useEffect(() => {
@@ -707,6 +722,8 @@ export function SellPage({ api, user, place, onSignIn, onPickLocation, onOpenIte
         {active >= MAX_ADS ? t("mk_e_limit") : t("mk_count").replace("{n}", active)}
       </p>
 
+      <Btn full kind="ghost" onClick={() => setOrdersOpen(true)} style={{ margin: "0 0 18px" }}>{t("mb_mine")}</Btn>
+      {ordersOpen && <ItemOrdersSheet api={api} onClose={() => setOrdersOpen(false)} />}
       <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 12px" }}>{t("mk_my_ads")}</h2>
       {mine === null ? (
         <div style={{ height: 90, background: T.white, borderRadius: 14 }} />

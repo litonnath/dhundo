@@ -184,6 +184,12 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_min: o.min ?? null, p_max: o.max ?? null, p_radius_km: o.radiusKm || null,
         p_sort: o.sort || "near", p_limit: o.limit || 30, p_offset: o.offset || 0,
       }, true),
+    itemBuy: (id, mode, offer, note) => rpc("services_item_buy", { p_item: id, p_mode: mode, p_offer_rupees: offer, p_note: note || null }, true),
+    itemOrderUpdate: (id, action, fee) => rpc("services_item_order_update", { p_order: id, p_action: action, p_fee_rupees: fee == null ? null : fee }, true),
+    itemOrderComplete: (id, code) => rpc("services_item_order_complete", { p_order: id, p_code: code }, true),
+    myItemOrders: () => rpc("services_my_item_orders", {}, true),
+    itemChatList: (id) => rpc("services_item_chat_list", { p_order: id }, true),
+    itemChatSend: (id, body) => rpc("services_item_chat_send", { p_order: id, p_body: body }, true),
     itemGet: (id) => rpc("services_item_get", { p_id: id }, true),
     itemSave: (p) =>
       rpc("services_item_save", {
@@ -3093,7 +3099,8 @@ export default function ServicesPage({
       )}
 
       {tab === "market" && (
-        <MarketPage api={api} place={place} state={state} onBack={() => setTab("browse")}
+        <MarketPage api={api} place={place} state={state} onBack={() => setTab("browse")} user={signedIn ? user : null}
+                    onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} setItemOpen(null); setTab("browse"); }}
                     onOpenItem={(it) => setItemOpen({ id: it.id, km: it.distance_km })}
                     />
       )}
@@ -3109,6 +3116,7 @@ export default function ServicesPage({
       {itemOpen && (
         <ItemDetail api={api} id={itemOpen.id} distanceKm={itemOpen.km ?? null}
                     user={signedIn ? user : null} onSignIn={onSignIn}
+                    onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} setItemOpen(null); setTab("browse"); }}
                     onClose={() => {
                       setItemOpen(null);
                       try {

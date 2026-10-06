@@ -18,7 +18,7 @@ export function RideChat({ api, rideId, role, kind = "ride" }) {
   const [open, setOpen] = useState(true);
   const end = useRef(null);
   const load = useCallback(async () => {
-    try { setMsgs(many(await (kind === "job" ? api.jobChatList(rideId) : api.rideChatList(rideId)))); } catch (_) { /* next tick */ }
+    try { setMsgs(many(await (kind === "job" ? api.jobChatList(rideId) : kind === "buy" ? api.itemChatList(rideId) : api.rideChatList(rideId)))); } catch (_) { /* next tick */ }
   }, [api, rideId, kind]);
   useEffect(() => {
     load();
@@ -30,10 +30,10 @@ export function RideChat({ api, rideId, role, kind = "ride" }) {
     const b = String(body || "").trim();
     if (!b || busy) return;
     setBusy(true);
-    try { await (kind === "job" ? api.jobChatSend(rideId, b) : api.rideChatSend(rideId, b)); setText(""); await load(); } catch (_) {}
+    try { await (kind === "job" ? api.jobChatSend(rideId, b) : kind === "buy" ? api.itemChatSend(rideId, b) : api.rideChatSend(rideId, b)); setText(""); await load(); } catch (_) {}
     setBusy(false);
   };
-  const quick = kind === "job"
+  const quick = kind === "buy" ? ["ib1", "ib2", "ib3"] : kind === "job"
     ? (role === "rider" ? ["jq1", "jq2", "jq3", "jq4"] : role === "shop" ? ["jo1", "jo2", "jo3"] : ["jc1", "jc2", "jc3"])
     : role === "driver" ? ["qd1", "qd2", "qd3", "qd4"] : ["qp1", "qp2", "qp3", "qp4"];
   return (
