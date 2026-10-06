@@ -589,13 +589,19 @@ export function MyOrdersSheet({ api, onClose }) {
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
             {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</b></div>}
             <OrderTrack o={o} />
-            {o.status === "confirmed" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", margin: "6px 0" }}>{t("st_confirmed_msg")}</div>}
+            {o.status === "confirmed" && (
+              <div style={{ margin: "6px 0" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", marginBottom: 6 }}>{t("st_confirmed_msg")}</div>
+                <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>
+              </div>
+            )}
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
                 {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</div>}
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
+                  {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
                   <Btn kind="ghost" onClick={() => cancel(o)}>{t("st_quote_decline")}</Btn>
                 </div>
               </div>

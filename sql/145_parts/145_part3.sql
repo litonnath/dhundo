@@ -28,6 +28,13 @@ begin
     update public.services_orders set status = 'accepted', updated_at = now()
      where id = p_order and customer_id = v_me and status = 'quoted' and mode in ('shop_delivery', 'pickup');
     get diagnostics v_n = row_count;
+  elsif p_action = 'choose_pickup' then
+    -- the customer would rather collect it: before the shop has answered the order
+    -- stays waiting as a pickup order; after the shop accepted, it is accepted
+    update public.services_orders set mode = 'pickup', delivery_fee_paise = 0,
+           status = case when status = 'placed' then 'placed' else 'accepted' end, updated_at = now()
+     where id = p_order and customer_id = v_me and mode = 'shop_delivery' and status in ('placed', 'confirmed', 'quoted');
+    get diagnostics v_n = row_count;
   elsif p_action = 'refuse_delivery' then
     -- the shop cannot deliver this one: it becomes a pickup order the customer
     -- can accept (collect it from the shop) or decline
