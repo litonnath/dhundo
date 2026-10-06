@@ -48,7 +48,7 @@ export function useAvailability(api, enabled) {
   const consent = useConsent();
   const [s, setS] = useState({
     loaded: false, online: false, until: null, seenAt: null,
-    visible: true, busy: false, finding: false, error: null, where: null,
+    visible: true, busy: false, finding: false, error: null, where: null, saved: null,
   });
   const pos = useRef(null);       // latest fix from the phone
   const sent = useRef(null);      // position last sent, and when
@@ -76,6 +76,21 @@ export function useAvailability(api, enabled) {
     return () => { alive = false; };
   }, [api, enabled]);
 
+  // The position and address saved with the listing: what goes online by
+  // default, and what the screen shows, instead of asking the phone again.
+  const home = useRef(null);
+  useEffect(() => {
+    if (!enabled || !api.myListingPoint) return undefined;
+    let alive = true;
+    api.myListingPoint().then((r) => {
+      const x = one(r);
+      if (!alive || !x || typeof x.lat !== "number" || typeof x.lng !== "number") return;
+      home.current = x;
+      patch({ saved: x });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, enabled]);
+
   const beat = useCallback(async (force) => {
     const p = pos.current;
     if (!p) return;
@@ -86,7 +101,7 @@ export function useAvailability(api, enabled) {
     sent.current = { ...p, at: Date.now() };
     try {
       const r = one(await api.setAvailability(true, p, null));
-      if (r && r.ok) patch({ seenAt: new Date().toISOString(), until: r.online_until, error: null, where: { lat: p.lat, lng: p.lng, manual: !!p.manual } });
+      if (r && r.ok) patch({ seenAt: new Date().toISOString(), until: r.online_until, error: null, where: { lat: p.lat, lng: p.lng, manual: !!p.manual, saved: !!p.saved } });
       else if (r && r.reason === "offline") patch({ online: false, until: null });
     } catch (e) {
       // The database refuses a position with no live-location consent on
@@ -129,8 +144,8 @@ export function useAvailability(api, enabled) {
     };
   }, [enabled, s.online, beat, consent.tick]);
 
-  const goOnline = useCallback(async (hours, manual) => {
-    patch({ busy: true, finding: !manual, error: null });
+  const goOnline = useCallback(async (hours, manual, useGps) => {
+    patch({ busy: true, finding: !manual && (useGps || !home.current), error: null });
     if (!(await consent.ask("live"))) { patch({ busy: false, finding: false, error: "consent" }); return; }
     const send = async (p) => {
       pos.current = p;
@@ -140,7 +155,7 @@ export function useAvailability(api, enabled) {
           sent.current = { ...p, at: Date.now() };
           patch({ online: true, until: r.online_until, seenAt: new Date().toISOString(),
                   visible: r.visible !== false, busy: false, finding: false,
-                  where: { lat: p.lat, lng: p.lng, manual: !!p.manual } });
+                  where: { lat: p.lat, lng: p.lng, manual: !!p.manual, saved: !!p.saved } });
         } else {
           patch({ busy: false, finding: false, error: (r && r.reason) || "failed" });
         }
@@ -150,6 +165,8 @@ export function useAvailability(api, enabled) {
     };
     // A position the driver typed or pinned themselves, instead of the phone's.
     if (manual) { await send({ lat: manual.lat, lng: manual.lng, accuracy: 50, manual: true }); return; }
+    // No position given: start from the one saved with the listing.
+    if (!useGps && home.current) { await send({ lat: home.current.lat, lng: home.current.lng, accuracy: 50, manual: true, saved: true }); return; }
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (!geo) { patch({ busy: false, finding: false, error: "location" }); return; }
     geo.getCurrentPosition(
@@ -188,7 +205,7 @@ function timeOf(iso, lang) {
 }
 
 // Where the driver is shown from while online, with a way to change it.
-function WhereCard({ where, onChange, onPhone, busy }) {
+function WhereCard({ where, saved, onChange, onPhone, busy }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const key = where.lat.toFixed(3) + "," + where.lng.toFixed(3);
@@ -201,8 +218,10 @@ function WhereCard({ where, onChange, onPhone, busy }) {
     <div style={{ margin: "16px 0 0", padding: "12px 14px", background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, textAlign: "left" }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: T.inkFaint }}>{t("av_where")}</div>
       <div style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, margin: "2px 0 8px" }}>
-        {name || `${where.lat.toFixed(4)}, ${where.lng.toFixed(4)}`}
-        <span style={{ fontWeight: 600, color: T.inkSoft }}> · {where.manual ? t("av_where_set") : t("av_where_phone")}</span>
+        {where.saved && saved && (saved.address_line || saved.locality)
+          ? [saved.address_line || saved.locality, saved.city, saved.state].filter(Boolean).join(", ") + (saved.pincode ? " · " + saved.pincode : "")
+          : (name || `${where.lat.toFixed(4)}, ${where.lng.toFixed(4)}`)}
+        <span style={{ fontWeight: 600, color: T.inkSoft }}> · {where.saved ? t("av_where_saved") : where.manual ? t("av_where_set") : t("av_where_phone")}</span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Btn kind="ghost" disabled={busy} onClick={onChange}>{t("av_change")}</Btn>
@@ -317,7 +336,7 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
           </div>
         )}
 
-        {on && avail.where && <WhereCard where={avail.where} onChange={() => setPinOpen(true)} onPhone={() => avail.goOnline(null)} busy={avail.busy} />}
+        {on && avail.where && <WhereCard where={avail.where} saved={avail.saved} onChange={() => setPinOpen(true)} onPhone={() => avail.goOnline(null, null, true)} busy={avail.busy} />}
 
         {on && mins !== null && (
           <div style={{ fontSize: 12.5, color: T.inkFaint, marginTop: 12 }}>

@@ -483,6 +483,7 @@ export default {
   av_enter: "વાર લાગે છે? જાતે નાખવા અહીં ક્લિક કરો",
   av_where: "તમારું સ્થાન",
   av_where_set: "તમે નક્કી કરેલું",
+  av_where_saved: "તમારી લિસ્ટિંગમાં સાચવેલું",
   av_where_phone: "ફોનમાંથી",
   av_change: "સ્થાન બદલો",
   av_use_phone: "ફોનનું સ્થાન વાપરો",

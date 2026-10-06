@@ -483,6 +483,7 @@ export default {
   av_enter: "ਦੇਰ ਲੱਗ ਰਹੀ ਹੈ? ਆਪ ਪਾਉਣ ਲਈ ਇੱਥੇ ਕਲਿੱਕ ਕਰੋ",
   av_where: "ਤੁਹਾਡੀ ਲੋਕੇਸ਼ਨ",
   av_where_set: "ਤੁਹਾਡੀ ਚੁਣੀ ਹੋਈ",
+  av_where_saved: "ਤੁਹਾਡੀ ਲਿਸਟਿੰਗ ਵਿੱਚ ਸੰਭਾਲੀ",
   av_where_phone: "ਫ਼ੋਨ ਤੋਂ",
   av_change: "ਲੋਕੇਸ਼ਨ ਬਦਲੋ",
   av_use_phone: "ਫ਼ੋਨ ਦੀ ਲੋਕੇਸ਼ਨ ਵਰਤੋ",

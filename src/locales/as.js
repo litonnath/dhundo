@@ -483,6 +483,7 @@ export default {
   av_enter: "পলম হৈছে? নিজে দিবলৈ ইয়াত ক্লিক কৰক",
   av_where: "আপোনাৰ অৱস্থান",
   av_where_set: "আপুনি দিয়া",
+  av_where_saved: "আপোনাৰ লিস্টিঙত সংৰক্ষিত",
   av_where_phone: "ফোনৰ পৰা",
   av_change: "অৱস্থান সলনি কৰক",
   av_use_phone: "ফোনৰ অৱস্থান ব্যৱহাৰ কৰক",

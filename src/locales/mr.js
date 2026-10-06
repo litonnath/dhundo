@@ -483,6 +483,7 @@ export default {
   av_enter: "वेळ लागतोय? स्वतः टाकण्यासाठी येथे क्लिक करा",
   av_where: "तुमचे ठिकाण",
   av_where_set: "तुम्ही ठरवलेले",
+  av_where_saved: "तुमच्या लिस्टिंगमध्ये जतन केलेले",
   av_where_phone: "फोनवरून",
   av_change: "ठिकाण बदला",
   av_use_phone: "फोनचे ठिकाण वापरा",

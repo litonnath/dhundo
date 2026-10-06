@@ -483,6 +483,7 @@ export default {
   av_enter: "ತಡವಾಗುತ್ತಿದೆಯೇ? ನೀವೇ ನಮೂದಿಸಲು ಇಲ್ಲಿ ಕ್ಲಿಕ್ ಮಾಡಿ",
   av_where: "ನಿಮ್ಮ ಸ್ಥಳ",
   av_where_set: "ನೀವು ಹೊಂದಿಸಿದ್ದು",
+  av_where_saved: "ನಿಮ್ಮ ಪಟ್ಟಿಯಲ್ಲಿ ಉಳಿಸಿದ್ದು",
   av_where_phone: "ಫೋನ್‌ನಿಂದ",
   av_change: "ಸ್ಥಳ ಬದಲಿಸಿ",
   av_use_phone: "ಫೋನ್ ಸ್ಥಳ ಬಳಸಿ",

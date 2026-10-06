@@ -483,6 +483,7 @@ export default {
   av_enter: "ଡେରି ହେଉଛି? ନିଜେ ଦେବାକୁ ଏଠାରେ କ୍ଲିକ୍ କରନ୍ତୁ",
   av_where: "ଆପଣଙ୍କ ସ୍ଥାନ",
   av_where_set: "ଆପଣ ଦେଇଥିବା",
+  av_where_saved: "ଆପଣଙ୍କ ଲିଷ୍ଟିଂରେ ସେଭ୍ କରାଯାଇଛି",
   av_where_phone: "ଫୋନରୁ",
   av_change: "ସ୍ଥାନ ବଦଳାନ୍ତୁ",
   av_use_phone: "ଫୋନର ସ୍ଥାନ ବ୍ୟବହାର କରନ୍ତୁ",

@@ -235,6 +235,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
 
     // ---------------------------------------------------------- profile
     myListing: () => rpc("services_my_listing", {}, true),
+    myListingPoint: () => rpc("services_my_listing_point", {}, true),
     // An exact position for the listing: "device" for the phone GPS, "picked"
     // for a place chosen or a pin placed by hand (no GPS consent needed).
     setMyPosition: (lat, lng, source) =>
