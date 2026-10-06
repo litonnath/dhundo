@@ -47,6 +47,7 @@ import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
+import { OrdersPage } from "./orders.jsx";
 import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, LocationBar, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
@@ -2876,6 +2877,25 @@ export default function ServicesPage({
 
   const signedIn = !!(user && user.id);
   const inbox = useInbox(api, signedIn);
+  // What needs attention on the Orders tab: orders waiting for the restaurant or
+  // shop, a delivery charge or pickup waiting for the customer to answer, a
+  // second hand request waiting for the seller.
+  const [ordersBadge, setOrdersBadge] = useState(0);
+  useEffect(() => {
+    if (!signedIn) { setOrdersBadge(0); return undefined; }
+    let live = true;
+    const pull = async () => {
+      try {
+        const [o, it] = await Promise.all([api.myOrders().catch(() => []), api.myItemOrders ? api.myItemOrders().catch(() => []) : []]);
+        const a = (Array.isArray(o) ? o : []).filter((x) => (x.role === "owner" && x.status === "placed") || (x.role === "customer" && x.status === "quoted")).length;
+        const b = (Array.isArray(it) ? it : []).filter((x) => x.role === "seller" && x.status === "requested").length;
+        if (live) setOrdersBadge(a + b);
+      } catch (_) { /* next tick */ }
+    };
+    pull();
+    const id = setInterval(pull, 15000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, signedIn]);
   const openNotif = () => {
     inbox.markSeen();
     api.myJobs().then((r) => setNotifJobs(Array.isArray(r) ? r : r ? [r] : [])).catch(() => {});
@@ -2968,7 +2988,7 @@ export default function ServicesPage({
   }, [api, signedIn, hasListing, isDriver, avail.online]);
   const rideKey = rideReqs.map((r) => r.id).join(",");
   useEffect(() => {
-    if (!rideKey || tab === "work") return undefined;
+    if (!rideKey || tab === "work" || tab === "orders") return undefined;
     alertNewJob();
     const id = setInterval(alertNewJob, 8000);
     return () => clearInterval(id);
@@ -3148,7 +3168,7 @@ export default function ServicesPage({
               return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /></>;
             }
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
-              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />{tr.group_name !== "Eat & Stay" && <ShopJobs api={api} hasListing={hasListing} collapsed />}</>;
+              return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} onOpenOrders={() => setTab("orders")} />{tr.group_name !== "Eat & Stay" && <ShopJobs api={api} hasListing={hasListing} collapsed />}</>;
             return <RatesCard api={api} />;
           })()}
           top={signedIn && hasListing && !isAdmin ? (isDriver ? <RideRequests api={api} online={avail.online} trades={trades} where={avail.where} /> : myDriverKind === "delivery" ? <RiderJobs api={api} online={avail.online} where={avail.where} /> : null) : null}
@@ -3181,6 +3201,15 @@ export default function ServicesPage({
                     perks={[[t("trust_2_t"), t("trust_2_s")], [t("trust_3_t"), t("trust_3_s")]]} />
       )}
 
+      {tab === "orders" && (signedIn ? (
+        <OrdersPage api={api} online={avail.online} where={avail.where} trades={trades}
+                    role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
+                    onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
+      ) : (
+        <SignInGate onBack={() => setTab("browse")} onSignIn={onSignIn} title={t("or_tab")} text={t("or_gate")}
+                    perks={[[t("trust_2_t"), t("trust_2_s")]]} />
+      ))}
+
       {tab === "chats" && (signedIn ? (
         <ChatsPage items={inbox.items} onOpen={(x) => setChatItem(x)} onHome={() => setTab("browse")} alerts={inbox.alerts} onRequests={openNotif}
                    onDelete={async (x) => { try { await api.chatDelete(x.id); } catch (_) { /* the list reloads */ } inbox.reload(); }} />
@@ -3189,7 +3218,7 @@ export default function ServicesPage({
                     perks={[[t("trust_2_t"), t("trust_2_s")]]} />
       ))}
 
-      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && tab !== "chats" &&
+      {tab !== "browse" && tab !== "mine" && tab !== "work" && tab !== "account" && tab !== "profile" && tab !== "chats" && tab !== "orders" &&
        tab !== "market" && tab !== "sell" && !(tab === "add" && !signedIn) && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
           {tab === "add" && (
@@ -3286,7 +3315,7 @@ export default function ServicesPage({
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
-                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} />
+                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0} />
     </div>
   );
 }

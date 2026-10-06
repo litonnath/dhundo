@@ -76,7 +76,7 @@ export function BuySheet({ api, item, onClose, onSent, onHire }) {
 
 const STATUS_COLOR = { requested: "#B45309", accepted: "#1D4ED8", completed: "#16A34A", declined: "#B91C1C", cancelled: "#6B7280" };
 
-export function ItemOrdersSheet({ api, onClose, onHire }) {
+export function ItemOrdersList({ api, onHire }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
   const [fee, setFee] = useState({});
@@ -102,7 +102,7 @@ export function ItemOrdersSheet({ api, onClose, onHire }) {
   };
   const label = (o) => (o.status === "requested" ? (o.role === "buyer" ? t("mb_wait") : t("mb_new")) : o.status === "accepted" ? t("mb_accepted") : o.status === "completed" ? t("mb_done") : o.status === "declined" ? t("mb_declined") : t("mb_cancelled"));
   return (
-    <FormSheet title={t("mb_mine")} onClose={onClose}>
+    <div>
       {rows === null && <div style={{ color: T.inkSoft }}>{"\u2026"}</div>}
       {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("mb_none")}</div>}
       {(rows || []).map((o) => {
@@ -170,6 +170,15 @@ export function ItemOrdersSheet({ api, onClose, onHire }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function ItemOrdersSheet({ api, onClose, onHire }) {
+  const { t } = useI18n();
+  return (
+    <FormSheet title={t("mb_mine")} onClose={onClose}>
+      <ItemOrdersList api={api} onHire={onHire} />
     </FormSheet>
   );
 }

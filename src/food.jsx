@@ -617,9 +617,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
 }
 
 // ============================================================= MY ORDERS
-export function MyOrdersSheet({ api, onClose }) {
+export function MyOrdersList({ api }) {
   const { t } = useI18n();
-  useDismissable(true, onClose);
   const [orders, setOrders] = useState(null);
   const load = useCallback(async () => {
     try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer")); } catch (_) { setOrders((o) => o || []); }
@@ -627,13 +626,7 @@ export function MyOrdersSheet({ api, onClose }) {
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
   const cancel = async (o) => { try { await api.orderUpdate(o.id, "cancel"); } catch (_) {} load(); };
   return (
-    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-         style={{ position: "fixed", inset: 0, zIndex: 540, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: "#F7F8FA", borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 560, padding: "14px 16px 24px", maxHeight: "92vh", overflowY: "auto", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
-          <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0 }}>{t("st_orders")}</h1>
-          <CloseButton onClick={onClose} />
-        </div>
+    <div>
         <AlertsCard api={api} compact />
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : orders.map((o) => (
           <div key={o.id} style={card}>
@@ -680,6 +673,22 @@ export function MyOrdersSheet({ api, onClose }) {
             )}
           </div>
         ))}
+    </div>
+  );
+}
+
+export function MyOrdersSheet({ api, onClose }) {
+  const { t } = useI18n();
+  useDismissable(true, onClose);
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+         style={{ position: "fixed", inset: 0, zIndex: 540, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: "#F7F8FA", borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 560, padding: "14px 16px 24px", maxHeight: "92vh", overflowY: "auto", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+          <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0 }}>{t("st_orders")}</h1>
+          <CloseButton onClick={onClose} />
+        </div>
+        <MyOrdersList api={api} />
       </div>
     </div>
   );
@@ -823,49 +832,22 @@ function StoreSettings({ api, shop, onSaved }) {
   );
 }
 
-export function OwnerFood({ api, shop, onHire }) {
+// The orders a restaurant or shop has received: those to deal with, and the
+// history. Used on the Orders tab.
+export function OwnerOrders({ api, onHire }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState([]);
-  const [menu, setMenu] = useState([]);
-  const [editing, setEditing] = useState(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
   const [busy, setBusy] = useState(null);
-  const [store, setStoreInfo] = useState(null);
-
-  const load = useCallback(async () => {
-    try {
-      const [o, m, st] = await Promise.all([api.myOrders(), api.myMenu(), api.myStore()]);
-      setOrders(many(o).filter((x) => x.role === "owner"));
-      setMenu(many(m));
-      setStoreInfo(one(st) || {});
-    } catch (_) { /* the next tick tries again */ }
-  }, [api]);
-  useEffect(() => { load(); const id = setInterval(load, 12000); return () => clearInterval(id); }, [load]);
-
-  const act = async (o, action) => { setBusy(o.id); try { await api.orderUpdate(o.id, action); } catch (_) {} setBusy(null); load(); };
-  const accepting = menu.length === 0 || menu[0].accepting !== false;
-  const toggle = async () => { try { await api.setAccepting(!accepting); } catch (_) {} load(); };
   const [quote, setQuote] = useState({});
+  const load = useCallback(async () => {
+    try { setOrders(many(await api.myOrders()).filter((x) => x.role === "owner")); } catch (_) { /* next tick */ }
+  }, [api]);
+  useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id); }, [load]);
+  const act = async (o, action) => { setBusy(o.id); try { await api.orderUpdate(o.id, action); } catch (_) {} setBusy(null); load(); };
   const active = orders.filter((o) => ["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status));
   const suggest = (o) => Math.max(50, Math.round((Number(o.dist_km || 0) * 20) / 10) * 10);
-
   return (
-    <div style={{ marginTop: 18 }}>
-      <div style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{t("ow_accepting")}</span>
-        <button onClick={toggle} role="switch" aria-checked={accepting} style={{
-          width: 52, height: 30, borderRadius: 15, border: "none", cursor: "pointer", position: "relative",
-          background: accepting ? GREEN : "#C5CBD3",
-        }}><span style={{ position: "absolute", top: 3, left: accepting ? 25 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
-      </div>
-
-      <SetupCard steps={store ? [
-        { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu") },
-        { done: !!(store.open_time && store.close_time), label: t("su_hours") },
-        { done: !!store.promo_text, label: t("su_promo") },
-      ] : []} />
-      <StoreSettings api={api} shop={shop} onSaved={load} />
-      <AlertsCard api={api} />
+    <div>
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}{active.length ? ` (${active.length})` : ""}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
         <div key={o.id} style={{ ...card, border: `1.5px solid ${statusColor[o.status]}` }}>
@@ -966,6 +948,52 @@ export function OwnerFood({ api, shop, onHire }) {
           </details>
         );
       })()}
+
+    </div>
+  );
+}
+
+export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
+  const { t } = useI18n();
+  const [pending, setPending] = useState(0);
+  const [menu, setMenu] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [store, setStoreInfo] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [o, m, st] = await Promise.all([api.myOrders(), api.myMenu(), api.myStore()]);
+      setPending(many(o).filter((x) => x.role === "owner" && ["placed", "confirmed", "quoted", "accepted", "ready"].includes(x.status)).length);
+      setMenu(many(m));
+      setStoreInfo(one(st) || {});
+    } catch (_) { /* the next tick tries again */ }
+  }, [api]);
+  useEffect(() => { load(); const id = setInterval(load, 12000); return () => clearInterval(id); }, [load]);
+
+  const accepting = menu.length === 0 || menu[0].accepting !== false;
+  const toggle = async () => { try { await api.setAccepting(!accepting); } catch (_) {} load(); };
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{t("ow_accepting")}</span>
+        <button onClick={toggle} role="switch" aria-checked={accepting} style={{
+          width: 52, height: 30, borderRadius: 15, border: "none", cursor: "pointer", position: "relative",
+          background: accepting ? GREEN : "#C5CBD3",
+        }}><span style={{ position: "absolute", top: 3, left: accepting ? 25 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
+      </div>
+
+      <SetupCard steps={store ? [
+        { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu") },
+        { done: !!(store.open_time && store.close_time), label: t("su_hours") },
+        { done: !!store.promo_text, label: t("su_promo") },
+      ] : []} />
+      <StoreSettings api={api} shop={shop} onSaved={load} />
+      <AlertsCard api={api} />
+      <div style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{t("ow_title_orders")}{pending ? ` (${pending})` : ""}</span>
+        {onOpenOrders && <Btn kind={pending ? "primary" : "ghost"} onClick={onOpenOrders}>{t("or_open")}</Btn>}
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", margin: "18px 0 8px" }}>
         <h2 style={{ flex: 1, fontSize: 17, fontWeight: 800, margin: 0 }}>{t(shop ? "ow_prod" : "ow_menu")}</h2>

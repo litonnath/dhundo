@@ -1673,11 +1673,12 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
 // every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
 // carries a green dot while the worker is online, so they can see from any
 // screen that customers can still find them.
-export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null, chatBadge = 0 }) {
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null, chatBadge = 0, ordersBadge = 0 }) {
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
     tab === "chats" ? "chats"
+    : tab === "orders" ? "orders"
     : tab === "account" || tab === "profile" ? "account"
     : mode === "offer" && tab === "sell" ? "sell"
     : tab === "market" || tab === "sell" ? (mode === "need" ? "find" : "market")
@@ -1727,6 +1728,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
         {mode === "offer" ? (
           <>
             {item("work", "construction", t("nav_dash"), () => setTab("work"), online)}
+            {item("orders", "bag", t("or_tab"), () => setTab("orders"), false, ordersBadge)}
             {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("sell", "tag", t("offer_sell"), () => setTab("sell"))}
             {onWallet && item("wallet", "wallet", t("wal_title"), onWallet)}
@@ -1735,6 +1737,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
         ) : mode === "need" ? (
           <>
             {item("find", "home", t("nav_home"), () => setTab("browse"))}
+            {item("orders", "bag", t("or_tab"), () => setTab("orders"), false, ordersBadge)}
             {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}
