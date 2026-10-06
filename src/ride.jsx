@@ -162,11 +162,15 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     if (!trip) return null;
     const e = book[slug] || { online: [], listed: [], fuels: [] };
     const kind = kindOf(slug);
-    const typical = kind === "bike" ? "petrol" : kind === "auto" ? "cng" : "petrol";
-    const counts = {}; e.fuels.forEach((f) => { counts[f] = (counts[f] || 0) + 1; });
+    // The standard (fallback) rate starts from the bike rate, which comes from
+    // the petrol price, and an auto is 5 times that and a car 10 times.
+    const bikeBook = Object.keys(book).filter((k) => kindOf(k) === "bike").flatMap((k) => book[k].fuels);
+    const counts = {}; bikeBook.forEach((f) => { counts[f] = (counts[f] || 0) + 1; });
     const common = Object.keys(counts).sort((x, y) => counts[y] - counts[x])[0];
-    const fuel = KM_PER[kind][common] ? common : typical;
-    const std = Math.ceil((fuels[fuel] || 100) / KM_PER[kind][fuel] + BASE[kind]);
+    const bikeFuel = KM_PER.bike[common] ? common : "petrol";
+    const bikeStd = Math.ceil((fuels[bikeFuel] || 100) / KM_PER.bike[bikeFuel] + BASE.bike);
+    const fuel = bikeFuel;
+    const std = bikeStd * (kind === "auto" ? 5 : kind === "car" ? 10 : 1);
     const set = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
     // The riders' own per-km rate is the price: rate x distance, nothing
     // adjusted or capped. The standard rate only stands in when no rider of
