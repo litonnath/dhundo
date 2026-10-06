@@ -156,7 +156,7 @@ export function UberMap({ markers, lines = [], height = "50vh", onSelect, fitKey
   return <div ref={box} style={{ height, minHeight: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
 }
 
-export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onlineRows = [], fares, trip, height = 250 }) {
+export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onlineRows = [], fares, trip, height = 250, drop = null, between = null }) {
   const { t, lang } = useI18n();
   const [rows, setRows] = useState(null);
   const [pos, setPos] = useState({});
@@ -188,7 +188,8 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
   const sorted = shown.slice().sort((a, b) => (onlineIds.has(b.id) ? 1 : 0) - (onlineIds.has(a.id) ? 1 : 0)
     || (Number(a.distance_km ?? 1e9) - Number(b.distance_km ?? 1e9)));
-  const markers = [{ id: "me", kind: "me", lat: pick.lat, lng: pick.lng }].concat(
+  const hasDrop = drop && typeof drop.lat === "number";
+  const markers = [{ id: "me", kind: "me", lat: pick.lat, lng: pick.lng }].concat(hasDrop ? [{ id: "drop", kind: "drop", lat: drop.lat, lng: drop.lng }] : []).concat(
     sorted.filter((r) => pos[r.id]).map((r) => ({
       id: r.id, kind: "driver", lat: pos[r.id].lat, lng: pos[r.id].lng, online: onlineIds.has(r.id),
       emoji: vehicleEmoji(r.trade_slug + " " + r.trade_name), selected: sel === r.id,
@@ -197,7 +198,8 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   return (
     <div style={{ marginTop: 18 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 10px" }}>{t("rd_nearby")}{sorted.length ? ` (${sorted.length})` : ""}</h2>
-      <UberMap markers={markers} height="46vh" onSelect={(id) => setSel(id)} />
+      <UberMap markers={markers} lines={hasDrop ? [{ pts: [[pick.lat, pick.lng], [drop.lat, drop.lng]] }] : []} height="46vh" onSelect={(id) => { if (id !== "me" && id !== "drop") setSel(id); }} />
+      {between}
       {rows !== null && sorted.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6, marginTop: 10 }}>{t("rd_nearby_none")}</div>}
       <div style={{ marginTop: 10 }}>
         {sorted.map((d) => {

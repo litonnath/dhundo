@@ -129,35 +129,55 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
 
   if (ride) {
     const accepted = ride.status === "accepted";
+    const hasPos = typeof ride.pick_lat === "number" && typeof ride.pick_lng === "number";
+    const dropPt = typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null;
+    const vTrade = allVeh.find((x) => x.slug === ride.vehicle);
+    const sheet = (
+      <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 6px 22px rgba(15,23,42,0.10)", padding: "16px 16px 14px", margin: "12px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ position: "relative", width: 14, height: 14, flexShrink: 0 }}>
+            {!accepted && <span className="dh-pulse" style={{ background: "rgba(22,163,74,.45)" }} />}
+            <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: accepted ? T.green : "#16A34A" }} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{accepted ? t("rd_found") : t("rd_searching")}</div>
+            {!accepted && <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45, marginTop: 2 }}>{t("rd_wait_sub")}</div>}
+          </div>
+          {ride.fare_paise != null && (
+            <span style={{ fontSize: 20, fontWeight: 800, color: T.ink, flexShrink: 0 }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</span>
+          )}
+        </div>
+        {accepted && (
+          <div style={{ margin: "12px 0 0", padding: "10px 12px", background: "#F3F6FA", borderRadius: 12 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
+            {ride.other_vehicle && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 1 }}>{ride.other_vehicle}</div>}
+          </div>
+        )}
+        <Timeline pick={ride.pick_text} drop={ride.drop_text} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {vTrade && <span style={{ fontSize: 12.5, fontWeight: 800, color: T.ink, background: "#F3F4F6", borderRadius: 14, padding: "5px 11px" }}>{vehicleLabel(vTrade, lang)}</span>}
+          {ride.fare_paise != null && <span style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft }}>{String(t("rdr_fare")).replace("{n}", Math.round(ride.fare_paise / 100))}</span>}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+          {accepted && ride.other_phone && <a href={`tel:${ride.other_phone}`} style={{ ...linkBtn(T.green), flex: 1, textAlign: "center", minHeight: 48 }}>{t("rd_call")}</a>}
+          <Btn kind="ghost" full={!accepted || !ride.other_phone} disabled={busy} onClick={cancel} style={{ color: "#B91C1C", borderColor: "#FCA5A5" }}>{t("rd_cancel")}</Btn>
+        </div>
+        {!accepted && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 700, color: T.brandDark, minHeight: 32, display: "flex", alignItems: "center" }}>{t("rd_alerts_more")}</summary>
+            <div style={{ marginTop: 6 }}><AlertsCard api={api} compact /></div>
+          </details>
+        )}
+      </div>
+    );
     return (
       <div style={wrap}>
-        <div style={{ ...card, border: `2px solid ${accepted ? T.green : T.brandDark}` }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: accepted ? T.green : T.brandDark, marginBottom: 6 }}>
-            {accepted ? t("rd_found") : t("rd_searching")}
-          </div>
-          {!accepted && <AlertsCard api={api} compact />}
-          {accepted ? (
-            <>
-              <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
-              {ride.other_vehicle && <div style={{ fontSize: 14, color: T.inkSoft, marginTop: 2 }}>{ride.other_vehicle}</div>}
-            </>
-          ) : (
-            <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55 }}>{t("rd_wait_sub")}</div>
-          )}
-          {accepted && <PassengerLive api={api} ride={ride} />}
-          <Route pick={ride.pick_text} drop={ride.drop_text} />
-          {ride.fare_paise != null && (
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: T.brandDark, marginBottom: 8 }}>
-              {String(t("rdr_fare")).replace("{n}", Math.round(ride.fare_paise / 100))}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {accepted && ride.other_phone && <a href={`tel:${ride.other_phone}`} style={linkBtn(T.green)}>{t("rd_call")}</a>}
-            <Btn kind="ghost" disabled={busy} onClick={cancel}>{t("rd_cancel")}</Btn>
-          </div>
-        </div>
-        {!accepted && <NearbyDrivers api={api} pick={pick} state={place && place.state} slugs={null} vehicle="any"
-                                     onlineIds={new Set(online.map((d) => d.id))} onlineRows={online} fares={fares} trip={null} />}
+        {accepted && <PassengerLive api={api} ride={ride} />}
+        {!accepted && hasPos ? (
+          <NearbyDrivers api={api} pick={{ lat: ride.pick_lat, lng: ride.pick_lng }} drop={dropPt} state={place && place.state} slugs={null}
+                         vehicle={ride.vehicle || "any"} onlineIds={new Set(online.map((d) => d.id))} onlineRows={online}
+                         fares={fares} trip={null} between={sheet} />
+        ) : sheet}
       </div>
     );
   }
@@ -257,6 +277,40 @@ function Label({ dot, text }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 800, color: T.inkSoft, margin: "0 0 6px" }}>
       <span style={{ width: 10, height: 10, borderRadius: "50%", background: dot }} /> {text}
+    </div>
+  );
+}
+
+// Pickup and drop as a ride-app timeline: green dot, a line, red square, the
+// place name bold and the rest of the address lighter.
+function Timeline({ pick, drop }) {
+  const split = (txt) => {
+    const x = String(txt || "");
+    const i = x.indexOf(",");
+    return i < 0 ? [x, ""] : [x.slice(0, i), x.slice(i + 1).trim()];
+  };
+  const row = (txt, shape, color, label) => {
+    const [a, b] = split(txt);
+    return (
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <span style={{ width: 16, display: "flex", justifyContent: "center", paddingTop: 4, flexShrink: 0 }}>
+          <span style={{ width: 12, height: 12, background: color, borderRadius: shape === "dot" ? "50%" : 3 }} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 11.5, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+          <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.3, overflowWrap: "anywhere" }}>{a}</span>
+          {b && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, overflowWrap: "anywhere" }}>{b}</span>}
+        </span>
+      </div>
+    );
+  };
+  const { t } = useI18n();
+  return (
+    <div style={{ margin: "14px 0 12px", position: "relative" }}>
+      <span style={{ position: "absolute", left: 7, top: 22, bottom: 30, width: 2, background: "#D1D5DB" }} />
+      {row(pick, "dot", "#16A34A", t("rd_pick"))}
+      <div style={{ height: 14 }} />
+      {row(drop, "sq", "#DC2626", t("rd_drop"))}
     </div>
   );
 }
