@@ -46,4 +46,4 @@ $fn$;
 revoke all on function public.services_job_accept(uuid) from public, anon, authenticated;
 grant execute on function public.services_job_accept(uuid) to authenticated;
 notify pgrst, 'reload schema';
-select 'part 2 of 3 done' as "142_part2";
+select 'part 2 of 2 done' as "142_part2";

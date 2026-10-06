@@ -76,4 +76,4 @@ begin
 end;
 $fn$;
 notify pgrst, 'reload schema';
-select 'part 1 of 3 done' as "142_part1";
+select 'part 1 of 2 done' as "142_part1";

@@ -1,6 +1,8 @@
--- 142 part 3: a delivery order that is accepted posts a rider job with a
--- delivery fee: 10 rupees a km (road estimate, 1.3 times the straight line),
--- at least 20 rupees. Replaces 117 part 7.
+-- 143 part 4: a delivery order that is accepted posts a rider job with the
+-- delivery fee charged to the customer. Run after 143 part 1 (it makes the fee
+-- function). Replaces 117 part 7.
+alter table public.services_orders add column if not exists delivery_fee_paise int not null default 0;
+
 create or replace function public.services_order_update(p_order uuid, p_action text)
 returns table (ok boolean, reason text)
 language plpgsql
@@ -36,9 +38,8 @@ begin
     get diagnostics v_n = row_count;
     if v_n > 0 and p_action = 'accept' and o.mode = 'delivery'
        and exists (select 1 from public.services_workers w where w.id = o.worker_id and w.auto_rider) then
-      select case when s.lat is null or o.lat is null then 3000
-                  else greatest(2000, round(public.services_km(s.lat, s.lng, o.lat, o.lng)::numeric * 1.3 * 1000)::int) end
-        into v_fee from public.services_workers s where s.id = o.worker_id;
+      v_fee := case when o.delivery_fee_paise > 0 then o.delivery_fee_paise
+                    else public.services_delivery_fee(o.worker_id, o.lat, o.lng) end;
       insert into public.services_jobs (poster_id, poster_work, note, drop_text, fee_paise)
       select v_me, o.worker_id,
              left('Order: ' || coalesce((select string_agg(l.qty || ' x ' || l.name, ', ')
@@ -55,4 +56,4 @@ $fn$;
 revoke all on function public.services_order_update(uuid, text) from public, anon, authenticated;
 grant execute on function public.services_order_update(uuid, text) to authenticated;
 notify pgrst, 'reload schema';
-select 'part 3 of 3 done' as "142_part3";
+select 'part 4 of 4 done' as "143_part4";

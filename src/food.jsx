@@ -422,6 +422,9 @@ function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, plac
   const [msg, setMsg] = useState(null);
   const signedIn = !!(user && user.id);
   const addrText = addr ? (addr.address || addr.area || "") : "";
+  // The delivery fee is set by the server when the order is placed (10 rupees
+  // a km, at least 20); this is the same sum, shown before ordering.
+  const feeRs = mode === "delivery" ? Math.max(20, Math.round((row.distance_km != null ? Number(row.distance_km) : 2.3) * 1.3 * 10)) : 0;
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
@@ -455,6 +458,16 @@ function CartSheet({ api, row, eat, kind, info, lines, cart, setQty, total, plac
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 800, margin: "12px 0" }}>
           <span>{t("st_total")}</span><span>{rupees(total)}</span>
         </div>
+        {mode === "delivery" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+              <span>{t("st_fee")}</span><span>~{"\u20B9"}{feeRs}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
+              <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(total / 100) + feeRs}</span>
+            </div>
+          </>
+        )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {[["delivery", "st_delivery"], ["pickup", "st_pickup"]].map(([k, label]) => (
             <button key={k} onClick={() => setMode(k)} aria-pressed={mode === k} style={{
@@ -515,7 +528,9 @@ export function MyOrdersSheet({ api, onClose }) {
               <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
             </div>
             <Lines lines={o.lines} />
-            <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {t(o.mode === "pickup" ? "st_pickup" : "st_delivery")}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {t(o.mode === "pickup" ? "st_pickup" : "st_delivery")}</div>
+            {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</b></div>}
+            <OrderTrack o={o} />
             {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ color: T.brandDark, fontWeight: 700, fontSize: 14 }}>{o.other_phone}</a>}
             {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
               <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
@@ -533,6 +548,32 @@ export function MyOrdersSheet({ api, onClose }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Where the order is, as a row of steps. Delivery: placed, accepted, on the way
+// with a rider (out for delivery once picked up), delivered. Pickup: placed,
+// accepted, ready, collected.
+function OrderTrack({ o }) {
+  const { t } = useI18n();
+  if (["rejected", "cancelled"].includes(o.status)) return null;
+  const delivery = o.mode === "delivery";
+  const steps = delivery
+    ? [t("st_status_placed"), t("st_status_accepted"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
+    : [t("st_status_placed"), t("st_status_accepted"), t("st_status_ready"), t("st_status_delivered")];
+  const at = o.status === "delivered" ? 3
+    : delivery ? (o.rider_name || o.job_status === "picked_up" ? 2 : o.status === "placed" ? 0 : 1)
+    : o.status === "ready" ? 2 : o.status === "accepted" ? 1 : 0;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
+      {steps.map((label, i) => (
+        <div key={i} style={{ flex: 1, textAlign: "center", position: "relative" }}>
+          {i > 0 && <span style={{ position: "absolute", top: 9, right: "50%", width: "100%", height: 3, background: i <= at ? "#16A34A" : "#E1E5EA" }} />}
+          <span style={{ position: "relative", display: "inline-block", width: 20, height: 20, borderRadius: "50%", background: i <= at ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: "20px" }}>{i <= at ? "\u2713" : ""}</span>
+          <div style={{ fontSize: 11, fontWeight: i === at ? 800 : 600, color: i <= at ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 3 }}>{label}</div>
+        </div>
+      ))}
     </div>
   );
 }
