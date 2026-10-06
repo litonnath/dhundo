@@ -23,6 +23,7 @@ import { T, Icon, Btn, Notice, SignupHelp } from "./ui.jsx";
 import { SignInGate } from "./start.jsx";
 import { useI18n } from "./i18n.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
+import MapPicker from "./mappicker.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
 
@@ -46,7 +47,7 @@ export function useAvailability(api, enabled) {
   const consent = useConsent();
   const [s, setS] = useState({
     loaded: false, online: false, until: null, seenAt: null,
-    visible: true, busy: false, error: null,
+    visible: true, busy: false, finding: false, error: null,
   });
   const pos = useRef(null);       // latest fix from the phone
   const sent = useRef(null);      // position last sent, and when
@@ -110,7 +111,7 @@ export function useAvailability(api, enabled) {
                           accuracy: g.coords.accuracy };
           beat(false);
         },
-        () => patch({ error: "location" }),
+        () => { if (!pos.current) patch({ error: "location" }); },
         { enableHighAccuracy: true, maximumAge: 30000, timeout: 30000 }
       );
     }
@@ -125,29 +126,31 @@ export function useAvailability(api, enabled) {
     };
   }, [enabled, s.online, beat, consent.tick]);
 
-  const goOnline = useCallback(async (hours) => {
-    patch({ busy: true, error: null });
-    if (!(await consent.ask("live"))) { patch({ busy: false, error: "consent" }); return; }
-    const geo = typeof navigator !== "undefined" && navigator.geolocation;
-    if (!geo) { patch({ busy: false, error: "location" }); return; }
-    geo.getCurrentPosition(
-      async (g) => {
-        const p = { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy };
-        pos.current = p;
-        try {
-          const r = one(await api.setAvailability(true, p, hours));
-          if (r && r.ok) {
-            sent.current = { ...p, at: Date.now() };
-            patch({ online: true, until: r.online_until, seenAt: new Date().toISOString(),
-                    visible: r.visible !== false, busy: false });
-          } else {
-            patch({ busy: false, error: (r && r.reason) || "failed" });
-          }
-        } catch (e) {
-          patch({ busy: false, error: e && e.code === "consent_required" ? "consent" : "failed" });
+  const goOnline = useCallback(async (hours, manual) => {
+    patch({ busy: true, finding: !manual, error: null });
+    if (!(await consent.ask("live"))) { patch({ busy: false, finding: false, error: "consent" }); return; }
+    const send = async (p) => {
+      pos.current = p;
+      try {
+        const r = one(await api.setAvailability(true, p, hours));
+        if (r && r.ok) {
+          sent.current = { ...p, at: Date.now() };
+          patch({ online: true, until: r.online_until, seenAt: new Date().toISOString(),
+                  visible: r.visible !== false, busy: false, finding: false });
+        } else {
+          patch({ busy: false, finding: false, error: (r && r.reason) || "failed" });
         }
-      },
-      () => patch({ busy: false, error: "location" }),
+      } catch (e) {
+        patch({ busy: false, finding: false, error: e && e.code === "consent_required" ? "consent" : "failed" });
+      }
+    };
+    // A position the driver typed or pinned themselves, instead of the phone's.
+    if (manual) { await send({ lat: manual.lat, lng: manual.lng, accuracy: 50 }); return; }
+    const geo = typeof navigator !== "undefined" && navigator.geolocation;
+    if (!geo) { patch({ busy: false, finding: false, error: "location" }); return; }
+    geo.getCurrentPosition(
+      (g) => send({ lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy }),
+      () => patch({ busy: false, finding: false, error: "location" }),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
     );
   }, [api, consent.ask]);
@@ -183,6 +186,7 @@ function timeOf(iso, lang) {
 export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing, extra = null }) {
   const { t, lang } = useI18n();
   const [hours, setHours] = useState(4);
+  const [pinOpen, setPinOpen] = useState(false);
   const [, tick] = useState(0);
 
   // Re-render every 30 s so "updated 2 min ago" stays honest.
@@ -275,6 +279,15 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
           {avail.busy ? t("au_working") : on ? t("av_stop") : t("av_go")}
         </Btn>
 
+        {!on && (avail.finding || avail.error === "location") && (
+          <div style={{ marginTop: 12, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5 }}>
+            {avail.finding && <div style={{ fontWeight: 700 }}>{t("av_finding")}</div>}
+            <button onClick={() => setPinOpen(true)} style={{ marginTop: 4, background: "none", border: "none", padding: 4, color: T.brandDark, fontWeight: 800, fontSize: 14, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>
+              {t("av_enter")}
+            </button>
+          </div>
+        )}
+
         {on && mins !== null && (
           <div style={{ fontSize: 12.5, color: T.inkFaint, marginTop: 12 }}>
             {mins < 1 ? t("av_seen_now") : t("av_seen").replace("{n}", String(mins))}
@@ -282,6 +295,10 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
         )}
       </div>
 
+      {pinOpen && (
+        <MapPicker start={null} onCancel={() => setPinOpen(false)}
+                   onConfirm={(pt) => { setPinOpen(false); avail.goOnline(hours, pt); }} />
+      )}
       {avail.error === "location" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("av_need_loc")}</Notice></div>}
       {avail.error === "consent" && <div style={{ marginTop: 14 }}><Notice tone="bad">{t("cs_server")}</Notice></div>}
       {avail.error && avail.error !== "location" && avail.error !== "consent" && (
