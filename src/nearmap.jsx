@@ -278,7 +278,6 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
     const id = setInterval(pull, 6000);
     return () => { live = false; clearInterval(id); };
   }, [api, idsKey]);
-  if (!pick || typeof pick.lat !== "number") return null;
   // Drivers who are online right now are always included, even when the
   // ordinary search did not return them.
   const have = new Set((rows || []).map((r) => r.id));
@@ -286,6 +285,25 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
   const sorted = shown.slice().sort((a, b) => (onlineIds.has(b.id) ? 1 : 0) - (onlineIds.has(a.id) ? 1 : 0)
     || (Number(a.distance_km ?? 1e9) - Number(b.distance_km ?? 1e9)));
+  // The nearest driver who is live, and how long he needs to reach the pickup:
+  // by road when the routing service answers, a straight-line estimate if not.
+  const pickOk = !!pick && typeof pick.lat === "number";
+  const liveList = (!pickOk ? [] : sorted.filter((r) => pos[r.id])).map((r) => ({ id: r.id, km: kmBetween(pick, pos[r.id]), at: pos[r.id] })).sort((a, b) => a.km - b.km);
+  const near = liveList[0] || null;
+  const [roadMin, setRoadMin] = useState(null);
+  const nearKey = near ? `${near.id}:${near.at.lat.toFixed(3)},${near.at.lng.toFixed(3)}` : "";
+  useEffect(() => {
+    setRoadMin(null);
+    if (!near || !pickOk) return undefined;
+    const ctl = new AbortController();
+    fetch(`${OSRM}${near.at.lng},${near.at.lat};${pick.lng},${pick.lat}?overview=false`, { signal: ctl.signal })
+      .then((r) => r.json())
+      .then((j) => { const r = j && j.routes && j.routes[0]; if (r) setRoadMin(Math.max(1, Math.round(r.duration / 60))); })
+      .catch(() => {});
+    return () => ctl.abort();
+  }, [nearKey, pick && pick.lat, pick && pick.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!pickOk) return null;
+  const info = { count: liveList.length, min: near ? (roadMin != null ? roadMin : etaMin(near.km)) : null, km: near ? near.km : null };
   const hasDrop = drop && typeof drop.lat === "number";
   const markers = [{ id: "me", kind: "me", lat: pick.lat, lng: pick.lng }].concat(hasDrop ? [{ id: "drop", kind: "drop", lat: drop.lat, lng: drop.lng }] : []).concat(
     sorted.filter((r) => pos[r.id]).map((r) => ({
@@ -297,7 +315,7 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
     <div style={{ marginTop: 18 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 10px" }}>{t("rd_nearby")}{sorted.length ? ` (${sorted.length})` : ""}</h2>
       <UberMap markers={markers} lines={hasDrop ? [{ pts: [[pick.lat, pick.lng], [drop.lat, drop.lng]] }] : []} height="46vh" onSelect={(id) => { if (id !== "me" && id !== "drop") setSel(id); }} />
-      {between}
+      {typeof between === "function" ? between(info) : between}
       {rows !== null && sorted.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6, marginTop: 10 }}>{t("rd_nearby_none")}</div>}
       <div style={{ marginTop: 10 }}>
         {sorted.map((d) => {

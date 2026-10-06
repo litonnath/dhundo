@@ -133,7 +133,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     const hasPos = typeof ride.pick_lat === "number" && typeof ride.pick_lng === "number";
     const dropPt = typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null;
     const vTrade = allVeh.find((x) => x.slug === ride.vehicle);
-    const sheet = (
+    const sheetFor = (info) => (
       <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 6px 22px rgba(15,23,42,0.10)", padding: "16px 16px 14px", margin: "12px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ position: "relative", width: 14, height: 14, flexShrink: 0 }}>
@@ -152,6 +152,16 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
           <div style={{ margin: "12px 0 0", padding: "10px 12px", background: "#F3F6FA", borderRadius: 12 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
             {ride.other_vehicle && <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 1 }}>{ride.other_vehicle}</div>}
+          </div>
+        )}
+        {!accepted && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 0", padding: "10px 12px", background: info && info.count ? "#ECFDF3" : "#FFF7E6", borderRadius: 12 }}>
+            <span style={{ fontSize: 22 }}>{"\u{1F3CD}\u{FE0F}"}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.35 }}>
+              {info && info.count
+                ? String(t("rd_eta")).replace("{n}", info.min)
+                : t("rd_eta_none")}
+            </span>
           </div>
         )}
         <Timeline pick={ride.pick_text} drop={ride.drop_text} />
@@ -177,8 +187,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         {!accepted && hasPos ? (
           <NearbyDrivers api={api} pick={{ lat: ride.pick_lat, lng: ride.pick_lng }} drop={dropPt} state={place && place.state} slugs={null}
                          vehicle={ride.vehicle || "any"} onlineIds={new Set(online.map((d) => d.id))} onlineRows={online}
-                         fares={fares} trip={null} between={sheet} />
-        ) : sheet}
+                         fares={fares} trip={null} between={sheetFor} />
+        ) : sheetFor(null)}
       </div>
     );
   }
