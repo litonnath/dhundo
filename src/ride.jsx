@@ -365,15 +365,30 @@ function RiderSettings({ api, onSaved }) {
   );
 }
 
+// The driver's setup, settings and alerts: lives under the map and requests.
+export function RideTools({ api, online }) {
+  const { t } = useI18n();
+  const [rider, setRiderInfo] = useState(null);
+  const loadRider = useCallback(() => { api.myRider().then((r) => setRiderInfo(one(r) || {})).catch(() => {}); }, [api]);
+  useEffect(loadRider, [loadRider]);
+  return (
+    <div style={{ marginTop: 6 }}>
+      <SetupCard steps={rider ? [
+        { done: rider.per_km_rupees != null, label: t("su_fare") },
+        { done: !!online, label: t("su_online") },
+      ] : []} />
+      <RiderSettings api={api} onSaved={loadRider} />
+      <AlertsCard api={api} />
+    </div>
+  );
+}
+
 export function RideRequests({ api, online, trades = [] }) {
   const { t, lang } = useI18n();
   const [rides, setRides] = useState([]);
   const [mine, setMine] = useState([]);
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState("");
-  const [rider, setRiderInfo] = useState(null);
-  const loadRider = useCallback(() => { api.myRider().then((r) => setRiderInfo(one(r) || {})).catch(() => {}); }, [api]);
-  useEffect(loadRider, [loadRider]);
 
   const load = useCallback(async () => {
     try {
@@ -384,7 +399,7 @@ export function RideRequests({ api, online, trades = [] }) {
   }, [api]);
   useEffect(() => {
     load();
-    const id = setInterval(load, online ? 6000 : 30000);
+    const id = setInterval(load, online ? 4000 : 30000);
     return () => clearInterval(id);
   }, [load, online]);
 
@@ -419,7 +434,7 @@ export function RideRequests({ api, online, trades = [] }) {
   };
 
   return (
-    <div style={{ marginTop: 18 }}>
+    <div style={{ marginTop: 4 }}>
       {mine.map((r) => (
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
@@ -436,14 +451,8 @@ export function RideRequests({ api, online, trades = [] }) {
           </div>
         </div>
       ))}
-      <SetupCard steps={rider ? [
-        { done: rider.per_km_rupees != null, label: t("su_fare") },
-        { done: !!online, label: t("su_online") },
-      ] : []} />
-      <RiderSettings api={api} onSaved={loadRider} />
-      <AlertsCard api={api} />
-      <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>
-      {online && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (() => {
+      {online && !busyNow && <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>}
+      {online && !busyNow && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (() => {
         const cur = sorted.find((r) => r.id === selId) || sorted[0];
         const me = { lat: sorted[0].my_lat, lng: sorted[0].my_lng };
         const fare = (r) => (r.fare_paise != null ? `\u20B9${Math.round(r.fare_paise / 100)}` : "");
@@ -467,7 +476,7 @@ export function RideRequests({ api, online, trades = [] }) {
         );
       })()}
       {msg && <Notice tone="bad">{msg}</Notice>}
-      {!online ? (
+      {busyNow ? null : !online ? (
         <Notice tone="info">{t("jb_offline")}</Notice>
       ) : rides.length === 0 ? (
         <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6 }}>{t("rdr_none")}</div>

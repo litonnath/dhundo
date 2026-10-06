@@ -40,7 +40,7 @@ import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { TileArt } from "./scenes.jsx";
-import { RideScreen, RideRequests } from "./ride.jsx";
+import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
@@ -2929,7 +2929,7 @@ export default function ServicesPage({
     let live = true;
     const pull = () => api.ridesNearby().then((r) => { if (live) setRideReqs(Array.isArray(r) ? r : r ? [r] : []); }).catch(() => {});
     pull();
-    const id = setInterval(pull, 8000);
+    const id = setInterval(pull, 4000);
     return () => { live = false; clearInterval(id); };
   }, [api, signedIn, hasListing, isDriver, avail.online]);
   const rideKey = rideReqs.map((r) => r.id).join(",");
@@ -3103,11 +3103,12 @@ export default function ServicesPage({
           extra={(() => {
             const tr = trades.find((x) => x.slug === myTrade) || {};
             if (!signedIn || !hasListing || isAdmin) return null;
-            if (tr.group_name === "Drivers") return <><RideRequests api={api} online={avail.online} trades={trades} /><RatesCard api={api} /><RiderJobs api={api} online={avail.online} /></>;
+            if (tr.group_name === "Drivers") return <><RideTools api={api} online={avail.online} /><RatesCard api={api} /><RiderJobs api={api} online={avail.online} /></>;
             if (tr.kind === "supplier" || tr.group_name === "Suppliers" || tr.group_name === "Eat & Stay")
               return <><OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} /><ShopJobs api={api} hasListing={hasListing} /></>;
             return <RatesCard api={api} />;
           })()}
+          top={signedIn && hasListing && !isAdmin && isDriver ? <RideRequests api={api} online={avail.online} trades={trades} /> : null}
           avail={avail} signedIn={signedIn} hasListing={hasListing}
           onSignIn={onSignIn}
           onList={() => setTab("add")}

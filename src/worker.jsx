@@ -253,7 +253,7 @@ function WhereCard({ where, saved, onChange, onPhone, busy }) {
   );
 }
 
-export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing, extra = null }) {
+export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOpenListing, extra = null, top = null }) {
   const { t, lang } = useI18n();
   const [hours, setHours] = useState(4);
   const [pinOpen, setPinOpen] = useState(false);
@@ -300,6 +300,7 @@ export function WorkerHome({ avail, signedIn, hasListing, onSignIn, onList, onOp
 
   return wrap(
     <>
+      {top}
       <div style={{
         background: on ? T.greenSoft : T.white,
         border: `1.5px solid ${on ? "rgba(18,128,74,0.35)" : T.line}`,
