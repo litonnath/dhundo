@@ -307,12 +307,28 @@ function Promo({ info, small = false }) {
   );
 }
 
+// What a place looks like with no photo of its own: a warm banner with a big
+// emoji for the kind of food, not the owner's profile picture.
+function coverLook(row, eat) {
+  const k = `${row.trade_slug || ""} ${row.trade_name || ""}`.toLowerCase();
+  if (!eat) return ["#16A34A", "#0F766E", "\u{1F6CD}\u{FE0F}"];
+  if (/tea|snack|chai/.test(k)) return ["#B45309", "#D97706", "\u2615"];
+  if (/bak|sweet|cake/.test(k)) return ["#BE185D", "#F472B6", "\u{1F370}"];
+  if (/tiffin|home/.test(k)) return ["#0F766E", "#34D399", "\u{1F371}"];
+  if (/biryani|fast/.test(k)) return ["#B91C1C", "#F97316", "\u{1F354}"];
+  if (/dhaba|hotel/.test(k)) return ["#9A3412", "#F59E0B", "\u{1F35B}"];
+  if (/cater/.test(k)) return ["#6D28D9", "#A78BFA", "\u{1F37D}\u{FE0F}"];
+  return ["#C2410C", "#FB923C", "\u{1F37D}\u{FE0F}"];
+}
+
 function Cover({ row, eat, height }) {
-  const src = (row.photos && row.photos[0]) || row.avatar_url;
-  return src ? (
-    <span style={{ display: "block", height, background: `center/cover url(${src}) ${T.line}` }} />
-  ) : (
-    <TileArt k={eat ? "eat" : "shop"} style={{ aspectRatio: "auto", height }} />
+  const src = row.photos && row.photos[0];
+  if (src) return <span style={{ display: "block", height, background: `center/cover url(${src}) ${T.line}` }} />;
+  const [c1, c2, emoji] = coverLook(row, eat);
+  return (
+    <span style={{ display: "flex", alignItems: "center", justifyContent: "center", height, background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+      <span style={{ fontSize: Math.min(72, height * 0.45), filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.25))" }}>{emoji}</span>
+    </span>
   );
 }
 
@@ -355,13 +371,21 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             background: "rgba(255,255,255,0.95)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
           }}><Icon name="back" size={20} /></button>
         </div>
-        <div style={{ padding: "14px 16px 4px", background: T.white, borderBottom: `1px solid ${T.line}` }}>
-          <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, color: T.ink }}>{row.display_name}</h1>
-          <div style={{ fontSize: 14, color: T.inkSoft, margin: "3px 0 12px" }}>
-            {[row.trade_name, row.locality || row.area || row.city].filter(Boolean).join(" · ")}
-            {row.distance_km != null ? ` · ${String(t("st_away")).replace("{n}", row.distance_km)}` : ""}
+        <div style={{ position: "relative", marginTop: -22, borderRadius: "22px 22px 0 0", padding: "16px 16px 6px", background: T.white, borderBottom: `1px solid ${T.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {row.avatar_url && <span style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, border: "3px solid #fff", boxShadow: "0 2px 8px rgba(0,0,0,0.18)", background: `center/cover url(${row.avatar_url}) ${T.line}` }} />}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: T.ink, lineHeight: 1.2, overflowWrap: "anywhere" }}>{row.display_name}</h1>
+              <span style={{ display: "block", fontSize: 14, color: T.inkSoft, marginTop: 2 }}>
+                {[row.trade_name, row.locality || row.area || row.city].filter(Boolean).join(" \u00B7 ")}
+              </span>
+            </span>
           </div>
-          {info && <div style={{ margin: "-8px 0 12px" }}><OpenLine info={info} t={t} /></div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "12px 0 14px" }}>
+            {row.distance_km != null && <span style={{ fontSize: 12.5, fontWeight: 800, color: T.brandDark, background: T.brandSoft, borderRadius: 14, padding: "5px 11px" }}>{String(t("st_away")).replace("{n}", row.distance_km)}</span>}
+            {info && info.delivery_mins && <span style={{ fontSize: 12.5, fontWeight: 800, color: T.ink, background: "#F3F4F6", borderRadius: 14, padding: "5px 11px" }}>{String(t("st_mins")).replace("{n}", info.delivery_mins)}</span>}
+            {info && <span style={{ display: "inline-flex" }}><OpenLine info={info} t={t} /></span>}
+          </div>
           {row.about && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.55, margin: "-6px 0 12px", overflowWrap: "anywhere" }}>{row.about}</div>}
           {info && info.promo_text && <Promo info={info} />}
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
@@ -387,15 +411,18 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             </>)
           ) : Object.keys(byCat).map((cat) => (
             <div key={cat} style={{ marginBottom: 18 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 8px", color: T.ink }}>{catering && cat === "Menu" ? t("fk_pkgs") : cat}</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 10px", color: T.ink, display: "flex", alignItems: "baseline", gap: 8 }}>
+                {catering && cat === "Menu" ? t("fk_pkgs") : cat}
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.inkFaint }}>{byCat[cat].length}</span>
+              </h2>
               {byCat[cat].map((m) => (
-                <div key={m.id} style={{ ...card, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div key={m.id} style={{ ...card, display: "flex", gap: 12, alignItems: "flex-start", borderRadius: 16, boxShadow: "0 2px 10px rgba(15,20,25,0.06)" }}>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       {eat && <VegMark veg={m.veg} />}
                       <span style={{ fontSize: 15.5, fontWeight: 700, color: T.ink }}>{m.name}</span>
                     </span>
-                    <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 3 }}>{rupees(m.price_paise)}</span>
+                    <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: T.brandDark, marginTop: 3 }}>{rupees(m.price_paise)}</span>
                     {m.about && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 3, lineHeight: 1.45 }}>{m.about}</span>}
                     {m.bike_ok === false && <span style={{ display: "inline-block", marginTop: 5, fontSize: 11.5, fontWeight: 800, color: "#B45309", background: "#FFF3D6", borderRadius: 8, padding: "2px 8px" }}>{t("sh_big")}</span>}
                   </span>
