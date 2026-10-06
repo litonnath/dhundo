@@ -10,6 +10,7 @@ import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { FormSheet } from "./rates.jsx";
+import { RideChat } from "./ridechat.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { TileArt } from "./scenes.jsx";
@@ -184,6 +185,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return (
       <div style={wrap}>
         {accepted && <PassengerLive api={api} ride={ride} />}
+        {accepted && <RideChat api={api} rideId={ride.id} role="passenger" />}
         {!accepted && hasPos ? (
           <NearbyDrivers api={api} pick={{ lat: ride.pick_lat, lng: ride.pick_lng }} drop={dropPt} state={place && place.state} slugs={null}
                          vehicle={ride.vehicle || "any"} onlineIds={new Set(online.map((d) => d.id))} onlineRows={online}
@@ -425,6 +427,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{r.other_name}</div>
           <DriverLive api={api} ride={r} where={where} />
+          <RideChat api={api} rideId={r.id} role="driver" />
           <Route pick={r.pick_text} drop={r.drop_text} />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("rdr_call_pax")}</a>}

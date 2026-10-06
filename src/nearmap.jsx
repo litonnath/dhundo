@@ -31,6 +31,7 @@ export function DriverMap({ me, pins, height }) {
       if (!st.current.map) {
         st.current.L = L;
         st.current.map = L.map(box.current, { zoomControl: true, attributionControl: true }).setView([me.lat, me.lng], 13);
+        st.current.map.attributionControl.setPrefix(false); ensureCss();
         L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
@@ -86,7 +87,7 @@ function ensureCss() {
   if (document.getElementById(STYLE_ID)) return;
   const el = document.createElement("style");
   el.id = STYLE_ID;
-  el.textContent = "@keyframes dhPulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}.dh-pulse{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:rgba(37,99,235,.45);animation:dhPulse 2s ease-out infinite}";
+  el.textContent = "@keyframes dhPulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}.leaflet-control-attribution{font-size:9px!important;opacity:.5;background:transparent!important;padding:0 4px!important}.dh-pulse{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:rgba(37,99,235,.45);animation:dhPulse 2s ease-out infinite}";
   document.head.appendChild(el);
 }
 
@@ -386,6 +387,7 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
       if (dead || !box.current) return;
       if (!st.current.map) {
         st.current.map = L.map(box.current).setView([pick.lat, pick.lng], 14);
+        st.current.map.attributionControl.setPrefix(false); ensureCss();
         L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }

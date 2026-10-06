@@ -147,6 +147,7 @@ export default function MapPicker({ start, state, onCancel, onConfirm }) {
       map.on("move", update);
       map.on("moveend", update);
 
+      map.attributionControl.setPrefix(false);
       mapRef.current = map;
       if (!cancelled) setReady(true);
       // Leaflet mis-sizes itself inside a sheet that animates in.

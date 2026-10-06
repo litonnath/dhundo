@@ -1,0 +1,69 @@
+// ---------------------------------------------------------------------------
+// MESSAGES ON A RIDE: the passenger and the driver of an accepted ride can
+// text each other, with one-tap replies for the usual things ("I have
+// reached", "Are you at your location?"). Every message is saved in the
+// database, so the conversation is still there if the screen is reopened.
+// ---------------------------------------------------------------------------
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { T, input } from "./ui.jsx";
+import { useI18n } from "./i18n.jsx";
+
+const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
+
+export function RideChat({ api, rideId, role }) {
+  const { t } = useI18n();
+  const [msgs, setMsgs] = useState([]);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(true);
+  const end = useRef(null);
+  const load = useCallback(async () => {
+    try { setMsgs(many(await api.rideChatList(rideId))); } catch (_) { /* next tick */ }
+  }, [api, rideId]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 4000);
+    return () => clearInterval(id);
+  }, [load]);
+  useEffect(() => { if (open && end.current) end.current.scrollIntoView({ block: "nearest" }); }, [msgs.length, open]);
+  const send = async (body) => {
+    const b = String(body || "").trim();
+    if (!b || busy) return;
+    setBusy(true);
+    try { await api.rideChatSend(rideId, b); setText(""); await load(); } catch (_) {}
+    setBusy(false);
+  };
+  const quick = role === "driver" ? ["qd1", "qd2", "qd3", "qd4"] : ["qp1", "qp2", "qp3", "qp4"];
+  return (
+    <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", margin: "10px 0" }}>
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} style={{ display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", padding: 0, minHeight: 36, cursor: "pointer", fontFamily: "inherit" }}>
+        <span style={{ flex: 1, textAlign: "left", fontSize: 15, fontWeight: 800, color: T.ink }}>{t("rc_title")}{msgs.length ? ` (${msgs.length})` : ""}</span>
+        <span style={{ fontSize: 14, color: T.inkSoft }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <>
+          <div style={{ maxHeight: 220, overflowY: "auto", margin: "8px 0", display: "flex", flexDirection: "column", gap: 6 }}>
+            {msgs.length === 0 && <div style={{ fontSize: 13, color: T.inkFaint, lineHeight: 1.5 }}>{t("rc_empty")}</div>}
+            {msgs.map((m) => (
+              <div key={m.id} style={{ alignSelf: m.mine ? "flex-end" : "flex-start", maxWidth: "82%", background: m.mine ? "#0A5BB8" : "#EEF1F5", color: m.mine ? "#fff" : T.ink, borderRadius: 14, padding: "7px 11px", fontSize: 14.5, lineHeight: 1.4, overflowWrap: "anywhere" }}>
+                {m.body}
+                <div style={{ fontSize: 10.5, opacity: 0.7, marginTop: 2, textAlign: "right" }}>{new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</div>
+              </div>
+            ))}
+            <div ref={end} />
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+            {quick.map((k) => (
+              <button key={k} disabled={busy} onClick={() => send(t(k))} style={{ minHeight: 38, padding: "0 12px", borderRadius: 19, border: `1.5px solid ${T.line}`, background: "#F7F9FB", color: T.ink, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{t(k)}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input style={{ ...input, flex: 1, marginBottom: 0 }} value={text} maxLength={300} placeholder={t("rc_ph")} aria-label={t("rc_ph")}
+                   onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(text); }} />
+            <button disabled={busy || !text.trim()} onClick={() => send(text)} style={{ minHeight: 48, padding: "0 16px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit", opacity: !text.trim() ? 0.5 : 1 }}>{t("rc_send")}</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
