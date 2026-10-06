@@ -41,11 +41,20 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const hire = mode === "hire";
   // A delivery rider is another service altogether, booked by shops through
   // delivery jobs: not a ride and not a machine for hire.
-  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? !isTravel(x) : isTravel(x)));
+  // Travel offers three vehicles, in this order: bike taxi, taxi / cab, auto.
+  // A plain "car" is not a separate choice, and there is no "any".
+  const rank = (x) => { const k = `${x.slug} ${x.name_en || ""}`.toLowerCase(); return /bike|moto|scooter/.test(k) ? 0 : /taxi|cab/.test(k) ? 1 : 2; };
+  const isPlainCar = (x) => /^car$/i.test(String(x.slug || "").trim()) || /^car$/i.test(String(x.name_en || "").trim());
+  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? !isTravel(x) : isTravel(x) && !isPlainCar(x)))
+    .sort((a, b) => (hire ? 0 : rank(a) - rank(b)));
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [drop, setDrop] = useState(null);
   const [vehicle, setVehicle] = useState("any");
+  const vehicleKey = vehicles.map((v) => v.slug).join(",");
+  useEffect(() => {
+    if (!hire && vehicles.length && !vehicles.some((v) => v.slug === vehicle)) setVehicle(vehicles[0].slug);
+  }, [hire, vehicleKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [fare, setFare] = useState("");
   const [ride, setRide] = useState(null);
   const [online, setOnline] = useState([]);
@@ -321,7 +330,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
 
       <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
       <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", marginBottom: 14 }}>
-        {[{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }].concat(
+        {(hire ? [{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }] : []).concat(
           vehicles.map((x) => ({ slug: x.slug, label: vehicleLabel(x, lang), icon: tradeIcon(x, "drivers"), color: vividFor(x.slug) }))
         ).map((v) => (
           <button key={v.slug} onClick={() => setVehicle(v.slug)} aria-pressed={vehicle === v.slug} style={{
