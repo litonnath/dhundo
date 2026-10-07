@@ -235,8 +235,8 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
         ) : null;
   return (
     <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
-      <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
-        <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 0 18px" }}>
+      <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
+        <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 auto 18px", maxWidth: 440 }}>
           {[["user", "user", t("nm_mode_user")], ["business", "construction", t("nm_mode_biz")]].map(([k, icon, label]) => (
             <button key={k} role="tab" aria-selected={homeMode === k} onClick={() => onHomeMode && onHomeMode(k === "business" ? "offer" : "need")} style={{
               flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 50, borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -246,7 +246,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
           ))}
         </div>
         {homeMode === "business" && (
-          biz ? bizBlock : (
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>{biz ? bizBlock : (
             <button onClick={onOffer} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 88, padding: "14px 16px", borderRadius: 18, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit" }}>
               <span style={{ width: 50, height: 50, borderRadius: 14, background: "#C2410C", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={26} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
@@ -255,15 +255,29 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
               </span>
               <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
             </button>
-          )
+          )}</div>
         )}
         {homeMode !== "business" && (<>
-        <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1.5px solid ${T.line}`, borderRadius: 16, padding: "4px 6px 4px 14px", margin: "0 0 16px" }}>
-          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hm_search_ph")} aria-label={t("hm_search_ph")}
-                 style={{ flex: 1, border: "none", outline: "none", fontSize: 16.5, minHeight: 50, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
-          <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
-        </form>
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: 26, margin: "0 0 22px", color: "#fff",
+                      padding: wide ? "40px 44px 36px" : "24px 18px 22px",
+                      background: "linear-gradient(135deg, #032C61 0%, #0A5BB8 58%, #2E86E6 100%)", boxShadow: "0 16px 40px rgba(5,66,145,0.28)" }}>
+          <span aria-hidden="true" style={{ position: "absolute", right: -50, top: -80, width: 230, height: 230, borderRadius: "50%", background: "linear-gradient(135deg, #FF9A3D, #F87617)", opacity: 0.9 }} />
+          <span aria-hidden="true" style={{ position: "absolute", right: 70, bottom: -90, width: 190, height: 190, borderRadius: "50%", background: "rgba(255,255,255,0.10)" }} />
+          <div style={{ position: "relative", maxWidth: 640 }}>
+            <h1 style={{ fontSize: wide ? 40 : 27, fontWeight: 800, lineHeight: 1.12, margin: "0 0 8px", letterSpacing: "-0.025em" }}>{t("launch_title")}</h1>
+            <p style={{ fontSize: wide ? 17 : 14.5, margin: "0 0 18px", opacity: 0.88 }}>{t("trust_2_s")}</p>
+            <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 18, padding: "5px 6px 5px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)" }}>
+              <Icon name="search" size={21} style={{ color: T.inkFaint }} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hm_search_ph")} aria-label={t("hm_search_ph")}
+                     style={{ flex: 1, border: "none", outline: "none", fontSize: 17, minHeight: 52, background: "transparent", fontFamily: "inherit", minWidth: 0, color: T.ink }} />
+              <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
+            </form>
+            <div style={{ marginTop: 14 }}>
+              <ListenButton style={{ background: "rgba(255,255,255,0.14)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.55)" }}
+                lines={[t("launch_title"), ...TILES.filter((x) => x[0] !== "partner").map((x) => `${t(x[4])}. ${t(x[5])}`), t("hm_earn")]} />
+            </div>
+          </div>
+        </div>
         {liveNow.length > 0 && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 8px" }}>{t("hm_continue")}</div>
@@ -282,25 +296,19 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
             ))}
           </div>
         )}
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "0 0 10px", lineHeight: 1.25 }}>{t("launch_title")}</h1>
-        <div style={{ margin: "0 0 14px" }}>
-          <ListenButton lines={[t("launch_title"), ...TILES.filter((x) => x[0] !== "partner").map((x) => `${t(x[4])}. ${t(x[5])}`), t("hm_earn")]} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${wide ? 320 : 150}px, 1fr))`, gap: wide ? 18 : 12 }}>
           {TILES.filter((x) => x[0] !== "partner").map(([key, icon, fg, bg, label, sub, art]) => (
-            <button key={key} onClick={() => onPick(key)} style={{
-              display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left",
-              padding: 0, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white,
-              cursor: "pointer", fontFamily: "inherit",
+            <button key={key} className="dh-tile" onClick={() => onPick(key)} style={{
+              position: "relative", display: "block", textAlign: "left", padding: 0, overflow: "hidden", borderRadius: 24, border: "none",
+              aspectRatio: wide ? "16 / 10" : "1 / 1.12", cursor: "pointer", fontFamily: "inherit", background: "#111827",
+              boxShadow: "0 8px 22px rgba(15,20,25,0.14)",
             }}>
-              <TileArt k={art} />
-              <span style={{ display: "block", padding: "11px 13px 13px" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 9, color: "#fff", background: fg, flexShrink: 0,
-                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={18} /></span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
-                </span>
-                <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 6 }}>{t(sub)}</span>
+              <TileArt k={art} pos="center" style={{ position: "absolute", inset: 0, aspectRatio: "auto", height: "100%" }} />
+              <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,14,26,0.86) 0%, rgba(8,14,26,0.45) 38%, rgba(8,14,26,0) 66%)" }} />
+              <span style={{ position: "absolute", left: 12, top: 12, width: 42, height: 42, borderRadius: 14, background: fg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}><Icon name={icon} size={22} /></span>
+              <span style={{ position: "absolute", left: 14, right: 14, bottom: 14, color: "#fff" }}>
+                <span style={{ display: "block", fontSize: wide ? 22 : 18, fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.01em" }}>{t(label)}</span>
+                <span style={{ display: "block", fontSize: wide ? 14 : 12.5, lineHeight: 1.35, marginTop: 4, opacity: 0.88 }}>{t(sub)}</span>
               </span>
             </button>
           ))}

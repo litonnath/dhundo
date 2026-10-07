@@ -33,8 +33,8 @@ export const T = {
   ink: "#0F1419",
   inkSoft: "rgba(15,20,25,0.62)",
   inkFaint: "rgba(15,20,25,0.42)",
-  line: "rgba(15,20,25,0.09)",
-  paper: "#F6F8FA",
+  line: "rgba(15,20,25,0.08)",
+  paper: "#F7F7F9",
   white: "#FFFFFF",
   // Sampled from the logo file rather than chosen alongside it. The teal
   // this app started with sat badly next to the mark's blue, and two blues
@@ -1636,11 +1636,12 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
   // a 360px phone the language button was pushed off the edge.
   return (
     <div style={{
-      background: T.white, borderBottom: `1px solid ${T.line}`,
+      background: "rgba(255,255,255,0.92)", borderBottom: `1px solid ${T.line}`,
+      backdropFilter: "saturate(180%) blur(14px)", WebkitBackdropFilter: "saturate(180%) blur(14px)",
       position: "sticky", top: 0, zIndex: 50,
     }}>
       <div style={{
-        maxWidth: 1000, margin: "0 auto", padding: "8px 14px",
+        maxWidth: 1180, margin: "0 auto", padding: "8px 14px",
         display: "flex", alignItems: "center", gap: 10,
       }}>
         <button
@@ -1653,6 +1654,12 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         </button>
         <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
         <LocationPill place={place} onOpen={onOpenLocation} />
+        <span className="dh-deskbar" style={{ display: "none", flex: 1, justifyContent: "center", gap: 6 }}>
+          {[["browse", t("nav_home")], ["orders", t("nav_activity")], ["chats", t("ch_tab")], ["account", t("nav_account")]].map(([k, label]) => {
+            const on = k === "browse" ? ["browse", "market", "work", "mine", "add", "sell", "bizpage"].includes(tab) : k === "account" ? ["account", "profile"].includes(tab) : tab === k;
+            return <button key={k} onClick={() => setTab(k)} style={{ border: "none", background: on ? T.brandSoft : "transparent", color: on ? T.brandDark : T.ink, fontWeight: 800, fontSize: 15, padding: "0 18px", minHeight: 44, borderRadius: 22, cursor: "pointer", fontFamily: "inherit" }}>{label}</button>;
+          })}
+        </span>
         <LanguageSwitch />
         {onOpenNotifications && (
           <button onClick={onOpenNotifications} aria-label="Notifications" style={{

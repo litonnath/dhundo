@@ -19,6 +19,23 @@
     <!-- The first thing anyone sees while the app loads: the round logo on
          Dhundo blue, the same blue as Android's own launch screen, so the
          two join up instead of flashing a tile and then a blank page. -->
+    <style id="dh-theme">
+      html{-webkit-text-size-adjust:100%}
+      body{background:#F7F7F9;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+      h1,h2,h3{letter-spacing:-0.02em}
+      button,a{-webkit-tap-highlight-color:transparent}
+      button{transition:transform .12s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease}
+      button:not(:disabled):active{transform:scale(.975)}
+      input:focus,textarea:focus,select:focus{outline:2px solid #0A5BB8;outline-offset:1px}
+      .dh-tile{transition:transform .2s ease,box-shadow .2s ease}
+      @media (hover:hover){.dh-tile:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(15,20,25,.22) !important}}
+      ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(15,20,25,.2);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+      @media (min-width:900px){
+        nav[aria-label="Dhundo"]{display:none !important}
+        .dh-deskbar{display:flex !important}
+      }
+      @media (max-width:899px){nav[aria-label="Dhundo"]{border-radius:20px 20px 0 0;backdrop-filter:blur(10px)}}
+    </style>
     <style>
       /* Pop-up sheets slide up from the bottom on a phone and sit in the
          middle of the screen on a computer. */
