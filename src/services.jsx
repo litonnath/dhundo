@@ -3094,7 +3094,6 @@ export default function ServicesPage({
         const go = (tb) => () => setTab(tb);
         const bizMode = homeMode === "business";
         const talk = [
-          { icon: "chat", title: t("ch_tab"), badge: inbox.unread, go: go("chats") },
           { icon: "bell", title: t("nt_title"), badge: inbox.alerts + rideReqs.length, go: openNotif },
         ];
         // NORMAL USER: only what a customer uses.
@@ -3118,15 +3117,11 @@ export default function ServicesPage({
         if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
         if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
         if (signedIn) business.push({ icon: "tag", title: t("offer_sell"), go: go("sell") });
-        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }];
-        const partner = { icon: "user", title: t("home_partner"), sub: t("home_partner_sub"), go: () => setPartnerOpen(true) };
         const sections = (bizMode ? [
           { title: t("nm_mode_biz"), rows: business },
           { title: t("ms_activity"), rows: talk },
-          { title: t("ms_money"), rows: [...money, partner] },
         ] : [
           { title: t("ms_activity"), rows: activity },
-          { title: t("ms_money"), rows: [...money, partner] },
         ]).filter((x) => x.rows.length);
         return (
           <MenuSheet api={api} mode={homeMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
@@ -3389,6 +3384,7 @@ export default function ServicesPage({
           onList={() => setTab("add")}
           onOpenProfile={() => setTab("profile")}
           onOpenAds={homeMode === "business" ? () => setTab("sell") : undefined}
+          onPartner={() => setPartnerOpen(true)}
           showCredits={inApp}
           privacy={<PrivacyLinks api={api} />}
         />

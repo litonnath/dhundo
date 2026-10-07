@@ -82,8 +82,6 @@ export function MenuSheet({ api, mode, onMode, onInstall, onAccount, signedIn, o
           <div style={{ fontSize: 12, fontWeight: 800, color: T.inkFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{t("ms_more")}</div>
         </div>
         {signedIn && <AlertsCard api={api} compact />}
-        {row("user", signedIn ? t("nav_account") : t("nav_signin"), null, () => { onAccount(); onClose(); })}
-        {canInstall && row("download", t("install_app"), t("install_sub"), () => { onClose(); onInstall(); })}
         {help && row("help", t("sh_title"), t("sh_menu_sub"), null, help)}
         {row("shield", t("pn_link"), null, null, "/privacy")}
         {CONTACT.phone && row("phone", `${t("ft_call")}: ${CONTACT.phone}`, null, null, `tel:${CONTACT.phone.replace(/[^+\d]/g, "")}`)}
