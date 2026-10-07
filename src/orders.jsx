@@ -12,21 +12,21 @@ import { RiderJobs } from "./hub.jsx";
 import { RideRequests, RideHistory } from "./ride.jsx";
 
 
-export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0 }) {
+export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false }) {
   const { t } = useI18n();
   const [view, setView] = useState("active");
+  const showWork = !!role && bizMode;
   const [part, setPart] = useState(() => {
     let want = null;
     try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "work" && role ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : null;
+    return want === "work" && role ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : showWork ? "work" : null;
   });
   const workKey = role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
-  const tiles = [
-    role ? ["work", "bag", t(workKey), badge] : null,
+  const tiles = (showWork ? [["work", "bag", t(workKey), badge]] : [
     ["mine", "bag", t("or_mine"), 0],
     ["items", "tag", t("mb_mine"), 0],
     ["rides", "drivers", t("rh_title"), 0],
-  ].filter(Boolean);
+  ]);
   const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 120px" }}>

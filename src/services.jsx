@@ -3092,16 +3092,23 @@ export default function ServicesPage({
         const isOwner = biz && (myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier");
         const isRider = biz && (myDriverKind === "delivery" || myDriverKind === "travel");
         const go = (tb) => () => setTab(tb);
-        const activity = [
-          { icon: "bag", title: t("or_title"), sub: t("or_mine"), badge: ordersBadge, go: () => openOrders("mine") },
+        const bizMode = homeMode === "business";
+        const talk = [
           { icon: "chat", title: t("ch_tab"), badge: inbox.unread, go: go("chats") },
           { icon: "bell", title: t("nt_title"), badge: inbox.alerts + rideReqs.length, go: openNotif },
+        ];
+        // NORMAL USER: only what a customer uses.
+        const activity = [
+          { icon: "bag", title: t("or_mine"), badge: ordersBadge, go: () => openOrders("mine") },
           { icon: "tag", title: t("mb_mine"), go: () => openOrders("items") },
+          { icon: "drivers", title: t("rh_title"), go: () => openOrders("rides") },
+          ...talk,
           { icon: "tag", title: t("offer_sell"), go: go("sell") },
         ];
+        // BUSINESS: only what the owner, driver or rider uses.
         const business = [];
         if (isOwner) {
-          business.push({ icon: "bag", title: t("m_received"), go: () => openOrders("work") });
+          business.push({ icon: "bag", title: t("m_received"), badge: ordersBadge, go: () => openOrders("work") });
           business.push({ icon: "edit", title: t("m_menu_items"), sub: t("m_hours"), go: () => openBiz("menu") });
         }
         if (biz && myDriverKind === "delivery") business.push({ icon: "drivers", title: t("m_rider_jobs"), go: () => openOrders("work") });
@@ -3111,12 +3118,16 @@ export default function ServicesPage({
         if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
         if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
         if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
-        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }, { icon: "user", title: t("home_partner"), sub: t("home_partner_sub"), go: () => setPartnerOpen(true) }];
-        const sections = [
+        const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }];
+        const partner = { icon: "user", title: t("home_partner"), sub: t("home_partner_sub"), go: () => setPartnerOpen(true) };
+        const sections = (bizMode ? [
+          { title: t("nm_mode_biz"), rows: business },
+          { title: t("ms_activity"), rows: talk },
+          { title: t("ms_money"), rows: [...money, partner] },
+        ] : [
           { title: t("ms_activity"), rows: activity },
-          business.length ? { title: t("ms_business"), rows: business } : null,
-          { title: t("ms_money"), rows: money },
-        ].filter(Boolean);
+          { title: t("ms_money"), rows: [...money, partner] },
+        ]).filter((x) => x.rows.length);
         return (
           <MenuSheet api={api} mode={homeMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
                      onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
@@ -3288,7 +3299,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage key={ordersKey} badge={ordersBadge} api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} badge={ordersBadge} bizMode={homeMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
