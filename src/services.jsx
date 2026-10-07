@@ -3387,6 +3387,7 @@ export default function ServicesPage({
           onPartner={() => setPartnerOpen(true)}
           showCredits={inApp}
           privacy={<PrivacyLinks api={api} />}
+          extra={signedIn ? <><AlertsCard api={api} compact /><SignupHelp compact /></> : null}
         />
       )}
 
@@ -3408,7 +3409,7 @@ export default function ServicesPage({
       <BottomNav tab={tab} setTab={setTab} online={avail.online}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
-                 onMenu={() => setMenuOpen(true)} chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0}
+                 chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0}
                  ordersLabel={hasListing && !isAdmin && (myDriverKind === "delivery" || myDriverKind === "travel") ? t("or_rider") : null}
                  ordersIcon={hasListing && !isAdmin && (myDriverKind === "delivery" || myDriverKind === "travel") ? "drivers" : "bag"} />
     </div>

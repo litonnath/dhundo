@@ -2479,7 +2479,7 @@ export function waLink(phone) {
 // be spread over two header rows.
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
-  hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, onPartner = null, showCredits = false,
+  hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, onPartner = null, extra = null, showCredits = false,
   privacy = null, phoneOk = null, onVerifyPhone = null, onOpenRequests = null,
 }) {
   const { t } = useI18n();
@@ -2568,6 +2568,8 @@ export function AccountPage({
         {row("download", t("install_app"), onInstall)}
         {account && row("back", t("nav_signout"), onSignOut)}
       </div>
+
+      {extra && <div style={{ marginTop: 14 }}>{extra}</div>}
 
       {/* What the person has allowed, and a way to take it back. */}
       {privacy}
