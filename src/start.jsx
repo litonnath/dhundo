@@ -197,7 +197,7 @@ export function HomeButton({ onClick, label }) {
   );
 }
 
-export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, onSearch }) {
+export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, onSearch, homeMode = "user", onHomeMode }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
@@ -206,16 +206,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
-  return (
-    <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
-      <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
-        <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1.5px solid ${T.line}`, borderRadius: 16, padding: "4px 6px 4px 14px", margin: "0 0 16px" }}>
-          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hm_search_ph")} aria-label={t("hm_search_ph")}
-                 style={{ flex: 1, border: "none", outline: "none", fontSize: 16.5, minHeight: 50, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
-          <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
-        </form>
-        {biz && (
+  const bizBlock = biz ? (
           <div style={{ background: T.white, border: `1px solid ${biz.online ? "#1FA85A" : T.line}`, borderRadius: 20, overflow: "hidden", margin: "0 0 20px", boxShadow: "0 4px 16px rgba(15,20,25,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 16px", background: biz.online ? "#F0FAF4" : "#F7F8FA" }}>
               <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", background: biz.online ? "#1FA85A" : "#9CA3AF", boxShadow: biz.online ? "0 0 0 6px rgba(31,168,90,0.18)" : "none" }}>
@@ -241,7 +232,38 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
             </div>
             <button onClick={biz.onDash} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "#F7F8FA", border: "none", borderTop: `1px solid ${T.line}`, color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 46, cursor: "pointer", fontFamily: "inherit" }}>{t("hm_dash")} <Icon name="chev" size={16} style={{ transform: "rotate(-90deg)" }} /></button>
           </div>
+        ) : null;
+  return (
+    <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
+      <div style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
+        <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 0 18px" }}>
+          {[["user", "user", t("nm_mode_user")], ["business", "construction", t("nm_mode_biz")]].map(([k, icon, label]) => (
+            <button key={k} role="tab" aria-selected={homeMode === k} onClick={() => onHomeMode && onHomeMode(k === "business" ? "offer" : "need")} style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 50, borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 16, fontWeight: 800, background: homeMode === k ? T.white : "transparent", color: homeMode === k ? T.brandDark : T.inkSoft,
+              boxShadow: homeMode === k ? "0 2px 8px rgba(15,20,25,0.12)" : "none",
+            }}><Icon name={icon} size={20} /> {label}</button>
+          ))}
+        </div>
+        {homeMode === "business" && (
+          biz ? bizBlock : (
+            <button onClick={onOffer} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 88, padding: "14px 16px", borderRadius: 18, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ width: 50, height: 50, borderRadius: 14, background: "#C2410C", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={26} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 18, fontWeight: 800, color: T.ink }}>{t("nm_start_biz")}</span>
+                <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{t("hm_earn_sub")}</span>
+              </span>
+              <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
+            </button>
+          )
         )}
+        {homeMode !== "business" && (<>
+        <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1.5px solid ${T.line}`, borderRadius: 16, padding: "4px 6px 4px 14px", margin: "0 0 16px" }}>
+          <Icon name="search" size={20} style={{ color: T.inkFaint }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hm_search_ph")} aria-label={t("hm_search_ph")}
+                 style={{ flex: 1, border: "none", outline: "none", fontSize: 16.5, minHeight: 50, background: "transparent", fontFamily: "inherit", minWidth: 0 }} />
+          <VoiceButton onHeard={(said) => { setQ(said); if (onSearch) onSearch(said); }} />
+        </form>
         {liveNow.length > 0 && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 8px" }}>{t("hm_continue")}</div>
@@ -285,15 +307,16 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
         </div>
         <button onClick={onOffer} style={{
           width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 76, padding: "12px 16px", marginTop: 16,
-          borderRadius: 16, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit",
+          borderRadius: 16, border: `1.5px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
         }}>
-          <span style={{ width: 46, height: 46, borderRadius: 14, background: "#C2410C", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={hasBusiness ? "construction" : "edit"} size={22} /></span>
+          <span style={{ width: 46, height: 46, borderRadius: 14, background: T.brandSoft, color: T.brandDark, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={22} /></span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: T.ink }}>{hasBusiness ? t("hm_mybiz") : t("hm_earn")}</span>
-            <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{hasBusiness ? t("hm_mybiz_sub") : t("hm_earn_sub")}</span>
+            <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: T.ink }}>{t("nm_more")}</span>
+            <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{t("nm_more_sub")}</span>
           </span>
           <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
         </button>
+        </>)}
       </div>
     </div>
   );

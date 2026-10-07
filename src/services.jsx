@@ -543,7 +543,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
 
 // Remembered between visits so Back from Buy something lands on the I need tiles.
 let lastSide = null;
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, homeMode = "user", onHomeMode }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -903,7 +903,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker" && section !== "ride" && section !== "shop" && section !== "eat") {
-    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} biz={biz}
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} biz={biz} homeMode={homeMode} onHomeMode={onHomeMode}
       onSearch={(said) => { const tr = matchTrade(said, trades); if (tr) { setSearch(""); setGroup(tr.group_name); setTrade(tr.slug); } else setSearch(said); }} />;
   }
   // Worker or Helper: people who come and work. Not drivers (Ride), not
@@ -2963,7 +2963,7 @@ export default function ServicesPage({
     if (!hasListing || isAdmin || modeChosen.current) return;
     modeChosen.current = true;
     const saved = savedMode.current;
-    if (saved !== "find" && tab === "browse") setTab("work");
+    if (saved !== "find") { try { if (!window.localStorage.getItem("dhundo_home_mode")) setHomeModeState("business"); } catch (_) {} }
     // Only on first learning that this person has a listing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasListing, isAdmin]);
@@ -2982,10 +2982,12 @@ export default function ServicesPage({
     if (need.includes(tab)) setModeState("need");
     else if (offer.includes(tab)) setModeState("offer");
   }, [tab]);
+  const [homeMode, setHomeModeState] = useState(() => { try { return window.localStorage.getItem("dhundo_home_mode") === "business" ? "business" : "user"; } catch (_) { return "user"; } });
+  const setHomeMode = (m) => { setHomeModeState(m); try { window.localStorage.setItem("dhundo_home_mode", m); } catch (_) {} };
   const switchMode = (m) => {
-    if (m === mode && (m === "need" ? tab === "browse" : tab === "work")) return;
+    setHomeMode(m === "offer" ? "business" : "user");
     setModeState(m);
-    setTab(m === "need" ? "browse" : "work");
+    setTab("browse");
   };
 
   // The heartbeat runs here, not in the Work screen, so a worker's
@@ -3116,7 +3118,7 @@ export default function ServicesPage({
           { title: t("ms_money"), rows: money },
         ].filter(Boolean);
         return (
-          <MenuSheet api={api} mode={mode} onMode={switchMode} signedIn={signedIn} sections={sections}
+          <MenuSheet api={api} mode={homeMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
                      onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
                      onClose={() => setMenuOpen(false)} />
         );
@@ -3170,7 +3172,8 @@ export default function ServicesPage({
           onPickLocation={() => setLocOpen(true)}
           onMarket={() => setTab("market")}
           onPartner={() => setPartnerOpen(true)}
-          onOffer={() => { if (hasListing && !isAdmin) switchMode("offer"); else setOfferPick(true); }}
+          onOffer={() => setOfferPick(true)}
+          homeMode={homeMode} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
           biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
@@ -3187,7 +3190,7 @@ export default function ServicesPage({
 
       {tab === "sell" && (
         <SellPage api={api} user={signedIn ? user : null} place={place} onSignIn={onSignIn}
-                  onBack={() => { if (signedIn) setTab("work"); else { setOfferPick(true); setTab("browse"); } }}
+                  onBack={() => { if (signedIn) setTab("browse"); else { setOfferPick(true); setTab("browse"); } }}
                   onPickLocation={() => setLocOpen(true)}
                   onOpenItem={(it) => setItemOpen({ id: it.id })}
                   editId={editItem} setEditId={setEditItem} />
@@ -3264,7 +3267,7 @@ export default function ServicesPage({
 
       {tab === "mine" && signedIn && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
-          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("work")} /></div>
+          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("browse")} /></div>
           <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("nav_mine")}</h1>
           <MyListing api={api} trades={trades} isAdmin={isAdmin}
                      onGoAdd={() => setTab("add")} />
@@ -3341,9 +3344,9 @@ export default function ServicesPage({
                              startGroup={{ ride: "Drivers", hire: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
                              startTrade={offerTrade}
                              place={place} setPlace={setPlace}
-                             onBack={() => { setListedNow(false); setTab(isAdmin ? "browse" : "work"); }}
+                             onBack={() => { setListedNow(false); setTab("browse"); }}
                              onDone={() => { setListedNow(true); setReloadKey((k) => k + 1); }}
-                             onNext={() => { setListedNow(false); setTab("work"); }} />
+                             onNext={() => { setListedNow(false); setHomeMode("business"); setTab("browse"); }} />
               )}
             </>
           )}
