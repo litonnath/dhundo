@@ -263,7 +263,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
                       background: "linear-gradient(135deg, #032C61 0%, #0A5BB8 58%, #2E86E6 100%)", boxShadow: "0 16px 40px rgba(5,66,145,0.28)" }}>
           <span aria-hidden="true" style={{ position: "absolute", right: -50, top: -80, width: 230, height: 230, borderRadius: "50%", background: "linear-gradient(135deg, #FF9A3D, #F87617)", opacity: 0.9 }} />
           <span aria-hidden="true" style={{ position: "absolute", right: 70, bottom: -90, width: 190, height: 190, borderRadius: "50%", background: "rgba(255,255,255,0.10)" }} />
-          <div style={{ position: "relative", maxWidth: 640 }}>
+          <div style={{ position: "relative", maxWidth: 960 }}>
             <h1 style={{ fontSize: wide ? 40 : 27, fontWeight: 800, lineHeight: 1.12, margin: "0 0 8px", letterSpacing: "-0.025em" }}>{t("launch_title")}</h1>
             <p style={{ fontSize: wide ? 17 : 14.5, margin: "0 0 18px", opacity: 0.88 }}>{t("trust_2_s")}</p>
             <form onSubmit={(e) => { e.preventDefault(); if (q.trim() && onSearch) onSearch(q.trim()); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 18, padding: "5px 6px 5px 16px", boxShadow: "0 8px 24px rgba(0,0,0,0.22)" }}>
