@@ -2893,6 +2893,8 @@ export default function ServicesPage({
   const [ordersKey, setOrdersKey] = useState(0);
   const [liveNow, setLiveNow] = useState([]);
   const [bizOpen, setBizOpen] = useState(null);
+  const [listedNow, setListedNow] = useState(false);   // keeps the form (and its success screen) up right after saving
+  useEffect(() => { if (tab !== "add") setListedNow(false); }, [tab]);
   const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
   const openOrders = (sub) => { try { window.localStorage.setItem("dhundo_orders_tab", sub || ""); } catch (_) {} setOrdersKey((k) => k + 1); setTab("orders"); };
   useEffect(() => {
@@ -3326,7 +3328,7 @@ export default function ServicesPage({
                   <Notice tone="info">{t("need_signin")}</Notice>
                   <Btn onClick={onSignIn}>{t("nav_signin")}</Btn>
                 </>
-              ) : hasListing && !isAdmin ? (
+              ) : hasListing && !isAdmin && !listedNow ? (
                 // Reachable only by a stale link or the back button now that
                 // the tab is hidden, but it must not show a form the database
                 // will reject.
@@ -3339,9 +3341,9 @@ export default function ServicesPage({
                              startGroup={{ ride: "Drivers", hire: "Drivers", shop: "Suppliers", eat: "Eat & Stay" }[offerType] || null}
                              startTrade={offerTrade}
                              place={place} setPlace={setPlace}
-                             onBack={() => setTab(isAdmin ? "browse" : "work")}
-                             onDone={() => setReloadKey((k) => k + 1)}
-                             onNext={() => setTab("work")} />
+                             onBack={() => { setListedNow(false); setTab(isAdmin ? "browse" : "work"); }}
+                             onDone={() => { setListedNow(true); setReloadKey((k) => k + 1); }}
+                             onNext={() => { setListedNow(false); setTab("work"); }} />
               )}
             </>
           )}
