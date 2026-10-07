@@ -543,7 +543,7 @@ function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
 
 // Remembered between visits so Back from Buy something lands on the I need tiles.
 let lastSide = null;
-function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, homeMode = "user", onHomeMode }) {
+function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, homeMode = "user", onHomeMode, showSwitch = true }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
   const [group, setGroup] = useState(null);
@@ -903,7 +903,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // The front: just the tiles. Coming back to "all categories" from any
   // section other than workers lands here too.
   if (showGrid && section !== "worker" && section !== "ride" && section !== "shop" && section !== "eat") {
-    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} biz={biz} homeMode={homeMode} onHomeMode={onHomeMode}
+    return <CustomerLauncher onPick={pickTile} onOffer={onOffer} hasBusiness={hasBusiness} liveNow={liveNow} onLive={onLive} biz={biz} homeMode={homeMode} onHomeMode={onHomeMode} showSwitch={showSwitch}
       onSearch={(said) => { const tr = matchTrade(said, trades); if (tr) { setSearch(""); setGroup(tr.group_name); setTrade(tr.slug); } else setSearch(said); }} />;
   }
   // Worker or Helper: people who come and work. Not drivers (Ride), not
@@ -2984,6 +2984,15 @@ export default function ServicesPage({
   }, [tab]);
   const [homeMode, setHomeModeState] = useState(() => { try { return window.localStorage.getItem("dhundo_home_mode") === "business" ? "business" : "user"; } catch (_) { return "user"; } });
   const setHomeMode = (m) => { setHomeModeState(m); try { window.localStorage.setItem("dhundo_home_mode", m); } catch (_) {} };
+  // WHO IS THIS? A signed-in person with a listing is a business account and
+  // sees only the business side; everyone else signed in sees only the
+  // customer side. The two-way switch is shown only to visitors who have not
+  // signed in yet (so they can choose how to sign up). A business can look at
+  // the app as a customer from Account, and come back from there.
+  const [viewAsCustomer, setViewAsCustomerState] = useState(() => { try { return window.localStorage.getItem("dhundo_view_customer") === "1"; } catch (_) { return false; } });
+  const setViewAsCustomer = (v) => { setViewAsCustomerState(v); try { window.localStorage.setItem("dhundo_view_customer", v ? "1" : "0"); } catch (_) {} };
+  const isBizAccount = signedIn && hasListing && !isAdmin;
+  const effMode = !signedIn ? homeMode : isBizAccount && !viewAsCustomer ? "business" : "user";
   const switchMode = (m) => {
     setHomeMode(m === "offer" ? "business" : "user");
     setModeState(m);
@@ -3092,7 +3101,7 @@ export default function ServicesPage({
         const isOwner = biz && (myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier");
         const isRider = biz && (myDriverKind === "delivery" || myDriverKind === "travel");
         const go = (tb) => () => setTab(tb);
-        const bizMode = homeMode === "business";
+        const bizMode = effMode === "business";
         const talk = [
           { icon: "bell", title: t("nt_title"), badge: inbox.alerts + rideReqs.length, go: openNotif },
         ];
@@ -3124,7 +3133,7 @@ export default function ServicesPage({
           { title: t("ms_activity"), rows: activity },
         ]).filter((x) => x.rows.length);
         return (
-          <MenuSheet api={api} mode={homeMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
+          <MenuSheet api={api} mode={effMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
                      onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
                      onClose={() => setMenuOpen(false)} />
         );
@@ -3179,7 +3188,7 @@ export default function ServicesPage({
           onMarket={() => setTab("market")}
           onPartner={() => setPartnerOpen(true)}
           onOffer={() => setOfferPick(true)}
-          homeMode={homeMode} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
+          homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
           biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
@@ -3294,7 +3303,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage key={ordersKey} badge={ordersBadge} bizMode={homeMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} badge={ordersBadge} bizMode={effMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
@@ -3383,7 +3392,8 @@ export default function ServicesPage({
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
           onOpenProfile={() => setTab("profile")}
-          onOpenAds={homeMode === "business" ? () => setTab("sell") : undefined}
+          onOpenAds={effMode === "business" ? () => setTab("sell") : undefined}
+          viewRow={!signedIn || isAdmin ? null : isBizAccount ? { label: viewAsCustomer ? t("nm_view_business") : t("nm_view_customer"), icon: viewAsCustomer ? "construction" : "search", go: () => { setViewAsCustomer(!viewAsCustomer); setTab("browse"); } } : { label: t("nm_start_biz"), icon: "plus", go: () => { setOfferPick(true); setTab("browse"); } }}
           onPartner={() => setPartnerOpen(true)}
           showCredits={inApp}
           privacy={<PrivacyLinks api={api} />}

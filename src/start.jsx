@@ -197,7 +197,7 @@ export function HomeButton({ onClick, label }) {
   );
 }
 
-export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, onSearch, homeMode = "user", onHomeMode }) {
+export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, onSearch, homeMode = "user", onHomeMode, showSwitch = true }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [wide, setWide] = useState(() => typeof window !== "undefined" && window.innerWidth >= 600);
@@ -236,7 +236,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
   return (
     <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
-        <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 auto 18px", maxWidth: 440 }}>
+        {showSwitch && <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 auto 18px", maxWidth: 440 }}>
           {[["user", "user", t("nm_mode_user")], ["business", "construction", t("nm_mode_biz")]].map(([k, icon, label]) => (
             <button key={k} role="tab" aria-selected={homeMode === k} onClick={() => onHomeMode && onHomeMode(k === "business" ? "offer" : "need")} style={{
               flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 50, borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -244,7 +244,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
               boxShadow: homeMode === k ? "0 2px 8px rgba(15,20,25,0.12)" : "none",
             }}><Icon name={icon} size={20} /> {label}</button>
           ))}
-        </div>
+        </div>}
         {homeMode === "business" && (
           <div style={{ maxWidth: 720, margin: "0 auto" }}>{biz ? bizBlock : (
             <button onClick={onOffer} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 88, padding: "14px 16px", borderRadius: 18, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit" }}>

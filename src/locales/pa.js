@@ -732,6 +732,8 @@ export default {
   rd_note: "ਕਿਰਾਇਆ ਤੁਸੀਂ ਤੇ ਡਰਾਈਵਰ ਆਪਸ ਵਿੱਚ ਤੈਅ ਕਰੋ। ਐਪ ਕੋਈ ਪੈਸਾ ਨਹੀਂ ਲੈਂਦੀ।",
   rd_searching: "ਤੁਹਾਡੇ ਨੇੜੇ ਡਰਾਈਵਰ ਲੱਭ ਰਹੇ ਹਾਂ…",
   rd_alerts_more: "ਐਪ ਬੰਦ ਹੋਣ 'ਤੇ ਅਲਰਟ",
+  nm_view_customer: "ਗਾਹਕ ਵਜੋਂ ਵੇਖੋ",
+  nm_view_business: "ਕਾਰੋਬਾਰ ਵਿਊ ਤੇ ਵਾਪਸ ਜਾਓ",
   nm_mode_user: "ਆਮ ਵਰਤੋਂਕਾਰ",
   nm_mode_biz: "ਕਾਰੋਬਾਰ",
   nm_more: "ਹੋਰ ਸੇਵਾਵਾਂ",

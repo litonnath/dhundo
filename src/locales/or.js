@@ -732,6 +732,8 @@ export default {
   rd_note: "ଭଡ଼ା ଆପଣ ଓ ଚାଳକ ନିଜେ ଠିକ୍ କରନ୍ତୁ। ଆପ୍ ଟଙ୍କା ନିଏ ନାହିଁ।",
   rd_searching: "ଆପଣଙ୍କ ପାଖରେ ଚାଳକ ଖୋଜୁଛୁ…",
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
+  nm_view_customer: "ଗ୍ରାହକ ଭାବେ ଦେଖନ୍ତୁ",
+  nm_view_business: "ବ୍ୟବସାୟ ଭ୍ୟୁକୁ ଫେରନ୍ତୁ",
   nm_mode_user: "ସାଧାରଣ ଉପଭୋକ୍ତା",
   nm_mode_biz: "ବ୍ୟବସାୟ",
   nm_more: "ଅଧିକ ସେବା",

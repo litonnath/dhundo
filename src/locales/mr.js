@@ -732,6 +732,8 @@ export default {
   rd_note: "भाडे तुम्ही आणि चालक आपापसात ठरवा. अ‍ॅप पैसे घेत नाही.",
   rd_searching: "तुमच्या जवळ चालक शोधत आहोत…",
   rd_alerts_more: "अॅप बंद असताना अलर्ट",
+  nm_view_customer: "ग्राहक म्हणून पहा",
+  nm_view_business: "व्यवसाय दृश्याकडे परत जा",
   nm_mode_user: "सामान्य वापरकर्ता",
   nm_mode_biz: "व्यवसाय",
   nm_more: "आणखी सेवा",
