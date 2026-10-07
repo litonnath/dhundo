@@ -305,17 +305,6 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
             </button>
           ))}
         </div>
-        <button onClick={onOffer} style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 76, padding: "12px 16px", marginTop: 16,
-          borderRadius: 16, border: `1.5px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
-        }}>
-          <span style={{ width: 46, height: 46, borderRadius: 14, background: T.brandSoft, color: T.brandDark, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={22} /></span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: T.ink }}>{t("nm_more")}</span>
-            <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{t("nm_more_sub")}</span>
-          </span>
-          <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
-        </button>
         </>)}
       </div>
     </div>

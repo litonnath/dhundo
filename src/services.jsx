@@ -3103,7 +3103,6 @@ export default function ServicesPage({
           { icon: "tag", title: t("mb_mine"), go: () => openOrders("items") },
           { icon: "drivers", title: t("rh_title"), go: () => openOrders("rides") },
           ...talk,
-          { icon: "tag", title: t("offer_sell"), go: go("sell") },
         ];
         // BUSINESS: only what the owner, driver or rider uses.
         const business = [];
@@ -3118,6 +3117,7 @@ export default function ServicesPage({
         if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
         if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
         if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
+        if (signedIn) business.push({ icon: "tag", title: t("offer_sell"), go: go("sell") });
         const money = [{ icon: "wallet", title: t("wal_title"), go: () => setWalletOpen(true) }];
         const partner = { icon: "user", title: t("home_partner"), sub: t("home_partner_sub"), go: () => setPartnerOpen(true) };
         const sections = (bizMode ? [
@@ -3388,7 +3388,7 @@ export default function ServicesPage({
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
           onOpenProfile={() => setTab("profile")}
-          onOpenAds={() => setTab("sell")}
+          onOpenAds={homeMode === "business" ? () => setTab("sell") : undefined}
           showCredits={inApp}
           privacy={<PrivacyLinks api={api} />}
         />

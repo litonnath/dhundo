@@ -2407,9 +2407,7 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
         <nav aria-label={t("ft_links")}>
           <p style={heading}>{t("ft_links")}</p>
           <button style={link} onClick={go("browse")}>{t("nav_home")}</button>
-          <button style={link} onClick={go(hasListing ? "mine" : "add")}>
-            {hasListing ? t("nav_mine") : t("nav_list")}
-          </button>
+          {hasListing && <button style={link} onClick={go("mine")}>{t("nav_mine")}</button>}
           {onInstall && <button style={link} onClick={onInstall}>{t("install_app")}</button>}
           <a style={link} href="/privacy">{t("pn_link")}</a>
         </nav>
@@ -2562,9 +2560,7 @@ export function AccountPage({
             they do, with the name, address and phone customers use. */}
         {account && row("user", account.full_name ? t("prof_edit") : t("prof_create"),
           onOpenProfile, null, t("prof_sub"))}
-        {account && (hasListing
-          ? row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))
-          : row("construction", t("nav_list"), onList, null, t("acc_list_sub")))}
+        {account && hasListing && row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))}
         {account && onOpenAds && row("tag", t("mk_my_ads"), onOpenAds, null, t("mk_my_ads_sub"))}
         {account && walletPaise !== null && row("wallet", t("wal_title"), onOpenWallet,
           <span style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{rupees(walletPaise)}</span>)}
@@ -2757,7 +2753,7 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
       </div>
 
       {/* The listing is a separate thing -- say so where people look. */}
-      <div style={{
+      {hasListing && (      <div style={{
         marginTop: 16, background: T.brandSoft, borderRadius: 16, padding: 18,
       }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{t("prof_list_q")}</div>
@@ -2768,7 +2764,7 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
           <Icon name={hasListing ? "edit" : "construction"} size={18} />{" "}
           {hasListing ? t("nav_mine") : t("nav_list")}
         </Btn>
-      </div>
+      </div>)}
     </div>
   );
 }
