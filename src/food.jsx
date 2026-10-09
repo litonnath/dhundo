@@ -800,6 +800,8 @@ export function StoreSettings({ api, shop, onSaved }) {
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
   const [upBusy, setUpBusy] = useState(false);
+  const [busyS, setBusyS] = useState(false);
+  const [err, setErr] = useState(null);
   useEffect(() => {
     api.myStore().then((r) => {
       const x = one(r) || {};
@@ -809,13 +811,16 @@ export function StoreSettings({ api, shop, onSaved }) {
     }).catch(() => setF({ open: "", close: "", mins: "", autoRider: true, promo: "", promoPhoto: "" }));
   }, [api]);
   if (!f) return null;
-  const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
+  const set = (k, v) => { setSaved(false); setErr(null); setF((x) => ({ ...x, [k]: v })); };
   const save = async () => {
+    setBusyS(true); setErr(null);
     try {
-      await api.setStore({ open: f.open || null, close: f.close || null, mins: f.mins ? Number(f.mins) : null,
-                           autoRider: f.autoRider, promo: f.promo, promoPhoto: f.promoPhoto });
-      setSaved(true); onSaved && onSaved();
-    } catch (_) {}
+      const r = one(await api.setStore({ open: f.open || null, close: f.close || null, mins: f.mins ? Number(f.mins) : null,
+                                         autoRider: f.autoRider, promo: f.promo, promoPhoto: f.promoPhoto }));
+      if (r && r.ok === false) setErr(t("e_save"));
+      else { setSaved(true); onSaved && onSaved(); }
+    } catch (e) { setErr((e && e.message) || t("e_save")); }
+    setBusyS(false);
   };
   const pickPromo = async (file) => {
     if (!file) return;
@@ -858,7 +863,8 @@ export function StoreSettings({ api, shop, onSaved }) {
             <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("ow_rider_sub")}</span></span>
         </label>
       )}
-      <Btn full onClick={save} style={{ minHeight: 54, fontSize: 17, background: saved ? "#16A34A" : undefined }}>{saved ? "\u2713 " + t("ow_store_saved") : t("ow_save")}</Btn>
+      {err && <div style={{ marginBottom: 10 }}><Notice tone="bad">{err}</Notice></div>}
+      <Btn full onClick={save} disabled={busyS} style={{ minHeight: 54, fontSize: 17, ...(saved ? { background: "#16A34A" } : {}) }}>{busyS ? "\u2026" : saved ? "\u2713 " + t("ow_store_saved") : t("ow_save")}</Btn>
     </div>
   );
 }
