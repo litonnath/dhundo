@@ -188,6 +188,7 @@ export function FareCalculator({ api }) {
         </table>
       </div>
       <GstRatesEditor api={api} />
+      <GstReport api={api} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 0" }}>Rate card</h3>
       {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees } api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
     </div>
@@ -228,6 +229,53 @@ function GstRatesEditor({ api }) {
         <Btn onClick={save}>Save</Btn>
         {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg === "Saved" ? "#157A43" : "#B91C1C" }}>{msg}</span>}
       </div>
+    </div>
+  );
+}
+
+// Admin: GST and fee totals on delivered orders, by month, for the accountant.
+function GstReport({ api }) {
+  const [rows, setRows] = useState(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [err, setErr] = useState("");
+  const load = () => {
+    setErr("");
+    Promise.resolve(api.gstReport(from || null, to || null)).then((r) => setRows(many(r))).catch(() => { setRows([]); setErr("Could not load"); });
+  };
+  const rup = (p) => Math.round(Number(p || 0)) / 100;
+  const csv = () => {
+    const head = ["Month", "Orders", "Items", "GST on food", "GST on goods", "Delivery charge", "GST on delivery", "Miscellaneous fee", "GST on misc. fee"];
+    const out = [head].concat((rows || []).map((r) => [r.month, r.orders, rup(r.items_paise), rup(r.items_gst_restaurant_paise), rup(r.items_gst_shop_paise), rup(r.delivery_paise), rup(r.delivery_gst_paise), rup(r.misc_fee_paise), rup(r.misc_gst_paise)]));
+    const text = out.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8" })); a.download = "dhundo-gst-report.csv";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+  return (
+    <div style={{ margin: "18px 0 0", padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>GST report for your accountant</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Totals on delivered orders, month by month. Keep these for your GST returns.</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div><div style={lbl}>From</div><input type="date" style={{ ...cell, width: 160 }} value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+        <div><div style={lbl}>To</div><input type="date" style={{ ...cell, width: 160 }} value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <Btn onClick={load}>Show</Btn>
+        {rows && rows.length > 0 && <Btn kind="ghost" onClick={csv}>Download CSV</Btn>}
+      </div>
+      {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginTop: 8 }}>{err}</div>}
+      {rows && rows.length === 0 && !err && <div style={{ marginTop: 8, fontSize: 14, color: T.inkSoft }}>No delivered orders in this range.</div>}
+      {rows && rows.length > 0 && (
+        <div style={{ overflowX: "auto", marginTop: 10 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 760 }}>
+            <thead><tr style={{ textAlign: "left", color: T.inkSoft }}>{["Month", "Orders", "Items", "GST food", "GST goods", "Delivery", "GST delivery", "Misc. fee", "GST misc."].map((h) => <th key={h} style={{ padding: "6px", fontWeight: 800 }}>{h}</th>)}</tr></thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.month} style={{ borderTop: `1px solid ${T.line}` }}>
+                <td style={{ padding: "7px 6px", fontWeight: 700 }}>{r.month}</td><td style={{ padding: "7px 6px" }}>{r.orders}</td>
+                {[r.items_paise, r.items_gst_restaurant_paise, r.items_gst_shop_paise, r.delivery_paise, r.delivery_gst_paise, r.misc_fee_paise, r.misc_gst_paise].map((v, i) => <td key={i} style={{ padding: "7px 6px" }}>{rs(rup(v))}</td>)}
+              </tr>))}</tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
