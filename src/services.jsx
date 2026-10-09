@@ -44,6 +44,7 @@ import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
+import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
@@ -386,6 +387,13 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     reviewsFor: (id, limit) => rpc("services_reviews_for", { p_worker: id, p_limit: limit || 10 }),
     myReviews: () => rpc("services_my_reviews", { p_limit: 20 }, true),
     pauseOrders: (mins) => rpc("services_pause_orders", { p_minutes: mins }, true),
+    scheduleGet: () => rpc("services_schedule_get", {}, true),
+    scheduleSave: (days, all, from, to, km) => rpc("services_schedule_save", { p_days: days, p_all_day: !!all, p_from: from || null, p_to: to || null, p_radius: km || 0 }, true),
+    schedulePublic: (id) => rpc("services_schedule_public", { p_worker: id }),
+    docsList: () => rpc("services_docs_list", {}, true),
+    docSave: (kind, no, exp) => rpc("services_doc_save", { p_kind: kind, p_no: no || null, p_expires: exp || null }, true),
+    bankGet: () => rpc("services_bank_get", {}, true),
+    bankSave: (holder, acct, ifsc, bank) => rpc("services_bank_save", { p_holder: holder, p_acct: acct, p_ifsc: ifsc, p_bank: bank || null }, true),
     resumeDue: () => rpc("services_resume_due", {}),
     myResume: () => rpc("services_my_resume", {}, true),
     rateSave: (r) => rpc("services_rate_save", { p_id: r.id || null, p_label: r.label, p_unit: r.unit, p_rupees: r.rupees }, true),
@@ -3223,7 +3231,7 @@ export default function ServicesPage({
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
           biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} auto={myDriverKind === "travel" ? { on: autoAccept, set: setAutoAccept } : null}
-              bookings={inbox.items} onBookingAnswer={async (id, ok) => { await api.bookingAnswer(id, ok); inbox.reload(); }} shareName={(myRow && (myRow.business_name || myRow.full_name)) || ""}
+              bookings={inbox.items} onBookingAnswer={async (id, ok) => { await api.bookingAnswer(id, ok); inbox.reload(); }} shareName={(myRow && (myRow.business_name || myRow.full_name)) || ""} onDocs={() => openBiz("docs")}
               profile={(() => {
                 if (!myRow) return null;
                 const gaps = myRow.gaps || [];
@@ -3293,8 +3301,11 @@ export default function ServicesPage({
         }
         if (hasListing && !isAdmin) {
           const ek = ownerKind ? "owner" : dk === "delivery" ? "delivery" : dk === "travel" ? "travel" : null;
-          if (ek) parts.unshift({ key: "earnings", icon: "wallet", label: t("er_title"), node: <EarningsPanel api={api} kind={ek} /> });
+          if (ek) parts.unshift({ key: "earnings", icon: "wallet", label: t("er_title"), node: <EarningsPanel api={api} kind={ek} bizName={(myRow && (myRow.business_name || myRow.full_name)) || ""} /> });
           parts.push({ key: "learn", icon: "bell", label: t("lr_title"), node: <LearnPanel kind={ek || "other"} /> });
+          if (!ownerKind) parts.push({ key: "schedule", icon: "construction", label: t("sc_title"), node: <SchedulePanel api={api} /> });
+          if (dk) parts.push({ key: "docs", icon: "check", label: t("dc_title"), node: <DocsPanel api={api} /> });
+          parts.push({ key: "bank", icon: "wallet", label: t("bnk_title"), node: <BankPanel api={api} /> });
           parts.push({ key: "payments", icon: "check", label: t("bp_title"), node: <PaymentsPanel api={api} kind={ownerKind ? "owner" : "other"} /> });
           parts.push({ key: "wallet", icon: "wallet", label: t("bz_wallet"), action: () => setWalletOpen(true) });
         }

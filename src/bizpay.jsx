@@ -10,6 +10,7 @@ import React, { useEffect, useState } from "react";
 import { T, Btn, Icon, Notice, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { CONTACT } from "./brand.jsx";
+import { exportCsv, openInvoice, docStatus } from "./bizmore.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
@@ -72,9 +73,11 @@ export function PaymentsPanel({ api, kind }) {
 }
 
 // kind: "owner" (orders received), "delivery" (rider jobs), "travel" (rides)
-export function EarningsPanel({ api, kind }) {
+export function EarningsPanel({ api, kind, bizName = "" }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
+  const [gst, setGst] = useState("");
+  useEffect(() => { let alive = true; Promise.resolve(api.bizPayGet ? api.bizPayGet() : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x && x.gst_no) setGst(x.gst_no); }).catch(() => {}); return () => { alive = false; }; }, [api]);
   useEffect(() => {
     let alive = true;
     const pull = async () => {
@@ -112,6 +115,11 @@ export function EarningsPanel({ api, kind }) {
         ))}
       </div>
       <div style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.55, marginBottom: 14 }}>{t("er_note")}</div>
+      {rows.length > 0 && (
+        <button onClick={() => exportCsv(rows.slice().sort((a, b) => new Date(b.at) - new Date(a.at)), "dhundo-sales")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", minHeight: 52, marginBottom: 14, borderRadius: 14, border: `1.5px solid ${T.brandDark}`, background: T.white, color: T.brandDark, fontWeight: 800, fontSize: 15.5, cursor: "pointer", fontFamily: "inherit" }}>
+          <Icon name="download" size={19} /> {t("iv_csv")}
+        </button>
+      )}
       {rows.length === 0 ? <div style={{ ...card, color: T.inkSoft }}>{t("er_none")}</div> : (
         <div style={card}>
           {rows.slice().sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 10).map((r, i) => (
@@ -129,6 +137,7 @@ export function EarningsPanel({ api, kind }) {
                 {r.who && <div>{r.who}</div>}
                 {r.sub && !r.pick && <div>{r.sub}</div>}
                 {r.note && <div>{r.note}</div>}
+                <button onClick={() => openInvoice({ biz: bizName || "Dhundo", gst, row: r, t })} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: `1.5px solid ${T.line}`, background: "#fff", color: T.brandDark, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("iv_invoice")}</button>
               </div>
             </details>
           ))}
@@ -146,7 +155,7 @@ export function EarningsPanel({ api, kind }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "" }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [range, setRange] = useState(7);
@@ -156,6 +165,13 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const [tick, setTick] = useState(0);
   const [stamp, setStamp] = useState(null);
   const [taking, setTaking] = useState(null);
+  const [docAlert, setDocAlert] = useState(0);
+  useEffect(() => {
+    if (kind === "owner" || !api.docsList || !onDocs) return undefined;
+    let alive = true;
+    Promise.resolve(api.docsList()).then((r) => { const n = many(r).filter((x) => ["soon", "expired"].includes(docStatus(x.expires_on).key)).length; if (alive) setDocAlert(n); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, kind]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (kind !== "owner" || !api.myMenu) return undefined;
     let alive = true;
@@ -288,6 +304,12 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
         ))}
       </div>
 
+      {docAlert > 0 && (
+        <button onClick={onDocs} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 58, padding: "10px 14px", marginBottom: 12, borderRadius: 16, border: "1.5px solid #F87171", background: "#FEF2F2", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+          <Icon name="alert" size={22} style={{ color: "#B91C1C" }} />
+          <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800, color: "#B91C1C" }}>{t("dc_alert")}</span>
+        </button>
+      )}
       {profile && profile.pct < 100 && (
         <button onClick={onProfile} style={{ display: "block", width: "100%", textAlign: "left", padding: "14px 14px 12px", marginBottom: 12, borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -440,7 +462,7 @@ export function RatingsCard({ api }) {
     return () => { alive = false; };
   }, [api]);
   if (rows === null || rows.length === 0) return rows === null ? null : (
-    <div style={{ ...card, marginTop: 12, marginBottom: 0, color: T.inkSoft, fontSize: 14.5 }}>{t("rt_title")}: {t("rt_none")}</div>
+    <div style={{ ...card, marginTop: 12, marginBottom: 0, color: T.inkSoft, fontSize: 14.5 }}>{t("rtg_title")}: {t("rt_none")}</div>
   );
   const rated = rows.filter((r) => !r.complaint);
   const avg = rated.length ? rated.reduce((s, r) => s + r.stars, 0) / rated.length : 0;

@@ -405,7 +405,7 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
           {reviews.length > 0 && (
             <details style={{ margin: "12px 0" }}>
-              <summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("rt_title")}</summary>
+              <summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("rtg_title")}</summary>
               {reviews.map((r, i) => (
                 <div key={i} style={{ padding: "8px 0", borderTop: `1px solid ${T.line}` }}>
                   <span style={{ color: "#F59E0B", fontSize: 15 }}>{"\u2605".repeat(r.stars)}</span>

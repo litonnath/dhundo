@@ -3,6 +3,7 @@
 // workers and customers, and the partner programme. Money is never handled
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
+import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, Icon, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -216,7 +217,7 @@ const localStamp = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d
 const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
 
 export function BookingSheet({ api, row, onClose, place }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDismissable(true, onClose);
   const [mins, setMins] = useState(60);
   const [custom, setCustom] = useState(false);
@@ -231,6 +232,8 @@ export function BookingSheet({ api, row, onClose, place }) {
   const [sent, setSent] = useState(false);
   const [rates, setRates] = useState([]);
   const [rate, setRate] = useState(null);
+  const [sched, setSched] = useState(null);
+  useEffect(() => { let live = true; Promise.resolve(api.schedulePublic ? api.schedulePublic(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (live && x) setSched(x); }).catch(() => {}); return () => { live = false; }; }, [api, row.id]);
   useEffect(() => {
     let live = true;
     api.ratesGet(row.id).then((r) => { if (live) setRates(many(r)); }).catch(() => {});
@@ -296,6 +299,7 @@ export function BookingSheet({ api, row, onClose, place }) {
           <>
             <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6, margin: "10px 0 0" }}>{t("bk_sub")}</p>
 
+            {sched && <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: 12, background: "#EEF4FF", fontSize: 14, fontWeight: 700, color: "#1E3A8A", lineHeight: 1.5 }}>{scheduleLine(sched, t, lang)}</div>}
             <div style={head}><span style={num}>1</span>{t("bk_when")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {[["now", "bk_now"], ["1h", "bk_1h"], ["tmr", "bk_tmr"], ["pick", "bk_pick"]].map(([k, key]) => (
