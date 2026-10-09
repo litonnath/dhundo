@@ -82,3 +82,20 @@ Test in a private window after adding; if the map or a font stops loading, the b
        update services_settings set value = 'on' where name = 'admin_needs_mfa';
    From then on every admin function and every admin storage rule refuses a session without the code.
    To undo in an emergency: update services_settings set value = 'off' where name = 'admin_needs_mfa';
+
+## Update after the business features (bank, payouts, ratings, schedule, documents)
+Done:
+- Bank account numbers are now ENCRYPTED in the database (sql/155_parts/155_part3.sql); the key lives in Supabase Vault and
+  only the last 4 digits reach the phone. Create the key first (see the top of that file).
+- A new UPI id for a withdrawal is held for 24 hours (sql/156_hardening_part1.sql), so a stolen session cannot cash out at
+  once. Withdrawals already needed a checked phone, a rate limit and a minimum.
+- PIN guessing: 10 wrong tries lock the account for 15 minutes on the server (sql/156_hardening_part2.sql). It only works
+  once the hook is switched on in Supabase (Authentication, Hooks, Password verification attempt).
+- Ratings only for a delivered order; the sales report CSV neutralises spreadsheet formulas; the invoice window uses no
+  inline script (the Content-Security-Policy forbids it) and escapes every value.
+- The resume-orders function can only be called by a signed-in user.
+- Re-read the order, ride, delivery job, second-hand order, chat and withdrawal functions: each one takes the account from
+  the signed token and checks the caller is a party to the record. The money and delete functions are not callable from
+  the app. The app hiding the business or customer view is only display; the database does the checking.
+Still to do: admin accounts (a second factor or a long password), one-time code for withdrawals, checking how
+services_is_admin is decided, and the nginx headers (security-headers.sh) on the live server.

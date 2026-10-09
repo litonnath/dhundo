@@ -155,7 +155,7 @@ export function BankPanel({ api }) {
     try {
       const r = one(await api.bankSave(f.holder.trim(), f.acct, f.ifsc.trim().toUpperCase(), f.bank.trim()));
       if (r && r.ok) { setF({ holder: "", acct: "", acct2: "", ifsc: "", bank: "" }); setMsg({ tone: "good", text: t("p_saved") }); load(); }
-      else setMsg({ tone: "bad", text: t("e_save") });
+      else setMsg({ tone: "bad", text: r && r.reason === "no_key" ? t("bnk_nokey") : r && r.reason === "bad_ifsc" ? t("bnk_bad_ifsc") : t("e_save") });
     } catch (e) { setMsg({ tone: "bad", text: (e && e.message) || t("e_save") }); }
     setBusy(false);
   };
