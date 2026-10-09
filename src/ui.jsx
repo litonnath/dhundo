@@ -1348,7 +1348,7 @@ export function LocationPill({ place, onOpen, compact }) {
 // Two rows on a phone: identity and location on top, navigation below. The
 // single-row version pushed the tabs onto a wrapped third line and left the
 // location squeezed to three characters.
-export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null, notifCount = 0, onOpenNotifications = null }) {
+export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null, notifCount = 0, onOpenNotifications = null, showBiz = false, onBiz = null }) {
   const { t } = useI18n();
   // One row: who we are, where you are, which language. Everything you DO
   // lives in the bottom bar, within reach of a thumb -- two rows of small
@@ -1375,9 +1375,9 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
         <LocationPill place={place} onOpen={onOpenLocation} />
         <span className="dh-deskbar" style={{ display: "none", flex: 1, justifyContent: "center", gap: 6 }}>
-          {[["browse", t("nav_home")], ["orders", t("nav_activity")], ["chats", t("ch_tab")], ["account", t("nav_account")]].map(([k, label]) => {
-            const on = k === "browse" ? ["browse", "market", "work", "mine", "add", "sell", "bizpage"].includes(tab) : k === "account" ? ["account", "profile"].includes(tab) : tab === k;
-            return <button key={k} onClick={() => setTab(k)} style={{ border: "none", background: on ? T.brandSoft : "transparent", color: on ? T.brandDark : T.ink, fontWeight: 800, fontSize: 15, padding: "0 18px", minHeight: 44, borderRadius: 22, cursor: "pointer", fontFamily: "inherit" }}>{label}</button>;
+          {[["browse", t("nav_home")], ["orders", t("nav_activity")], ...(showBiz ? [["bizpage", t("hm_mybiz")]] : []), ["chats", t("ch_tab")], ["account", t("nav_account")]].map(([k, label]) => {
+            const on = k === "browse" ? ["browse", "market", "work", "mine", "add", "sell"].includes(tab) : k === "account" ? ["account", "profile"].includes(tab) : tab === k;
+            return <button key={k} onClick={() => (k === "bizpage" && onBiz ? onBiz() : setTab(k))} style={{ border: "none", background: on ? T.brandSoft : "transparent", color: on ? T.brandDark : T.ink, fontWeight: 800, fontSize: 15, padding: "0 18px", minHeight: 44, borderRadius: 22, cursor: "pointer", fontFamily: "inherit" }}>{label}</button>;
           })}
         </span>
         <LanguageSwitch />
@@ -1413,11 +1413,12 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
 // every phone user knows from PhonePe, Rapido and WhatsApp. The Work icon
 // carries a green dot while the worker is online, so they can see from any
 // screen that customers can still find them.
-export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null, chatBadge = 0, ordersBadge = 0, ordersLabel = null, ordersIcon = "bag" }) {
+export function BottomNav({ tab, setTab, online = false, signedIn = false, hasListing = false, mode = null, onWallet = null, onMenu = null, chatBadge = 0, ordersBadge = 0, ordersLabel = null, ordersIcon = "bag", showBiz = false, onBiz = null }) {
   const { t } = useI18n();
   const workTabs = ["work", "mine"];
   const current =
     tab === "chats" ? "chats"
+    : tab === "bizpage" ? "biz"
     : tab === "orders" ? "orders"
     : tab === "account" || tab === "profile" ? "account"
     : mode === "offer" && tab === "sell" ? "sell"
@@ -1469,6 +1470,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
           <>
             {item(current === "work" ? "work" : "find", "home", t("nav_home"), () => setTab("browse"), online)}
             {item("orders", "bag", t("nav_activity"), () => setTab("orders"), false, ordersBadge)}
+            {showBiz && item("biz", "construction", t("hm_mybiz"), () => (onBiz ? onBiz() : setTab("bizpage")))}
             {item("chats", "chat", t("ch_tab"), () => setTab("chats"), false, chatBadge)}
             {item("account", "user", signedIn ? t("nav_account") : t("nav_signin"), () => setTab("account"))}
             {onMenu && item("menu", "menu", t("menu_title"), onMenu)}

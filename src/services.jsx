@@ -3054,6 +3054,7 @@ export default function ServicesPage({
         place={place}
         onOpenLocation={() => setLocOpen(true)}
         notifCount={signedIn ? inbox.alerts + rideReqs.length : 0}
+        showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
         onOpenNotifications={signedIn ? openNotif : null}
         mode={mode}
       />
@@ -3391,7 +3392,7 @@ export default function ServicesPage({
                     onInstall={() => setInstallOpen(true)} />
       )}
 
-      <BottomNav tab={tab} setTab={setTab} online={avail.online}
+      <BottomNav tab={tab} setTab={setTab} online={avail.online} showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
                  chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0}
