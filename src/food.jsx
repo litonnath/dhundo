@@ -128,6 +128,17 @@ export function StoreHome({ kind, api, trades, place, user, onSignIn, renderEmpt
       .catch(() => { if (alive) { setRows([]); setLoading(false); } });
     return () => { alive = false; };
   }, [api, chip, eat, slugs, near, qs, place && place.state, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Open/closed changes through the day: re-ask for the visible cards.
+  const idsKey = rows.map((r) => r.id).join(",");
+  useEffect(() => {
+    if (!idsKey) return undefined;
+    let alive = true;
+    const pull = () => Promise.resolve(api.storeInfos(idsKey.split(","))).then((inf) => { if (!alive) return; const o = {}; many(inf).forEach((i) => { o[i.id] = i; }); setInfos(o); }).catch(() => {});
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, 60000);
+    const onVis = () => { if (!document.hidden) pull(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", onVis); };
+  }, [api, idsKey]);
 
   // A peek at what each place sells, on its card, so people can see the items
   // before opening the page: the first few from its menu or product list.
@@ -339,7 +350,16 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
   useDismissable(true, onClose);
   // The list's copy of the hours can be old; ask again when the page opens.
   const [fresh, setFresh] = useState(null);
-  useEffect(() => { let alive = true; Promise.resolve(api.storeInfos([row.id])).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setFresh(x); }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
+  const [menuTick, setMenuTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const pull = () => { Promise.resolve(api.storeInfos([row.id])).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setFresh(x); }).catch(() => {}); setMenuTick((n) => n + 1); };
+    pull();
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, 30000);
+    const onVis = () => { if (!document.hidden) pull(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", onVis); };
+  }, [api, row.id]);
   const info = fresh || infoProp;
   const [menu, setMenu] = useState(null);
   const [cart, setCart] = useState({});
@@ -356,9 +376,9 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
 
   useEffect(() => {
     let alive = true;
-    api.menuGet(row.id).then((r) => { if (alive) setMenu(many(r)); }).catch(() => { if (alive) setMenu([]); });
+    api.menuGet(row.id).then((r) => { if (alive) setMenu(many(r)); }).catch(() => { if (alive) setMenu((m) => m || []); });
     return () => { alive = false; };
-  }, [api, row.id]);
+  }, [api, row.id, menuTick]);
 
   const accepting = (!menu || menu.length === 0 || menu[0].accepting !== false) && !(info && info.open_now === false);
   const byCat = useMemo(() => {
