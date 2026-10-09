@@ -4,6 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
+import { FeeHelper } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -959,6 +960,7 @@ export function OwnerOrders({ api, onHire }) {
                 ) : (!o.job_status || o.job_status === "expired") ? (
                   <div style={{ margin: "4px 0 8px" }}>
                     {o.job_status === "expired" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>{t("ow_rider_none")}</div>}
+                    <FeeHelper api={api} food={o.mode === "delivery"} onPick={(n) => setQuote((q) => ({ ...q, ["r" + o.id]: String(n) }))} />
                     <div style={{ display: "flex", gap: 8 }}>
                     <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
                            value={quote["r" + o.id] !== undefined ? quote["r" + o.id] : String(Math.round((o.delivery_fee_paise || 3000) / 100))}

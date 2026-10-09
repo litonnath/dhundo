@@ -42,6 +42,7 @@ import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
+import { FareCalculator } from "./fares.jsx";
 import { OrdersPage } from "./orders.jsx";
 import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
@@ -200,6 +201,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     itemReveal: (id) => rpc("services_item_reveal", { p_id: id }, true),
     itemReport: (id, reason, note) =>
       rpc("services_item_report", { p_id: id, p_reason: reason, p_note: note || null }, true),
+    rateCard: () => rpc("services_rate_card", {}),
+    rateSet: (key, base, perKm, min, platform) => rpc("services_rate_set", { p_key: key, p_base: base, p_per_km: perKm, p_min: min, p_platform: platform }, true),
     adminWithdrawals: (status) => rpc("services_admin_withdrawals", { p_status: status || null }, true),
     adminWithdrawalSet: (id, status, note) =>
       rpc("services_admin_withdrawal_set", { p_id: id, p_status: status, p_note: note || null }, true),
@@ -3349,6 +3352,7 @@ export default function ServicesPage({
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
               <AdminMfaCard api={api} onSession={onSessionTokens} onSignOut={onSignOut} />
               <AdminList api={api} trades={trades} reloadKey={reloadKey} />
+              <FareCalculator api={api} />
               <AdminWithdrawals api={api} />
               <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />
             </>
