@@ -732,6 +732,7 @@ export default {
   rd_note: "ଭଡ଼ା ଆପଣ ଓ ଚାଳକ ନିଜେ ଠିକ୍ କରନ୍ତୁ। ଆପ୍ ଟଙ୍କା ନିଏ ନାହିଁ।",
   rd_searching: "ଆପଣଙ୍କ ପାଖରେ ଚାଳକ ଖୋଜୁଛୁ…",
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
+  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

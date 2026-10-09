@@ -732,6 +732,7 @@ export default {
   rd_note: "നിരക്ക് നിങ്ങളും ഡ്രൈവറും തമ്മിൽ തീരുമാനിക്കുക. ആപ്പ് പണം വാങ്ങുന്നില്ല.",
   rd_searching: "നിങ്ങളുടെ അടുത്ത് ഡ്രൈവറെ തിരയുന്നു…",
   rd_alerts_more: "ആപ്പ് അടച്ചിരിക്കുമ്പോൾ അലേർട്ട്",
+  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

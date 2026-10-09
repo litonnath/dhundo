@@ -732,6 +732,7 @@ export default {
   rd_note: "ದರವನ್ನು ನೀವು ಮತ್ತು ಚಾಲಕ ನಿರ್ಧರಿಸಿ. ಆ್ಯಪ್ ಹಣ ಪಡೆಯುವುದಿಲ್ಲ.",
   rd_searching: "ನಿಮ್ಮ ಬಳಿ ಚಾಲಕರನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ…",
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
+  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

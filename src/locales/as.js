@@ -732,6 +732,7 @@ export default {
   rd_note: "ভাড়া আপুনি আৰু চালকে নিজেই ঠিক কৰক। এপে কোনো টকা নলয়।",
   rd_searching: "আপোনাৰ ওচৰত চালক বিচাৰি আছে…",
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
+  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

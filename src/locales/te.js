@@ -732,6 +732,7 @@ export default {
   rd_note: "ఛార్జీని మీరు, డ్రైవర్ మాట్లాడుకుని నిర్ణయించుకోండి. యాప్ డబ్బు తీసుకోదు.",
   rd_searching: "మీ దగ్గర డ్రైవర్ కోసం వెతుకుతున్నాం…",
   rd_alerts_more: "యాప్ మూసి ఉన్నప్పుడు అలర్ట్",
+  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",
