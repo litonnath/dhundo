@@ -2906,6 +2906,7 @@ export default function ServicesPage({
   const [bizOpen, setBizOpen] = useState(null);
   const [myStatus, setMyStatus] = useState(null);
   const [myViews, setMyViews] = useState(null);
+  const [myRow, setMyRow] = useState(null);
   const [autoAccept, setAutoAcceptState] = useState(() => { try { return window.localStorage.getItem("dhundo_auto_accept") === "1"; } catch (_) { return false; } });
   const setAutoAccept = (v) => { setAutoAcceptState(v); try { window.localStorage.setItem("dhundo_auto_accept", v ? "1" : "0"); } catch (_) {} };
   const autoBusy = useRef(false);
@@ -2954,7 +2955,7 @@ export default function ServicesPage({
     if (!signedIn) { setHasListing(false); return; }
     let alive = true;
     api.myListing()
-      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); setMyStatus((one(r) && one(r).status) || null); setMyViews((one(r) && one(r).contact_views) ?? null); } })
+      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); setMyStatus((one(r) && one(r).status) || null); setMyViews((one(r) && one(r).contact_views) ?? null); setMyRow(one(r) || null); } })
       .catch(() => {});
     return () => { alive = false; };
   }, [api, signedIn, reloadKey]);
@@ -3221,7 +3222,24 @@ export default function ServicesPage({
           onOffer={() => setOfferPick(true)}
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} auto={myDriverKind === "travel" ? { on: autoAccept, set: setAutoAccept } : null} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} />, status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} auto={myDriverKind === "travel" ? { on: autoAccept, set: setAutoAccept } : null}
+              bookings={inbox.items} onBookingAnswer={async (id, ok) => { await api.bookingAnswer(id, ok); inbox.reload(); }} shareName={(myRow && (myRow.business_name || myRow.full_name)) || ""}
+              profile={(() => {
+                if (!myRow) return null;
+                const gaps = myRow.gaps || [];
+                const need = [];
+                const isBizRow = isOwnerHome;
+                if (!myRow.avatar_url) need.push(t("todo_face"));
+                if (!(myRow.photos && myRow.photos.length)) need.push(t("todo_photos"));
+                if (!myRow.about || myRow.about === "-") need.push(t("w3_about"));
+                if (!myRow.locality) need.push(t("todo_area"));
+                if (!isBizRow && !myRow.day_rate_min && !myRow.day_rate_max) need.push(t("todo_rate"));
+                if (myRow.loc_source !== undefined && !["device", "picked"].includes(myRow.loc_source || "")) need.push(t("todo_pin"));
+                if (gaps.includes("id_doc")) need.push(t("todo_id"));
+                if (gaps.includes("vehicle_number")) need.push(t("todo_vehicle"));
+                const total = 7 + (gaps.includes("id_doc") ? 0 : 0);
+                return { pct: Math.max(10, Math.round(100 * (1 - need.length / Math.max(total, need.length)))), missing: need };
+              })()} onProfile={() => setTab("mine")} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} />, status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />

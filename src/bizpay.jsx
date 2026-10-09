@@ -146,7 +146,7 @@ export function EarningsPanel({ api, kind }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "" }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [range, setRange] = useState(7);
@@ -203,7 +203,10 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const done = d.filter((r) => r.done);
   const inRange = done.filter((r) => r.at && new Date(r.at).getTime() >= fromTime);
   const sum = (a) => a.reduce((acc, r) => acc + (Number(r.paise) || 0), 0);
-  const waitRows = d.filter((r) => r.wait);
+  const bk = Array.isArray(bookings) ? bookings : [];
+  const bkWait = kind === "other" ? bk.filter((x) => x.role === "worker" && x.status === "requested").map((x) => ({ id: x.id, title: x.other_name, at: x.start_at, status: "requested", noMoney: true, canAct: true, wait: true, bk: true })) : [];
+  const bkUp = kind === "other" ? bk.filter((x) => x.role === "worker" && x.status === "accepted") : [];
+  const waitRows = kind === "other" ? bkWait : d.filter((r) => r.wait);
   const waiting = waitRows.length + (kind === "travel" ? requests : 0);
   const active = d.filter((r) => r.active).length;
   const money = kind !== "other";
@@ -222,6 +225,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const label = (st) => { const k = "st_status_" + st; const v = t(k); return v === k ? st : v; };
   const rangeKey = range === 1 ? "er_today" : range === 7 ? "er_week" : "er_month";
   const act = async (r, action) => {
+    if (r.bk) { setBusy(r.id); try { if (onBookingAnswer) await onBookingAnswer(r.id, action === "accept"); } catch (_) {} setBusy(null); return; }
     setBusy(r.id);
     try { await api.orderUpdate(r.id, action); } catch (_) {}
     setBusy(null); pull();
@@ -237,7 +241,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
         ["db_waiting", waiting, "#C2410C", "#FFF1E6", onOrders],
         ["db_active", active, "#7E22CE", "#F3E8FD", onOrders],
       ]
-    : [["db_views", views == null ? "\u2014" : views, "#0A5BB8", "#E8F0FB", null]];
+    : [["db_waiting", bkWait.length, "#C2410C", "#FFF1E6", null], ["db_upcoming", bkUp.length, "#15803D", "#E7F5EC", null], ["db_views", views == null ? "\u2014" : views, "#0A5BB8", "#E8F0FB", null]];
   const dayRows = sel !== null && days[sel] ? days[sel].rows : [];
   const waNum = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   return (
@@ -284,6 +288,18 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
         ))}
       </div>
 
+      {profile && profile.pct < 100 && (
+        <button onClick={onProfile} style={{ display: "block", width: "100%", textAlign: "left", padding: "14px 14px 12px", marginBottom: 12, borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: T.ink }}>{t("db_profile")}</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: T.brandDark }}>{profile.pct}%</span>
+          </span>
+          <span style={{ display: "block", height: 8, borderRadius: 4, background: "#E5E9EF", overflow: "hidden", marginBottom: 8 }}>
+            <span style={{ display: "block", height: "100%", width: profile.pct + "%", background: "linear-gradient(90deg,#2E86E6,#0A5BB8)", borderRadius: 4 }} />
+          </span>
+          <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5 }}>{profile.missing.slice(0, 3).join(" \u00B7 ")}</span>
+        </button>
+      )}
       {waitRows.length > 0 && (
         <div style={{ background: "#FFF8E6", border: "1.5px solid #F59E0B", borderRadius: 18, padding: "10px 14px", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0 8px" }}>
@@ -293,6 +309,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           {waitRows.slice(0, 4).map((r) => (
             <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: "1px solid rgba(245,158,11,0.35)", flexWrap: "wrap" }}>
               <span style={{ flex: "1 1 120px", minWidth: 0, fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
+              {r.bk && r.at && <span style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>{new Date(r.at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span>}
               {!r.noMoney && <span style={{ fontSize: 14, fontWeight: 800 }}>{rupees(r.paise)}</span>}
               {r.canAct ? (
                 <>
@@ -363,6 +380,18 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           <button onClick={onOrders} style={{ display: "block", width: "100%", background: "none", border: "none", borderTop: `1px solid ${T.line}`, color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 46, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_activity")}</button>
         </div>
       )}
+      {bkUp.length > 0 && (
+        <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 18, padding: "6px 14px", marginTop: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, padding: "10px 0 4px" }}>{t("db_upcoming")}</div>
+          {bkUp.slice(0, 5).map((x, i) => (
+            <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name}</span>
+              <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{x.start_at ? new Date(x.start_at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : ""}</span>
+              {x.other_phone && <a href={`tel:${x.other_phone}`} aria-label="Call" style={{ width: 40, height: 40, borderRadius: "50%", background: "#0F8A3C", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="phone" size={18} /></a>}
+            </div>
+          ))}
+        </div>
+      )}
       {auto && (
         <button onClick={() => auto.set(!auto.on)} role="switch" aria-checked={auto.on} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 14px", marginTop: 12, borderRadius: 18, border: `1.5px solid ${auto.on ? "#1FA85A" : T.line}`, background: auto.on ? "#F0FAF4" : T.white, cursor: "pointer", fontFamily: "inherit" }}>
           <span style={{ flex: 1, minWidth: 0 }}>
@@ -382,6 +411,9 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
             <Icon name="wallet" size={20} /> {t("bz_cashout")}
           </button>
         )}
+        <button onClick={() => { const url = (typeof window !== "undefined" ? window.location.origin : "") + "/"; const text = String(t("sh_promo")).replace("{name}", shareName || "").replace("{url}", url); window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener"); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 56, borderRadius: 16, border: "1.5px solid #25D366", background: "#fff", color: "#157A43", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit", gridColumn: "1 / -1" }}>
+          {t("sh_btn_promo")}
+        </button>
         {waNum && (
           <a href={`https://wa.me/${waNum}?text=${encodeURIComponent(t("pn_help_msg"))}`} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 56, borderRadius: 16, background: "#25D366", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none" }}>
             {t("pn_help")}
