@@ -26,7 +26,8 @@ insert into public.services_rate_card (key, label, base_rupees, per_km_rupees, m
   ('delivery_heavy',  'Goods delivery: heavy / large vehicle', 120, 18, 200, 5, 5)
 on conflict (key) do nothing;
 
-create or replace function public.services_rate_card()
+drop function if exists public.services_rate_card();
+create function public.services_rate_card()
 returns table (key text, label text, base_rupees int, per_km_rupees int,
                min_rupees int, platform_rupees int)
 language sql
