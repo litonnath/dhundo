@@ -1019,7 +1019,7 @@ export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
             <span style={{ display: "block", fontSize: 14.5, fontWeight: 700 }}>{m.name}</span>
             <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{m.category} · {rupees(m.price_paise)}{!m.available && <b style={{ color: "#B91C1C" }}> · {t("pn_soldout")}</b>}</span>
           </span>
-          <button onClick={async () => { try { await api.menuSave({ id: m.id, category: m.category, name: m.name, about: m.about, price: Math.round((m.price_paise || 0) / 100), veg: m.veg, available: !m.available, photo: m.photo_url, bikeOk: shop ? m.bike_ok : undefined }); } catch (_) {} load(); }}
+          <button onClick={async () => { try { await api.menuSave({ id: m.id, category: m.category, name: m.name, about: m.about, price: Math.round((m.price_paise || 0) / 100), veg: m.veg, available: !m.available, photo: m.photo_url || "", bikeOk: shop ? m.bike_ok !== false : undefined }); } catch (_) {} load(); }}
                   role="switch" aria-checked={!!m.available} aria-label={t("pn_instock")} title={t("pn_instock")} style={{
             position: "relative", width: 50, height: 30, borderRadius: 15, border: "none", cursor: "pointer", flexShrink: 0,
             background: m.available ? GREEN : "#C5CBD3", transition: "background .15s",
