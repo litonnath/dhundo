@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from "react";
 import { T, Btn, Icon, Notice, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { CONTACT } from "./brand.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] || null : r || null);
@@ -134,7 +135,7 @@ export function EarningsPanel({ api, kind }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [range, setRange] = useState(7);
@@ -143,6 +144,14 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders }
   const [spin, setSpin] = useState(false);
   const [tick, setTick] = useState(0);
   const [stamp, setStamp] = useState(null);
+  const [taking, setTaking] = useState(null);
+  useEffect(() => {
+    if (kind !== "owner" || !api.myMenu) return undefined;
+    let alive = true;
+    Promise.resolve(api.myMenu()).then((m) => { const a = many(m); if (alive) setTaking(a.length === 0 || a[0].accepting !== false); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, kind]);
+  const flipTaking = async () => { const next = !taking; setTaking(next); try { await api.setAccepting(next); } catch (_) { setTaking(!next); } };
   const pull = async () => {
     try {
       let rows = [];
@@ -208,8 +217,17 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders }
       ]
     : [["db_views", views == null ? "\u2014" : views, "#0A5BB8", "#E8F0FB", null]];
   const dayRows = sel !== null && days[sel] ? days[sel].rows : [];
+  const waNum = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   return (
     <div style={{ margin: "0 0 20px" }}>
+      {kind === "owner" && taking !== null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: taking ? "#F0FAF4" : "#FEF2F2", border: `1.5px solid ${taking ? "#1FA85A" : "#FCA5A5"}` }}>
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: taking ? "#157A43" : "#B91C1C" }}>{taking ? t("pn_taking") : t("pn_paused")}</span>
+          <button onClick={flipTaking} role="switch" aria-checked={taking} style={{ position: "relative", width: 62, height: 36, borderRadius: 18, border: "none", cursor: "pointer", background: taking ? "#1FA85A" : "#C5CBD3", flexShrink: 0 }}>
+            <span style={{ position: "absolute", top: 4, left: taking ? 30 : 4, width: 28, height: 28, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+          </button>
+        </div>
+      )}
       {money && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <div role="tablist" style={{ flex: 1, display: "flex", gap: 4, background: "#EEF1F5", borderRadius: 14, padding: 4 }}>
@@ -310,6 +328,18 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders }
           <button onClick={onOrders} style={{ display: "block", width: "100%", background: "none", border: "none", borderTop: `1px solid ${T.line}`, color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 46, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_activity")}</button>
         </div>
       )}
+      <div style={{ display: "grid", gridTemplateColumns: onWallet ? "1fr 1fr" : "1fr", gap: 10, marginTop: 12 }}>
+        {onWallet && (
+          <button onClick={onWallet} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 56, borderRadius: 16, border: `1.5px solid ${T.brandDark}`, background: T.white, color: T.brandDark, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
+            <Icon name="wallet" size={20} /> {t("bz_cashout")}
+          </button>
+        )}
+        {waNum && (
+          <a href={`https://wa.me/${waNum}?text=${encodeURIComponent(t("pn_help_msg"))}`} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 56, borderRadius: 16, background: "#25D366", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none" }}>
+            {t("pn_help")}
+          </a>
+        )}
+      </div>
     </div>
   );
 }

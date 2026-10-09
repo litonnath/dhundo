@@ -1017,8 +1017,13 @@ export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
           {!shop && <VegMark veg={m.veg} />}
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 14.5, fontWeight: 700 }}>{m.name}</span>
-            <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{m.category} · {rupees(m.price_paise)}</span>
+            <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft }}>{m.category} · {rupees(m.price_paise)}{!m.available && <b style={{ color: "#B91C1C" }}> · {t("pn_soldout")}</b>}</span>
           </span>
+          <button onClick={async () => { try { await api.menuSave({ id: m.id, category: m.category, name: m.name, about: m.about, price: Math.round((m.price_paise || 0) / 100), veg: m.veg, available: !m.available, photo: m.photo_url, bikeOk: shop ? m.bike_ok : undefined }); } catch (_) {} load(); }}
+                  role="switch" aria-checked={!!m.available} aria-label={t("pn_instock")} title={t("pn_instock")} style={{
+            position: "relative", width: 50, height: 30, borderRadius: 15, border: "none", cursor: "pointer", flexShrink: 0,
+            background: m.available ? GREEN : "#C5CBD3", transition: "background .15s",
+          }}><span style={{ position: "absolute", top: 3, left: m.available ? 23 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
           <button onClick={() => setEditing(m)} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, cursor: "pointer", minHeight: 40, fontFamily: "inherit" }}>{t("ow_edit")}</button>
         </div>
       ))}
