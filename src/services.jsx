@@ -43,7 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
-import { PaymentsPanel, EarningsPanel } from "./bizpay.jsx";
+import { PaymentsPanel, EarningsPanel, BizDashboard } from "./bizpay.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
@@ -2898,6 +2898,7 @@ export default function ServicesPage({
   const [liveNow, setLiveNow] = useState([]);
   const [bizOpen, setBizOpen] = useState(null);
   const [myStatus, setMyStatus] = useState(null);
+  const [myViews, setMyViews] = useState(null);
   const [listedNow, setListedNow] = useState(false);   // keeps the form (and its success screen) up right after saving
   useEffect(() => { if (tab !== "add") setListedNow(false); }, [tab]);
   const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
@@ -2943,7 +2944,7 @@ export default function ServicesPage({
     if (!signedIn) { setHasListing(false); return; }
     let alive = true;
     api.myListing()
-      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); setMyStatus((one(r) && one(r).status) || null); } })
+      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); setMyStatus((one(r) && one(r).status) || null); setMyViews((one(r) && one(r).contact_views) ?? null); } })
       .catch(() => {});
     return () => { alive = false; };
   }, [api, signedIn, reloadKey]);
@@ -3195,7 +3196,7 @@ export default function ServicesPage({
           onOffer={() => setOfferPick(true)}
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} />, status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />

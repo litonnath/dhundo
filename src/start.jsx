@@ -251,7 +251,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
           ))}
         </div>}
         {homeMode === "business" && (
-          <div style={{ maxWidth: 720, margin: "0 auto" }}>{biz ? bizBlock : (
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>{biz ? <>{bizBlock}{biz.dash}</> : (
             <button onClick={onOffer} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left", minHeight: 88, padding: "14px 16px", borderRadius: 18, border: "1.5px dashed #C2410C", background: "#FFF7EC", cursor: "pointer", fontFamily: "inherit" }}>
               <span style={{ width: 50, height: 50, borderRadius: 14, background: "#C2410C", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={26} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
