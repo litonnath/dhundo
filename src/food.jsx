@@ -341,6 +341,8 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
   const [cartOpen, setCartOpen] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
+  const [pay, setPay] = useState(null);
+  useEffect(() => { let alive = true; Promise.resolve(api.storePay ? api.storePay(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setPay(x); }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
   const kind = eat ? foodKind(row.trade_slug) : "plain";
   const catering = kind === "catering";
 
@@ -387,6 +389,10 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             {info && <span style={{ display: "inline-flex" }}><OpenLine info={info} t={t} /></span>}
           </div>
           {row.about && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.55, margin: "-6px 0 12px", overflowWrap: "anywhere" }}>{row.about}</div>}
+          {pay && (pay.accepts_cash || pay.accepts_upi) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "0 0 12px" }}>
+            {pay.accepts_cash && <span style={{ fontSize: 13, fontWeight: 800, background: "#ECFDF3", color: "#0F6B33", borderRadius: 14, padding: "5px 11px" }}>{t("bp_cash_chip")}</span>}
+            {pay.accepts_upi && <span style={{ fontSize: 13, fontWeight: 800, background: "#E8F0FE", color: "#1D4ED8", borderRadius: 14, padding: "5px 11px" }}>UPI{pay.upi_id ? ` \u00B7 ${pay.upi_id}` : ""}</span>}
+          </div>}
           {info && info.promo_text && <Promo info={info} />}
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
           {!catering && kind !== "tiffin" && (

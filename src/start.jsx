@@ -220,6 +220,11 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
                 background: biz.online ? "#6B7280" : "#1FA85A", opacity: biz.busy ? 0.6 : 1, whiteSpace: "nowrap",
               }}>{biz.busy ? "…" : biz.online ? t("av_stop") : t("hm_goon")}</button>
             </div>
+            {biz.status && biz.status !== "approved" && (
+              <div style={{ padding: "10px 16px", background: biz.status === "hidden" ? "#F3F4F6" : "#FFF7E0", borderTop: `1px solid ${T.line}`, fontSize: 14, fontWeight: 800, color: biz.status === "hidden" ? T.inkSoft : "#8A5A00" }}>
+                {biz.status === "hidden" ? t("m_hidden") : t("m_pending")}
+              </div>
+            )}
             {biz.error && <button onClick={biz.onDash} style={{ display: "block", width: "100%", background: "#FEF2F2", border: "none", borderTop: "1px solid #FECACA", padding: "10px 16px", color: "#B91C1C", fontWeight: 800, fontSize: 14, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>{t("hm_fix")}</button>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: `1px solid ${T.line}` }}>
               {[["bag", t("nav_activity"), biz.onOrders, biz.orders, "#1D4ED8", "#E8F0FE"], ["edit", t("nav_mine"), biz.onListing, 0, "#C2410C", "#FFF1E6"], ["plus", t("hm_add"), biz.onSell, 0, "#15803D", "#E7F5EC"]].map(([icon, label, go, n, fg, bg], i) => (

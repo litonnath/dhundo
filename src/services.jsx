@@ -43,6 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
+import { PaymentsPanel, EarningsPanel } from "./bizpay.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
@@ -377,6 +378,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     }),
     ratesGet: (workerId) => rpc("services_rates_get", { p_worker: workerId }),
     myRates: () => rpc("services_my_rates", {}, true),
+    bizPayGet: () => rpc("services_biz_payment_get", {}, true),
+    bizPaySave: (cash, upiOk, upi, gst, lic) => rpc("services_biz_payment_save", { p_cash: cash, p_upi_ok: upiOk, p_upi: upi || null, p_gst: gst || null, p_licence: lic || null }, true),
+    storePay: (workerId) => rpc("services_store_payment", { p_worker: workerId }),
     rateSave: (r) => rpc("services_rate_save", { p_id: r.id || null, p_label: r.label, p_unit: r.unit, p_rupees: r.rupees }, true),
     rateDelete: (id) => rpc("services_rate_delete", { p_id: id }, true),
     storeInfos: (ids) => rpc("services_store_infos", { p_ids: ids }),
@@ -2893,6 +2897,7 @@ export default function ServicesPage({
   const [ordersKey, setOrdersKey] = useState(0);
   const [liveNow, setLiveNow] = useState([]);
   const [bizOpen, setBizOpen] = useState(null);
+  const [myStatus, setMyStatus] = useState(null);
   const [listedNow, setListedNow] = useState(false);   // keeps the form (and its success screen) up right after saving
   useEffect(() => { if (tab !== "add") setListedNow(false); }, [tab]);
   const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
@@ -2938,7 +2943,7 @@ export default function ServicesPage({
     if (!signedIn) { setHasListing(false); return; }
     let alive = true;
     api.myListing()
-      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); } })
+      .then((r) => { if (alive) { setHasListing(!!(one(r) && one(r).id)); setMyTrade((one(r) && one(r).trade_slug) || null); setMyStatus((one(r) && one(r).status) || null); } })
       .catch(() => {});
     return () => { alive = false; };
   }, [api, signedIn, reloadKey]);
@@ -3190,7 +3195,7 @@ export default function ServicesPage({
           onOffer={() => setOfferPick(true)}
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
@@ -3242,15 +3247,31 @@ export default function ServicesPage({
             parts.push({ key: "rates", icon: "edit", label: t("m_rates"), node: <RatesCard api={api} /> });
           }
         }
-        const cur = parts.find((x) => x.key === bizOpen) || (parts.length === 1 ? parts[0] : null);
+        if (hasListing && !isAdmin) {
+          const ek = ownerKind ? "owner" : dk === "delivery" ? "delivery" : dk === "travel" ? "travel" : null;
+          if (ek) parts.unshift({ key: "earnings", icon: "wallet", label: t("er_title"), node: <EarningsPanel api={api} kind={ek} /> });
+          parts.push({ key: "payments", icon: "check", label: t("bp_title"), node: <PaymentsPanel api={api} kind={ownerKind ? "owner" : "other"} /> });
+          parts.push({ key: "wallet", icon: "wallet", label: t("bz_wallet"), action: () => setWalletOpen(true) });
+        }
+        const cur = parts.find((x) => x.key === bizOpen && x.node) || null;
         return (
           <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 120px" }}>
             <HomeButton onClick={() => (cur && parts.length > 1 ? setBizOpen(null) : setTab("browse"))} />
             <h1 style={{ fontSize: 23, fontWeight: 800, margin: "14px 0 12px" }}>{cur ? cur.label : t("hm_mybiz")}</h1>
-            {cur ? cur.node : (
+            {cur ? cur.node : (<>
+              <div style={{ background: "linear-gradient(135deg,#032C61,#0A5BB8)", color: "#fff", borderRadius: 20, padding: "18px 16px", margin: "0 0 16px" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{t("bz_setup")}</div>
+                <div style={{ fontSize: 13.5, opacity: 0.88, marginBottom: 12, lineHeight: 1.5 }}>{t("bz_setup_sub")}</div>
+                {[[t("bp_title"), () => setBizOpen("payments")], [ownerKind ? t("m_menu_items") : t("m_rates"), () => setBizOpen(ownerKind ? "menu" : "rates")], [t("bz_photos"), () => setTab("mine")], [t("hm_goon"), () => setTab("browse")]].map(([label, go], i) => (
+                  <button key={i} onClick={go} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 50, padding: "0 14px", marginTop: 8, borderRadius: 14, border: "none", background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800, textAlign: "left", cursor: "pointer" }}>
+                    <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", color: "#054291", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>{i + 1}</span>
+                    <span style={{ flex: 1 }}>{label}</span>
+                  </button>
+                ))}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {parts.map((x) => (
-                  <button key={x.key} onClick={() => setBizOpen(x.key)} style={{
+                  <button key={x.key} onClick={() => (x.action ? x.action() : setBizOpen(x.key))} style={{
                     display: "flex", alignItems: "center", gap: 10, minHeight: 72, padding: "10px 12px", borderRadius: 14, textAlign: "left",
                     border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
                   }}>
@@ -3259,7 +3280,7 @@ export default function ServicesPage({
                   </button>
                 ))}
               </div>
-            )}
+            </>)}
           </div>
         );
       })()}
