@@ -334,9 +334,13 @@ function Cover({ row, eat, height }) {
 }
 
 // ====================================================== STORE PAGE (menu)
-function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, onClose, onOrdered, onHire }) {
+function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, renderEmpty, onClose, onOrdered, onHire }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
+  // The list's copy of the hours can be old; ask again when the page opens.
+  const [fresh, setFresh] = useState(null);
+  useEffect(() => { let alive = true; Promise.resolve(api.storeInfos([row.id])).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setFresh(x); }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
+  const info = fresh || infoProp;
   const [menu, setMenu] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
