@@ -733,6 +733,7 @@ export default {
   rd_searching: "உங்கள் அருகில் ஓட்டுநரைத் தேடுகிறோம்…",
   rd_alerts_more: "செயலி மூடியிருக்கும்போது அறிவிப்பு",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_gst: "GST",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

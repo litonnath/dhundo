@@ -733,6 +733,7 @@ export default {
   rd_searching: "നിങ്ങളുടെ അടുത്ത് ഡ്രൈവറെ തിരയുന്നു…",
   rd_alerts_more: "ആപ്പ് അടച്ചിരിക്കുമ്പോൾ അലേർട്ട്",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_gst: "GST",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

@@ -36,6 +36,17 @@ export function useRateCard(api) {
   return rows;
 }
 
+// The GST on what is bought from a restaurant or a shop, set by the admin.
+export function useGstRates(api) {
+  const [r, setR] = useState({ restaurant: 0, shop: 0 });
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.gstRates ? api.gstRates() : []).then((x) => { const o = { restaurant: 0, shop: 0 }; many(x).forEach((g) => { o[g.kind] = Number(g.percent) || 0; }); if (alive) setR(o); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  return r;
+}
+
 // Size chips and a distance under a shop's "send a rider" box. Picking one
 // fills the fee with the card's price; the shop can still change the number.
 export function FeeHelper({ api, food, onPick }) {
@@ -167,8 +178,47 @@ export function FareCalculator({ api }) {
           </tr></tfoot>
         </table>
       </div>
+      <GstRatesEditor api={api} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 0" }}>Rate card</h3>
       {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees } api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
+    </div>
+  );
+}
+
+// GST that appears on the customer's bill for restaurant food and shop goods.
+function GstRatesEditor({ api }) {
+  const [v, setV] = useState({ restaurant: "", shop: "" });
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.gstRates()).then((x) => { const o = { restaurant: "", shop: "" }; many(x).forEach((g) => { o[g.kind] = String(Number(g.percent)); }); if (alive) setV(o); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  const save = async () => {
+    setMsg("");
+    try {
+      for (const k of ["restaurant", "shop"]) {
+        const r = await api.gstSet(k, num(v[k]));
+        const x = Array.isArray(r) ? r[0] : r;
+        if (x && x.ok === false) throw new Error("no");
+      }
+      setMsg("Saved");
+    } catch (_) { setMsg("Could not save"); }
+  };
+  return (
+    <div style={{ margin: "18px 0 0", padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>GST on food and goods</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Added to the customer's bill for items bought from a restaurant or a shop. Charged to the customer only.</div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {[["restaurant", "Restaurants %"], ["shop", "Shops %"]].map(([k, l]) => (
+          <div key={k} style={{ width: 150 }}><div style={lbl}>{l}</div>
+            <input style={cell} inputMode="decimal" maxLength={4} value={v[k]} onChange={(e) => { setMsg(""); setV((p) => ({ ...p, [k]: e.target.value.replace(/[^\d.]/g, "") })); }} /></div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+        <Btn onClick={save}>Save</Btn>
+        {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg === "Saved" ? "#157A43" : "#B91C1C" }}>{msg}</span>}
+      </div>
     </div>
   );
 }

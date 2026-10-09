@@ -733,6 +733,7 @@ export default {
   rd_searching: "మీ దగ్గర డ్రైవర్ కోసం వెతుకుతున్నాం…",
   rd_alerts_more: "యాప్ మూసి ఉన్నప్పుడు అలర్ట్",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_gst: "GST",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

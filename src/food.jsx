@@ -4,7 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
-import { FeeHelper } from "./fares.jsx";
+import { FeeHelper, useGstRates } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -566,6 +566,8 @@ function Stepper({ qty, onAdd, onMinus, disabled, label }) {
 function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, total, place, user, onSignIn, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
+  const gstPct = useGstRates(api)[eat ? "restaurant" : "shop"];
+  const gstP = Math.round(total * gstPct / 100);
   // An item the shop marked as too big for a bike cannot go by delivery rider:
   // the customer collects it, or hires a vehicle to carry it.
   const tooBig = lines.some((m) => m.bike_ok === false);
@@ -614,13 +616,18 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 800, margin: "12px 0" }}>
           <span>{t("st_total")}</span><span>{rupees(total)}</span>
         </div>
+        {gstP > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 8px", color: T.inkSoft }}>
+            <span>{t("fr_gst")} ({gstPct}%)</span><span>{rupees(gstP)}</span>
+          </div>
+        )}
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
               <span>{t("st_fee")}</span><span>~{"\u20B9"}{feeRs}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-              <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(total / 100) + feeRs}</span>
+              <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round((total + gstP) / 100) + feeRs}</span>
             </div>
           </>
         )}
@@ -691,7 +698,8 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             </div>
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
-            {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</b></div>}
+            {o.gst_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("fr_gst")}: {rupees(o.gst_paise)}{!(o.delivery_fee_paise > 0) && <> {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.gst_paise)}</b></>}</div>}
+            {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise + (o.gst_paise || 0))}</b></div>}
             <OrderTrack o={o} />
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
@@ -702,7 +710,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise)}</div>}
+                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise + (o.gst_paise || 0))}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
@@ -918,7 +926,7 @@ export function OwnerOrders({ api, onHire }) {
             <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
           </div>
           <Lines lines={o.lines} />
-          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)}{o.gst_paise > 0 ? ` + ${t("fr_gst")} ${rupees(o.gst_paise)}` : ""} · {modeLabel(o.mode, t)}</div>
           {o.address_text && <div style={{ fontSize: 13.5, color: T.ink }}>{o.address_text}</div>}
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}

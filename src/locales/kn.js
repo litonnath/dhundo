@@ -733,6 +733,7 @@ export default {
   rd_searching: "ನಿಮ್ಮ ಬಳಿ ಚಾಲಕರನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ…",
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_gst: "GST",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",
