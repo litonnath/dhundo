@@ -265,19 +265,21 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
             ))}
           </div>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${wide ? 320 : 150}px, 1fr))`, gap: wide ? 18 : 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${wide ? 3 : 2}, 1fr)`, gap: wide ? 16 : 12 }}>
           {TILES.filter((x) => x[0] !== "partner").map(([key, icon, fg, bg, label, sub, art]) => (
             <button key={key} className="dh-tile" onClick={() => onPick(key)} style={{
-              position: "relative", display: "block", textAlign: "left", padding: 0, overflow: "hidden", borderRadius: 24, border: "none",
-              aspectRatio: wide ? "16 / 10" : "1 / 1.12", cursor: "pointer", fontFamily: "inherit", background: "#111827",
-              boxShadow: "0 8px 22px rgba(15,20,25,0.14)",
+              display: "flex", flexDirection: "column", alignItems: "stretch", textAlign: "left", padding: 0, overflow: "hidden",
+              borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+              boxShadow: "0 4px 14px rgba(15,20,25,0.07)",
             }}>
-              <TileArt k={art} pos="center" style={{ position: "absolute", inset: 0, aspectRatio: "auto", height: "100%" }} />
-              <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,14,26,0.86) 0%, rgba(8,14,26,0.45) 38%, rgba(8,14,26,0) 66%)" }} />
-              <span style={{ position: "absolute", left: 12, top: 12, width: 42, height: 42, borderRadius: 14, background: fg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}><Icon name={icon} size={22} /></span>
-              <span style={{ position: "absolute", left: 14, right: 14, bottom: 14, color: "#fff" }}>
-                <span style={{ display: "block", fontSize: wide ? 22 : 18, fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.01em" }}>{t(label)}</span>
-                <span style={{ display: "block", fontSize: wide ? 14 : 12.5, lineHeight: 1.35, marginTop: 4, opacity: 0.88 }}>{t(sub)}</span>
+              <TileArt k={art} />
+              <span style={{ display: "block", padding: "12px 14px 15px" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 36, height: 36, borderRadius: 10, color: "#fff", background: fg, flexShrink: 0,
+                                 display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={19} /></span>
+                  <span style={{ fontSize: wide ? 18 : 16, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{t(label)}</span>
+                </span>
+                <span style={{ display: "block", fontSize: 13, color: T.inkSoft, lineHeight: 1.45, marginTop: 7 }}>{t(sub)}</span>
               </span>
             </button>
           ))}
