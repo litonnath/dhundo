@@ -30,7 +30,8 @@ declare
 begin
   if v_acc is null then return query select false, 'signin'; return; end if;
   if p_stars is null or p_stars < 1 or p_stars > 5 then return query select false, 'bad_stars'; return; end if;
-  if v_kind not in ('order', 'ride', 'job', 'item', 'hire') then return query select false, 'bad_kind'; return; end if;
+  -- Only a finished order can be rated for now: it is the one thing the database can check.
+  if v_kind <> 'order' then return query select false, 'bad_kind'; return; end if;
   if v_kind = 'order' then
     select o.worker_id into v_w from public.services_orders o
      where o.id = p_ref and o.customer_id = v_acc and o.status = 'delivered';

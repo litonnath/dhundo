@@ -180,7 +180,14 @@ export function BankPanel({ api }) {
 }
 
 // ------------------------------------------------------------ report + invoice
-const csvCell = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+// A cell that starts with = + - @ is run as a formula by Excel and Sheets, so a
+// customer name like =HYPERLINK(...) could do harm. A leading apostrophe makes
+// it plain text.
+const csvCell = (v) => {
+  let x = String(v == null ? "" : v);
+  if (/^[=+\-@\t\r]/.test(x) && typeof v !== "number") x = "'" + x;
+  return `"${x.replace(/"/g, '""')}"`;
+};
 export function exportCsv(rows, name) {
   const head = ["Date", "Customer / place", "Details", "Amount (INR)"];
   const lines = [head.map(csvCell).join(",")].concat(rows.map((r) => [r.at ? new Date(r.at).toISOString().slice(0, 10) : "", r.title, (r.lines || []).map((l) => `${l.qty} x ${l.name}`).join("; ") || r.sub || r.drop || "", (Number(r.paise) || 0) / 100].map(csvCell).join(",")));
@@ -204,6 +211,9 @@ export function openInvoice({ biz, gst, row, t }) {
 <div class="m">${esc(row.title)}</div>
 <table><tr><th>${esc(t("iv_item"))}</th><th style="text-align:right">${esc(t("iv_qty"))}</th></tr>${rows || `<tr><td>${esc(row.sub || row.title)}</td><td></td></tr>`}</table>
 <div class="t">₹${((Number(row.paise) || 0) / 100).toLocaleString("en-IN")}</div>
-<p class="m">${esc(t("iv_thanks"))}</p><button onclick="window.print()" style="margin-top:12px;padding:12px 22px;font-size:16px">${esc(t("iv_print"))}</button></body></html>`);
+<p class="m">${esc(t("iv_thanks"))}</p><button id="p" style="margin-top:12px;padding:12px 22px;font-size:16px">${esc(t("iv_print"))}</button></body></html>`);
   w.document.close();
+  const btn = w.document.getElementById("p");
+  if (btn) btn.addEventListener("click", () => w.print());
+  w.opener = null;
 }
