@@ -687,8 +687,10 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
         })
         .catch(() => { if (alive) { setLive([]); setLiveFar(false); } });
     fetchLive();
-    const id = setInterval(fetchLive, 60000);
-    return () => { alive = false; clearInterval(id); };
+    const id = setInterval(() => { if (!document.hidden) fetchLive(); }, 45000);
+    const onVis = () => { if (!document.hidden) fetchLive(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [api, state, trade, group, showGrid, search, slugKey, typed, place && place.lat, place && place.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Available first, then everybody else once; the live copy of a card wins

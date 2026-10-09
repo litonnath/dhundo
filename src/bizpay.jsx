@@ -169,10 +169,10 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   useEffect(() => {
     if (kind !== "owner" || !api.myStore) return undefined;
     let alive = true;
-    Promise.resolve(api.myStore()).then((r) => {
+    const pull = () => Promise.resolve(api.myStore()).then((r) => {
       const x = Array.isArray(r) ? r[0] : r;
       const o = x && x.open_time ? String(x.open_time).slice(0, 5) : "", c = x && x.close_time ? String(x.close_time).slice(0, 5) : "";
-      if (!o || !c) return;
+      if (!o || !c) { if (alive) setClosedBy(null); return; }
       const ist = new Date(Date.now() + (new Date().getTimezoneOffset() + 330) * 60000);
       const nowM = ist.getHours() * 60 + ist.getMinutes();
       const mm = (v) => Number(v.split(":")[0]) * 60 + Number(v.split(":")[1]);
@@ -180,7 +180,9 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
       const f = (v) => { const [h, m] = v.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
       if (alive) setClosedBy(inside ? null : `${f(o)} – ${f(c)}`);
     }).catch(() => {});
-    return () => { alive = false; };
+    pull();
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, 60000);
+    return () => { alive = false; clearInterval(timer); };
   }, [api, kind, taking]);
   const [docAlert, setDocAlert] = useState(0);
   useEffect(() => {
@@ -192,8 +194,10 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   useEffect(() => {
     if (kind !== "owner" || !api.myMenu) return undefined;
     let alive = true;
-    Promise.resolve(api.myMenu()).then((m) => { const a = many(m); if (alive) setTaking(a.length === 0 || a[0].accepting !== false); }).catch(() => {});
-    return () => { alive = false; };
+    const pull = () => Promise.resolve(api.myMenu()).then((m) => { const a = many(m); if (alive) setTaking(a.length === 0 || a[0].accepting !== false); }).catch(() => {});
+    pull();
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, 30000);
+    return () => { alive = false; clearInterval(timer); };
   }, [api, kind]);
   const [resumeAt, setResumeAt] = useState(null);
   useEffect(() => {

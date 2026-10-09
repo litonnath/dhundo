@@ -105,13 +105,18 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   useEffect(() => {
     if (!pick || typeof pick.lat !== "number") { setOnline([]); return; }
     let live = true;
-    api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", trade: vehicle !== "any" ? vehicle : null, radiusKm: 8, limit: 8 })
+    const pull = () => api.availableWorkers({ lat: pick.lat, lng: pick.lng, group: "Drivers", trade: vehicle !== "any" ? vehicle : null, radiusKm: 8, limit: 8 })
       .then((rows) => {
         if (!live) return;
         const list = many(rows); setOnline(list);
         if (list.length) api.storeInfos(list.map((x) => x.id)).then((inf) => { if (live) { const o = {}; many(inf).forEach((i) => { o[i.id] = i.per_km_rupees; }); setFares(o); } }).catch(() => {});
       }).catch(() => {});
-    return () => { live = false; };
+    pull();
+    // Drivers go on and off line all day: ask again, only while the app is on screen.
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, 30000);
+    const onVis = () => { if (!document.hidden) pull(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { live = false; clearInterval(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [api, vehicle, pick && pick.lat, pick && pick.lng]);
 
   // Rates of the drivers near the pickup, kept per kind of vehicle: those online
