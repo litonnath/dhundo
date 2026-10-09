@@ -732,7 +732,7 @@ export default {
   rd_note: "भाडे तुम्ही आणि चालक आपापसात ठरवा. अ‍ॅप पैसे घेत नाही.",
   rd_searching: "तुमच्या जवळ चालक शोधत आहोत…",
   rd_alerts_more: "अॅप बंद असताना अलर्ट",
-  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",

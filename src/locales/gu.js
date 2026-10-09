@@ -732,7 +732,7 @@ export default {
   rd_note: "ભાડું તમે અને ડ્રાઇવર જાતે નક્કી કરો. એપ કોઈ ચુકવણી લેતી નથી.",
   rd_searching: "તમારી નજીક ડ્રાઇવર શોધી રહ્યા છીએ…",
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
-  fr_bill: "Customer pays ₹{c} (platform fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
+  fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",
