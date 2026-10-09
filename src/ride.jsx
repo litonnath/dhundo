@@ -488,6 +488,7 @@ function RiderSettings({ api, onSaved }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState("");
   useEffect(() => {
     Promise.all([api.myRider(), api.myFuel ? api.myFuel().catch(() => null) : null]).then(([r, fu]) => {
       const x = one(r) || {};
@@ -497,7 +498,15 @@ function RiderSettings({ api, onSaved }) {
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
   const row = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, fontSize: 15, fontWeight: 700 };
-  const save = async () => { try { await api.setRider(f); if (api.setFuel) await api.setFuel(f.fuel); setSaved(true); onSaved && onSaved(); setOpen(false); } catch (_) {} };
+  const save = async () => {
+    setErr("");
+    try {
+      const r = one(await api.setRider(f));
+      if (r && r.ok === false) throw new Error("no");
+      if (api.setFuel) await api.setFuel(f.fuel);
+      setSaved(true); onSaved && onSaved(); setOpen(false);
+    } catch (_) { setErr(t("e_save")); }
+  };
   const on = (v) => (v ? "\u2713" : "\u2013");
   return (
     <div style={card}>
@@ -508,7 +517,7 @@ function RiderSettings({ api, onSaved }) {
             {f.perKm ? String(t("rs_km_show")).replace("{n}", f.perKm) : t("rs_per_km")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
           </div>
         </div>
-        <Btn kind="ghost" onClick={() => { setSaved(false); setOpen(true); }}>{t("av_change")}</Btn>
+        <Btn kind="ghost" onClick={() => { setSaved(false); setErr(""); setOpen(true); }}>{t("av_change")}</Btn>
       </div>
       {open && (
         <FormSheet title={t("rs_title")} onClose={() => setOpen(false)}>
@@ -522,6 +531,7 @@ function RiderSettings({ api, onSaved }) {
           </select>
           <label style={row}><input type="checkbox" checked={f.rides} onChange={(e) => set("rides", e.target.checked)} /> {t("rs_rides")}</label>
           <label style={row}><input type="checkbox" checked={f.delivery} onChange={(e) => set("delivery", e.target.checked)} /> {t("rs_delivery")}</label>
+          {err && <div role="alert" style={{ color: "#B91C1C", fontSize: 14, fontWeight: 700, marginTop: 8 }}>{err}</div>}
           <div style={{ marginTop: 10 }}><Btn full onClick={save}>{t("ow_save")}</Btn></div>
         </FormSheet>
       )}

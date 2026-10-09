@@ -92,13 +92,19 @@ export function DocsPanel({ api }) {
   const [rows, setRows] = useState(null);
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
   const load = () => Promise.resolve(api.docsList()).then((r) => setRows(many(r))).catch(() => setRows([]));
   useEffect(() => { load(); }, [api]); // eslint-disable-line react-hooks/exhaustive-deps
   if (rows === null) return <div style={{ height: 120 }} />;
   const by = Object.fromEntries(rows.map((r) => [r.kind, r]));
   const save = async () => {
     setBusy(true);
-    try { await api.docSave(edit.kind, edit.no, edit.exp || null); setEdit(null); await load(); } catch (_) { /* stays open */ }
+    setErr("");
+    try {
+      const r = one(await api.docSave(edit.kind, edit.no, edit.exp || null));
+      if (r && r.ok === false) throw new Error("no");
+      setEdit(null); await load();
+    } catch (_) { setErr(t("e_save")); }
     setBusy(false);
   };
   const tone = { ok: ["#ECFDF3", "#0F6B33"], soon: ["#FFF7E0", "#8A5A00"], expired: ["#FEF2F2", "#B91C1C"], none: ["#F3F4F6", "#6B7280"] };
@@ -107,7 +113,7 @@ export function DocsPanel({ api }) {
       {DOC_KINDS.map(([k, key]) => {
         const r = by[k]; const st = docStatus(r && r.expires_on); const c = tone[st.key];
         return (
-          <button key={k} onClick={() => setEdit({ kind: k, no: (r && r.doc_no) || "", exp: (r && r.expires_on) || "" })} style={{ ...card, display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: "14px 16px", marginBottom: 10 }}>
+          <button key={k} onClick={() => setErr("") || setEdit({ kind: k, no: (r && r.doc_no) || "", exp: (r && r.expires_on) || "" })} style={{ ...card, display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: "14px 16px", marginBottom: 10 }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: T.ink }}>{t(key)}</span>
               <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>{r && r.doc_no ? r.doc_no : "—"}{r && r.expires_on ? ` · ${new Date(r.expires_on).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}` : ""}</span>
@@ -126,6 +132,7 @@ export function DocsPanel({ api }) {
             <input style={field} value={edit.no} maxLength={40} onChange={(e) => setEdit({ ...edit, no: e.target.value.toUpperCase() })} />
             <div style={label}>{t("dc_expires")}</div>
             <input type="date" style={field} value={edit.exp} onChange={(e) => setEdit({ ...edit, exp: e.target.value })} />
+            {err && <div role="alert" style={{ color: "#B91C1C", fontSize: 14, fontWeight: 700, marginTop: 10 }}>{err}</div>}
             <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
               <Btn kind="ghost" onClick={() => setEdit(null)} style={{ flex: 1 }}>{t("sos_close")}</Btn>
               <Btn onClick={save} disabled={busy} style={{ flex: 1 }}>{busy ? "…" : t("p_save")}</Btn>
