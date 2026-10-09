@@ -43,7 +43,7 @@ import { TileArt } from "./scenes.jsx";
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
-import { PaymentsPanel, EarningsPanel, BizDashboard } from "./bizpay.jsx";
+import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
@@ -381,6 +381,13 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bizPayGet: () => rpc("services_biz_payment_get", {}, true),
     bizPaySave: (cash, upiOk, upi, gst, lic) => rpc("services_biz_payment_save", { p_cash: cash, p_upi_ok: upiOk, p_upi: upi || null, p_gst: gst || null, p_licence: lic || null }, true),
     storePay: (workerId) => rpc("services_store_payment", { p_worker: workerId }),
+    reviewAdd: (o) => rpc("services_review_add", { p_worker: o.worker || null, p_kind: o.kind || "order", p_ref: o.ref || null, p_stars: o.stars, p_comment: o.comment || null, p_complaint: !!o.complaint }, true),
+    ratingSummary: (ids) => rpc("services_rating_summary", { p_workers: ids }),
+    reviewsFor: (id, limit) => rpc("services_reviews_for", { p_worker: id, p_limit: limit || 10 }),
+    myReviews: () => rpc("services_my_reviews", { p_limit: 20 }, true),
+    pauseOrders: (mins) => rpc("services_pause_orders", { p_minutes: mins }, true),
+    resumeDue: () => rpc("services_resume_due", {}),
+    myResume: () => rpc("services_my_resume", {}, true),
     rateSave: (r) => rpc("services_rate_save", { p_id: r.id || null, p_label: r.label, p_unit: r.unit, p_rupees: r.rupees }, true),
     rateDelete: (id) => rpc("services_rate_delete", { p_id: id }, true),
     storeInfos: (ids) => rpc("services_store_infos", { p_ids: ids }),
@@ -2899,6 +2906,9 @@ export default function ServicesPage({
   const [bizOpen, setBizOpen] = useState(null);
   const [myStatus, setMyStatus] = useState(null);
   const [myViews, setMyViews] = useState(null);
+  const [autoAccept, setAutoAcceptState] = useState(() => { try { return window.localStorage.getItem("dhundo_auto_accept") === "1"; } catch (_) { return false; } });
+  const setAutoAccept = (v) => { setAutoAcceptState(v); try { window.localStorage.setItem("dhundo_auto_accept", v ? "1" : "0"); } catch (_) {} };
+  const autoBusy = useRef(false);
   const [listedNow, setListedNow] = useState(false);   // keeps the form (and its success screen) up right after saving
   useEffect(() => { if (tab !== "add") setListedNow(false); }, [tab]);
   const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
@@ -3027,6 +3037,21 @@ export default function ServicesPage({
     return () => { live = false; clearInterval(id); };
   }, [api, signedIn, hasListing, isDriver, avail.online]);
   const rideKey = rideReqs.map((r) => r.id).join(",");
+  // AUTO-ACCEPT: while the driver is online with this on, the nearest request
+  // is accepted by itself -- but never while a ride is already running.
+  useEffect(() => {
+    if (!autoAccept || !rideReqs.length || autoBusy.current) return;
+    autoBusy.current = true;
+    (async () => {
+      try {
+        const hist = await api.rideHistory();
+        const list = Array.isArray(hist) ? hist : hist ? [hist] : [];
+        const running = list.some((r) => r.role === "driver" && ["accepted", "started", "arrived", "ongoing", "picked_up"].includes(r.status));
+        if (!running) await api.rideAccept(rideReqs[0].id);
+      } catch (_) { /* the driver can still accept by hand */ }
+      setTimeout(() => { autoBusy.current = false; }, 6000);
+    })();
+  }, [autoAccept, rideKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!rideKey || tab === "work" || tab === "orders") return undefined;
     alertNewJob();
@@ -3196,7 +3221,7 @@ export default function ServicesPage({
           onOffer={() => setOfferPick(true)}
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
-          biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} />, status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
+          biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} auto={myDriverKind === "travel" ? { on: autoAccept, set: setAutoAccept } : null} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} />, status: myStatus, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(isRiderHome || isOwnerHome ? "work" : "mine"), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => setTab("work"), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
@@ -3251,6 +3276,7 @@ export default function ServicesPage({
         if (hasListing && !isAdmin) {
           const ek = ownerKind ? "owner" : dk === "delivery" ? "delivery" : dk === "travel" ? "travel" : null;
           if (ek) parts.unshift({ key: "earnings", icon: "wallet", label: t("er_title"), node: <EarningsPanel api={api} kind={ek} /> });
+          parts.push({ key: "learn", icon: "bell", label: t("lr_title"), node: <LearnPanel kind={ek || "other"} /> });
           parts.push({ key: "payments", icon: "check", label: t("bp_title"), node: <PaymentsPanel api={api} kind={ownerKind ? "owner" : "other"} /> });
           parts.push({ key: "wallet", icon: "wallet", label: t("bz_wallet"), action: () => setWalletOpen(true) });
         }

@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
+import { RateBox } from "./bizpay.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink, ScrollRow } from "./market.jsx";
@@ -342,6 +343,9 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
   const [reqOpen, setReqOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
   const [pay, setPay] = useState(null);
+  const [rating, setRating] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  useEffect(() => { let alive = true; Promise.resolve(api.ratingSummary ? api.ratingSummary([row.id]) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x && x.n) setRating(x); }).catch(() => {}); Promise.resolve(api.reviewsFor ? api.reviewsFor(row.id, 5) : []).then((r) => { if (alive) setReviews(Array.isArray(r) ? r : []); }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
   useEffect(() => { let alive = true; Promise.resolve(api.storePay ? api.storePay(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setPay(x); }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
   const kind = eat ? foodKind(row.trade_slug) : "plain";
   const catering = kind === "catering";
@@ -389,12 +393,27 @@ function StorePage({ api, row, eat, info, place, user, onSignIn, renderEmpty, on
             {info && <span style={{ display: "inline-flex" }}><OpenLine info={info} t={t} /></span>}
           </div>
           {row.about && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.55, margin: "-6px 0 12px", overflowWrap: "anywhere" }}>{row.about}</div>}
+          {rating && <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 12px" }}>
+            <span style={{ fontSize: 14, fontWeight: 800, background: "#F59E0B", color: "#fff", borderRadius: 12, padding: "4px 10px" }}>{"\u2605"} {Number(rating.avg_stars).toFixed(1)}</span>
+            <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{String(t("rt_count")).replace("{n}", rating.n)}</span>
+          </div>}
           {pay && (pay.accepts_cash || pay.accepts_upi) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "0 0 12px" }}>
             {pay.accepts_cash && <span style={{ fontSize: 13, fontWeight: 800, background: "#ECFDF3", color: "#0F6B33", borderRadius: 14, padding: "5px 11px" }}>{t("bp_cash_chip")}</span>}
             {pay.accepts_upi && <span style={{ fontSize: 13, fontWeight: 800, background: "#E8F0FE", color: "#1D4ED8", borderRadius: 14, padding: "5px 11px" }}>UPI{pay.upi_id ? ` \u00B7 ${pay.upi_id}` : ""}</span>}
           </div>}
           {info && info.promo_text && <Promo info={info} />}
           <ContactRow api={api} row={row} user={user} onSignIn={onSignIn} />
+          {reviews.length > 0 && (
+            <details style={{ margin: "12px 0" }}>
+              <summary style={{ cursor: "pointer", fontSize: 15, fontWeight: 800, color: T.brandDark, minHeight: 44, display: "flex", alignItems: "center" }}>{t("rt_title")}</summary>
+              {reviews.map((r, i) => (
+                <div key={i} style={{ padding: "8px 0", borderTop: `1px solid ${T.line}` }}>
+                  <span style={{ color: "#F59E0B", fontSize: 15 }}>{"\u2605".repeat(r.stars)}</span>
+                  <div style={{ fontSize: 14.5, color: T.ink }}>{r.comment}</div>
+                </div>
+              ))}
+            </details>
+          )}
           {!catering && kind !== "tiffin" && (
             <div style={{ marginBottom: 12 }}>
               <Btn full kind="ghost" onClick={() => (user && user.id ? setAskOpen(true) : onSignIn && onSignIn())}>{t(eat ? "ea_ask" : "sh_ask")}</Btn>
@@ -631,6 +650,8 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
   const cancel = async (o) => { try { await api.orderUpdate(o.id, "cancel"); } catch (_) {} load(); };
+  const [rated, setRated] = useState(() => { try { return JSON.parse(window.localStorage.getItem("dhundo_rated") || "[]"); } catch (_) { return []; } });
+  const markRated = (id) => { const n = [...rated, id]; setRated(n); try { window.localStorage.setItem("dhundo_rated", JSON.stringify(n.slice(-200))); } catch (_) {} };
   if (view && orders && orders.length === 0 && !showEmpty) return null;
   return (
     <div>
@@ -677,6 +698,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
+            {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
             {o.status === "placed" && (
               <div><button onClick={() => cancel(o)} style={{ background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("st_cancel")}</button></div>
             )}

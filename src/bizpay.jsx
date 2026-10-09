@@ -81,11 +81,11 @@ export function EarningsPanel({ api, kind }) {
       try {
         let list = [];
         if (kind === "owner") {
-          list = many(await api.myOrders()).filter((o) => o.role === "owner" && o.status === "delivered").map((o) => ({ at: o.created_at, paise: o.total_paise, title: o.other_name }));
+          list = many(await api.myOrders()).filter((o) => o.role === "owner" && o.status === "delivered").map((o) => ({ at: o.created_at, paise: o.total_paise, title: o.other_name, lines: Array.isArray(o.lines) ? o.lines : [], mode: o.mode, fee: o.delivery_fee_paise || 0 }));
         } else if (kind === "delivery") {
-          list = many(await api.myJobs()).filter((j) => j.role === "rider" && j.status === "delivered").map((j) => ({ at: j.created_at, paise: j.fee_paise || 0, title: j.other_name || j.drop_text }));
+          list = many(await api.myJobs()).filter((j) => j.role === "rider" && j.status === "delivered").map((j) => ({ at: j.created_at, paise: j.fee_paise || 0, title: j.other_name || j.drop_text, sub: j.drop_text, note: j.note }));
         } else {
-          list = many(await api.rideHistory()).filter((r) => r.role === "driver" && r.status === "done").map((r) => ({ at: r.done_at || r.created_at, paise: r.fare_paise || 0, title: r.drop_text || r.other_name }));
+          list = many(await api.rideHistory()).filter((r) => r.role === "driver" && r.status === "done").map((r) => ({ at: r.done_at || r.created_at, paise: r.fare_paise || 0, title: r.drop_text || r.other_name, sub: r.pick_text, drop: r.drop_text, pick: r.pick_text, who: r.other_name }));
         }
         if (alive) setRows(list);
       } catch (_) { if (alive) setRows([]); }
@@ -115,11 +115,22 @@ export function EarningsPanel({ api, kind }) {
       {rows.length === 0 ? <div style={{ ...card, color: T.inkSoft }}>{t("er_none")}</div> : (
         <div style={card}>
           {rows.slice().sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 10).map((r, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
-              <span style={{ fontSize: 12.5, color: T.inkFaint }}>{r.at ? new Date(r.at).toLocaleDateString([], { day: "numeric", month: "short" }) : ""}</span>
-              <span style={{ fontSize: 15, fontWeight: 800 }}>{rupees(r.paise)}</span>
-            </div>
+            <details key={i} style={{ borderTop: i ? `1px solid ${T.line}` : "none" }}>
+              <summary style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", cursor: "pointer", listStyle: "none", minHeight: 44 }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
+                <span style={{ fontSize: 12.5, color: T.inkFaint }}>{r.at ? new Date(r.at).toLocaleDateString([], { day: "numeric", month: "short" }) : ""}</span>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>{rupees(r.paise)}</span>
+              </summary>
+              <div style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.6, padding: "0 0 10px" }}>
+                {(r.lines || []).map((l, j) => <div key={j}>{l.qty} {"\u00D7"} {l.name}</div>)}
+                {r.mode && <div>{String(r.mode).replace("_", " ")}{r.fee ? ` \u00B7 ${rupees(r.fee)}` : ""}</div>}
+                {r.pick && <div>{"\u25CF"} {r.pick}</div>}
+                {r.drop && <div>{"\u25A0"} {r.drop}</div>}
+                {r.who && <div>{r.who}</div>}
+                {r.sub && !r.pick && <div>{r.sub}</div>}
+                {r.note && <div>{r.note}</div>}
+              </div>
+            </details>
           ))}
         </div>
       )}
@@ -135,7 +146,7 @@ export function EarningsPanel({ api, kind }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [range, setRange] = useState(7);
@@ -151,7 +162,18 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
     Promise.resolve(api.myMenu()).then((m) => { const a = many(m); if (alive) setTaking(a.length === 0 || a[0].accepting !== false); }).catch(() => {});
     return () => { alive = false; };
   }, [api, kind]);
-  const flipTaking = async () => { const next = !taking; setTaking(next); try { await api.setAccepting(next); } catch (_) { setTaking(!next); } };
+  const [resumeAt, setResumeAt] = useState(null);
+  useEffect(() => {
+    if (kind !== "owner") return undefined;
+    let alive = true;
+    (async () => {
+      try { if (api.resumeDue) await api.resumeDue(); } catch (_) {}
+      try { const r = api.myResume ? await api.myResume() : null; const v = Array.isArray(r) ? r[0] : r; const at = typeof v === "string" ? v : v && v.services_my_resume ? v.services_my_resume : null; if (alive && at) setResumeAt(at); } catch (_) {}
+    })();
+    return () => { alive = false; };
+  }, [api, kind, taking]);
+  const flipTaking = async () => { const next = !taking; setTaking(next); if (next) setResumeAt(null); try { await api.setAccepting(next); } catch (_) { setTaking(!next); } };
+  const pauseFor = async (m) => { setTaking(false); try { const r = await api.pauseOrders(m); const x = Array.isArray(r) ? r[0] : r; if (x && x.resume_at) setResumeAt(x.resume_at); } catch (_) { try { await api.setAccepting(false); } catch (e) {} } };
   const pull = async () => {
     try {
       let rows = [];
@@ -221,11 +243,24 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   return (
     <div style={{ margin: "0 0 20px" }}>
       {kind === "owner" && taking !== null && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: taking ? "#F0FAF4" : "#FEF2F2", border: `1.5px solid ${taking ? "#1FA85A" : "#FCA5A5"}` }}>
-          <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: taking ? "#157A43" : "#B91C1C" }}>{taking ? t("pn_taking") : t("pn_paused")}</span>
-          <button onClick={flipTaking} role="switch" aria-checked={taking} style={{ position: "relative", width: 62, height: 36, borderRadius: 18, border: "none", cursor: "pointer", background: taking ? "#1FA85A" : "#C5CBD3", flexShrink: 0 }}>
-            <span style={{ position: "absolute", top: 4, left: taking ? 30 : 4, width: 28, height: 28, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
-          </button>
+        <div style={{ padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: taking ? "#F0FAF4" : "#FEF2F2", border: `1.5px solid ${taking ? "#1FA85A" : "#FCA5A5"}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: taking ? "#157A43" : "#B91C1C" }}>{taking ? t("pn_taking") : t("pn_paused")}</span>
+              {!taking && resumeAt && <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{String(t("pn_back_at")).replace("{t}", new Date(resumeAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</span>}
+            </span>
+            <button onClick={flipTaking} role="switch" aria-checked={taking} style={{ position: "relative", width: 62, height: 36, borderRadius: 18, border: "none", cursor: "pointer", background: taking ? "#1FA85A" : "#C5CBD3", flexShrink: 0 }}>
+              <span style={{ position: "absolute", top: 4, left: taking ? 30 : 4, width: 28, height: 28, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+            </button>
+          </div>
+          {taking && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft }}>{t("pn_pause")}</span>
+              {[[30, "pn_30"], [60, "pn_1h"], [120, "pn_2h"]].map(([m, key]) => (
+                <button key={m} onClick={() => pauseFor(m)} style={{ minHeight: 40, padding: "0 14px", borderRadius: 20, border: "1.5px solid #D1D5DB", background: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", color: T.ink }}>{t(key)}</button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {money && (
@@ -328,6 +363,19 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           <button onClick={onOrders} style={{ display: "block", width: "100%", background: "none", border: "none", borderTop: `1px solid ${T.line}`, color: T.brandDark, fontWeight: 800, fontSize: 14.5, minHeight: 46, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_activity")}</button>
         </div>
       )}
+      {auto && (
+        <button onClick={() => auto.set(!auto.on)} role="switch" aria-checked={auto.on} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 14px", marginTop: 12, borderRadius: 18, border: `1.5px solid ${auto.on ? "#1FA85A" : T.line}`, background: auto.on ? "#F0FAF4" : T.white, cursor: "pointer", fontFamily: "inherit" }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: T.ink }}>{t("au_title")}</span>
+            <span style={{ display: "block", fontSize: 13, color: T.inkSoft, lineHeight: 1.45, marginTop: 2 }}>{t("au_sub")}</span>
+          </span>
+          <span style={{ position: "relative", width: 56, height: 32, borderRadius: 16, background: auto.on ? "#1FA85A" : "#C5CBD3", flexShrink: 0 }}>
+            <span style={{ position: "absolute", top: 4, left: auto.on ? 28 : 4, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+          </span>
+        </button>
+      )}
+      <RatingsCard api={api} />
+      {(kind === "delivery" || kind === "travel") && <SosButton />}
       <div style={{ display: "grid", gridTemplateColumns: onWallet ? "1fr 1fr" : "1fr", gap: 10, marginTop: 12 }}>
         {onWallet && (
           <button onClick={onWallet} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 56, borderRadius: 16, border: `1.5px solid ${T.brandDark}`, background: T.white, color: T.brandDark, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
@@ -340,6 +388,145 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           </a>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// RATINGS the owner has received, and complaints (which only the owner sees).
+// ---------------------------------------------------------------------------
+function Stars({ n, size = 16 }) {
+  return <span aria-label={n + " / 5"} style={{ color: "#F59E0B", fontSize: size, letterSpacing: 1 }}>{"\u2605".repeat(Math.round(n))}<span style={{ color: "#D1D5DB" }}>{"\u2605".repeat(5 - Math.round(n))}</span></span>;
+}
+export function RatingsCard({ api }) {
+  const { t } = useI18n();
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.myReviews ? api.myReviews() : []).then((r) => { if (alive) setRows(many(r)); }).catch(() => { if (alive) setRows([]); });
+    return () => { alive = false; };
+  }, [api]);
+  if (rows === null || rows.length === 0) return rows === null ? null : (
+    <div style={{ ...card, marginTop: 12, marginBottom: 0, color: T.inkSoft, fontSize: 14.5 }}>{t("rt_title")}: {t("rt_none")}</div>
+  );
+  const rated = rows.filter((r) => !r.complaint);
+  const avg = rated.length ? rated.reduce((s, r) => s + r.stars, 0) / rated.length : 0;
+  return (
+    <div style={{ ...card, marginTop: 12, marginBottom: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+        <span style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em" }}>{avg.toFixed(1)}</span>
+        <span>
+          <Stars n={avg} size={20} />
+          <span style={{ display: "block", fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{String(t("rt_count")).replace("{n}", rated.length)}</span>
+        </span>
+      </div>
+      {rows.slice(0, 5).map((r, i) => (
+        <div key={i} style={{ padding: "9px 0", borderTop: `1px solid ${T.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Stars n={r.stars} />
+            {r.complaint && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: "#B91C1C", borderRadius: 10, padding: "2px 9px" }}>{t("rt_complaint")}</span>}
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 12, color: T.inkFaint }}>{r.created_at ? new Date(r.created_at).toLocaleDateString([], { day: "numeric", month: "short" }) : ""}</span>
+          </div>
+          {r.comment && <div style={{ fontSize: 14.5, color: T.ink, marginTop: 3, overflowWrap: "anywhere" }}>{r.comment}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// What the customer sees after a delivered order: stars, a few words, or a problem.
+export function RateBox({ api, orderId, onDone }) {
+  const { t } = useI18n();
+  const [stars, setStars] = useState(0);
+  const [text, setText] = useState("");
+  const [problem, setProblem] = useState(false);
+  const [state, setState] = useState(null);
+  const send = async () => {
+    setState("busy");
+    try {
+      const r = one(await api.reviewAdd({ kind: "order", ref: orderId, stars, comment: text, complaint: problem }));
+      if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); } else setState("err");
+    } catch (_) { setState("err"); }
+  };
+  if (state === "done") return <div style={{ margin: "8px 0", fontSize: 15, fontWeight: 800, color: "#157A43" }}>{"\u2713 "}{t("rt_thanks")}</div>;
+  return (
+    <div style={{ margin: "10px 0 4px", padding: "12px 12px", borderRadius: 14, background: "#FFF9E8", border: "1px solid #F5E2A8" }}>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("rt_rate")}</div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} onClick={() => setStars(n)} aria-label={n + " / 5"} style={{ background: "none", border: "none", padding: 2, fontSize: 34, lineHeight: 1, cursor: "pointer", color: n <= stars ? "#F59E0B" : "#D1D5DB" }}>{"\u2605"}</button>
+        ))}
+      </div>
+      {stars > 0 && (
+        <>
+          <input style={{ ...input, marginBottom: 8 }} value={text} maxLength={200} placeholder={t("rt_comment_ph")} onChange={(e) => setText(e.target.value)} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, marginBottom: 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={problem} onChange={(e) => setProblem(e.target.checked)} style={{ width: 20, height: 20 }} /> {t("rt_problem")}
+          </label>
+          {state === "err" && <div style={{ fontSize: 13.5, color: "#B91C1C", marginBottom: 6 }}>{t("e_save")}</div>}
+          <Btn full onClick={send} disabled={state === "busy"}>{state === "busy" ? "\u2026" : t("rt_send")}</Btn>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SOS for riders and drivers: call 112, or send the position to Dhundo help.
+// ---------------------------------------------------------------------------
+export function SosButton() {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const share = () => {
+    const num = String(CONTACT.whatsapp || "").replace(/\D/g, "");
+    const go = (pos) => {
+      const where = pos ? ` https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}` : "";
+      window.open(`https://wa.me/${num}?text=${encodeURIComponent(t("sos_msg") + where)}`, "_blank", "noopener");
+      setBusy(false);
+    };
+    setBusy(true);
+    if (navigator.geolocation) navigator.geolocation.getCurrentPosition(go, () => go(null), { enableHighAccuracy: true, timeout: 8000 });
+    else go(null);
+  };
+  return (
+    <>
+      <button onClick={() => setOpen(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", minHeight: 56, marginTop: 12, borderRadius: 16, border: "none", background: "#DC2626", color: "#fff", fontWeight: 800, fontSize: 17, cursor: "pointer", fontFamily: "inherit", letterSpacing: 1 }}>
+        <Icon name="alert" size={22} /> {t("sos_btn")}
+      </button>
+      {open && (
+        <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 700, background: "rgba(15,20,25,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, padding: "18px 18px calc(22px + env(safe-area-inset-bottom))", boxSizing: "border-box" }}>
+            <h2 style={{ margin: "0 0 14px", fontSize: 21, fontWeight: 800, color: "#B91C1C" }}>{t("sos_title")}</h2>
+            <a href="tel:112" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 62, borderRadius: 16, background: "#DC2626", color: "#fff", fontWeight: 800, fontSize: 18, textDecoration: "none", marginBottom: 10 }}>{t("sos_112")}</a>
+            <button onClick={share} disabled={busy} style={{ display: "block", width: "100%", minHeight: 62, borderRadius: 16, border: "none", background: "#25D366", color: "#fff", fontWeight: 800, fontSize: 17, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{busy ? "\u2026" : t("sos_share")}</button>
+            <button onClick={() => setOpen(false)} style={{ display: "block", width: "100%", minHeight: 50, borderRadius: 14, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", fontFamily: "inherit" }}>{t("sos_close")}</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LEARN: short tips for new partners, in the partner's language.
+// ---------------------------------------------------------------------------
+export function LearnPanel({ kind }) {
+  const { t } = useI18n();
+  const tips = ["lr_1", "lr_2", "lr_3", "lr_4", "lr_5", "lr_6"];
+  return (
+    <div>
+      {tips.map((k, i) => (
+        <details key={k} style={{ ...card, padding: "4px 16px", marginBottom: 10 }}>
+          <summary style={{ cursor: "pointer", minHeight: 54, display: "flex", alignItems: "center", gap: 12, fontSize: 16, fontWeight: 800, color: T.ink, listStyle: "none" }}>
+            <span style={{ width: 30, height: 30, borderRadius: "50%", background: T.brandSoft, color: T.brandDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{i + 1}</span>
+            <span style={{ flex: 1 }}>{t(k + "_t")}</span>
+          </summary>
+          <div style={{ fontSize: 15, lineHeight: 1.65, color: T.inkSoft, padding: "0 0 14px 42px" }}>{t(k + "_b")}</div>
+        </details>
+      ))}
     </div>
   );
 }
