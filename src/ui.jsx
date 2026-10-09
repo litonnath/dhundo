@@ -19,11 +19,11 @@
 //     bundle stays small enough to open on a 3G connection
 // ===========================================================================
 import React, { useState, useEffect } from "react";
-import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName, tradeName } from "./i18n.jsx";
-import { REGIONS, searchPlaces, isKnownPlace, snapToKnown, searchRemote, placeCoords, nearestPlaces, bestNearName, pinLookup, pinForPlace } from "./regions.js";
-import { useMyLocation, useInstallPrompt, isInstalledApp, locErrorKey } from "./device.jsx";
+import { useI18n, LANGS, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { searchPlaces, searchRemote, pinLookup } from "./regions.js";
+import { useInstallPrompt } from "./device.jsx";
 import { useConsent } from "./consent-core.js";
-import { DhundoLogo, DhundoGlyph, CONTACT } from "./brand.jsx";
+import { DhundoLogo, CONTACT } from "./brand.jsx";
 // auth.jsx imports nothing from here, so this does not make a cycle.
 import { prettyPhone } from "./auth.jsx";
 import { tradeKeysFor } from "./tradewords.js";
@@ -504,35 +504,6 @@ export function SignupHelp({ style, compact = false }) {
         </a>
       </span>
     </div>
-  );
-}
-
-export function InstallBanner({ onOpen }) {
-  const { isIos, installed } = useInstallPrompt();
-  const { t } = useI18n();
-  if (installed || isIos || isInstalledApp()) return null;
-  return (
-    <button onClick={onOpen} style={{
-      width: "100%", display: "flex", alignItems: "center", gap: 12, marginBottom: 18,
-      padding: "12px 14px", borderRadius: 16, cursor: "pointer", textAlign: "left",
-      background: "linear-gradient(90deg, #054291, #0A5BC4)", border: "none",
-      color: "#fff", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(5,66,145,0.25)",
-    }}>
-      <span style={{
-        width: 44, height: 44, borderRadius: 12, background: "#fff", flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}><img src="/logo-mark.png" alt="" width="34" height="34" /></span>
-      <span style={{ flex: 1, fontSize: 15, fontWeight: 800, lineHeight: 1.3 }}>
-        {t("install_banner")}
-      </span>
-      <span style={{
-        display: "inline-flex", alignItems: "center", gap: 6, background: "#fff",
-        color: "#054291", borderRadius: 22, padding: "9px 14px", fontSize: 14,
-        fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0,
-      }}>
-        <Icon name="download" size={16} /> {t("install_short")}
-      </span>
-    </button>
   );
 }
 
@@ -1086,206 +1057,6 @@ export function StateSelect({ value, onChange, dark = false, big = false, style 
   );
 }
 
-export function StateSwitch({ value, onChange, dark }) {
-  const { t } = useI18n();
-  return (
-    <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-      <span style={{
-        fontSize: 12, fontWeight: 700, letterSpacing: 0.3,
-        color: dark ? "rgba(255,255,255,0.7)" : T.inkFaint, textTransform: "uppercase",
-      }}>{t("state_label")}</span>
-      <StateSelect value={value} onChange={onChange} dark={dark} />
-    </div>
-  );
-}
-
-// -------------------------------------------------------------- area picker
-//
-// A list, not a text box. Free text meant "panisagar", "Panisagar" and
-// "Panisagar, North Tripura" were three different places, so the locality
-// filter -- the single most important filter in a LOCAL directory -- matched
-// two listings out of three and looked broken.
-//
-// Typing still works, but it SEARCHES rather than records: every keystroke
-// filters the list, and the value is only ever set by choosing a row. The
-// one escape hatch is deliberate: a place that is genuinely missing can be
-// used as typed, from a row that says so in as many words. Somebody in a
-// village the list forgot must not be locked out by a data file.
-export function AreaPicker({ state, value, onPick, autoFocus }) {
-  const { t } = useI18n();
-  const [q, setQ] = useState("");
-  const [remote, setRemote] = useState([]);
-  const [looking, setLooking] = useState(false);
-
-  // The local list renders instantly from memory; the geocoder is asked in
-  // the background and its results are appended under their own heading. So
-  // the control is never waiting on the network to be usable, and on a dead
-  // connection it simply behaves as it did before.
-  React.useEffect(() => {
-    const typed = q.trim();
-    if (typed.length < 3) { setRemote([]); setLooking(false); return; }
-    const ctrl = new AbortController();
-    setLooking(true);
-    // 350ms: long enough that typing "panisagar" is one request rather than
-    // nine, short enough not to feel like a pause.
-    const timer = setTimeout(() => {
-      searchRemote(state, typed, ctrl.signal)
-        .then((rows) => setRemote(rows))
-        .finally(() => setLooking(false));
-    }, 350);
-    return () => { clearTimeout(timer); ctrl.abort(); setLooking(false); };
-  }, [q, state]);
-
-  const results = searchPlaces(state, q);
-  const typed = q.trim();
-  // WHEN TYPING YOUR OWN NAME IS OFFERED.
-  //
-  // It used to need three characters AND for no list anywhere to contain the
-  // name. That was built to stop a free-typed duplicate outranking a real
-  // row, which was a genuine bug -- but it went too far. Somebody whose para
-  // is not in any register types its name, sees a DIFFERENT village that
-  // happens to match those letters, and has no way to say "no, mine".
-  //
-  // Now it is offered from two characters, and suppressed only when what was
-  // typed is EXACTLY a name already on screen -- where tapping the row is
-  // the same answer and a better one, because it carries coordinates. It
-  // still sits below the matches, which is the ordering that mattered.
-  const shownNames = [
-    ...results.map((r) => r.place),
-    ...remote.map((r) => r.place),
-  ].map((x) => x.toLowerCase());
-  const canUseTyped =
-    typed.length >= 2 && !shownNames.includes(typed.toLowerCase());
-
-  const groups = [];
-  results.forEach((r) => {
-    const last = groups[groups.length - 1];
-    if (last && last.group === r.group) last.places.push(r.place);
-    else groups.push({ group: r.group, places: [r.place] });
-  });
-
-  return (
-    <div>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 9, padding: "0 13px",
-        border: `1px solid ${T.line}`, borderRadius: 11, minHeight: 52, marginBottom: 10,
-      }}>
-        <span style={{ color: T.inkFaint }}><Icon name="search" size={19} /></span>
-        <input
-          value={q} onChange={(e) => setQ(e.target.value)} autoFocus={autoFocus}
-          placeholder={t("area_search_ph")}
-          style={{ ...input, border: "none", padding: "13px 0", background: "transparent",
-                   fontSize: 16, minHeight: 0 }}
-        />
-        {q && (
-          <button onClick={() => setQ("")} aria-label={t("p_remove")} style={{
-            background: "none", border: "none", cursor: "pointer", color: T.inkFaint, padding: 2,
-          }}><Icon name="close" size={17} /></button>
-        )}
-      </div>
-
-      <div style={{
-        maxHeight: 260, overflowY: "auto", border: `1px solid ${T.line}`,
-        borderRadius: 11, background: T.white,
-      }}>
-        {groups.length === 0 && remote.length === 0 && !looking && !canUseTyped && (
-          <div style={{ padding: "18px 14px", color: T.inkFaint, fontSize: 14, lineHeight: 1.6 }}>
-            {typed ? t("area_none") : t("area_hint")}
-          </div>
-        )}
-
-        {/* The escape hatch goes LAST. Typing "pani" matched Panisagar, and
-            with "use what I typed" sitting above it the obvious tap was the
-            wrong one -- a free-text duplicate of a place already in the
-            list, which is the exact thing this control exists to prevent. */}
-        {groups.map((g) => (
-          <div key={g.group}>
-            <div style={{
-              padding: "9px 14px 6px", fontSize: 11.5, fontWeight: 800, letterSpacing: 0.4,
-              color: T.inkFaint, textTransform: "uppercase", background: T.paper,
-              position: "sticky", top: 0,
-            }}>{g.group}</div>
-            {g.places.map((p) => {
-              const on = p === value;
-              return (
-                <button key={p} onClick={() => onPick(p, { group: g.group })} style={{
-                  display: "flex", alignItems: "center", gap: 9, width: "100%",
-                  padding: "12px 14px", minHeight: 48, cursor: "pointer", textAlign: "left",
-                  border: "none", borderBottom: `1px solid ${T.line}`,
-                  background: on ? T.brandSoft : T.white,
-                  color: on ? T.brandDeep : T.ink,
-                  fontWeight: on ? 800 : 500, fontSize: 15, fontFamily: "inherit",
-                }}>
-                  <span style={{ color: on ? T.brandDark : "transparent", flexShrink: 0 }}>
-                    <Icon name="check" size={17} />
-                  </span>
-                  {p}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-
-        {remote.length > 0 && (
-          <>
-            <div style={{
-              padding: "9px 14px 6px", fontSize: 11.5, fontWeight: 800, letterSpacing: 0.4,
-              color: T.inkFaint, textTransform: "uppercase", background: T.paper,
-            }}>{t("area_more")}</div>
-            {remote.map((r) => (
-              <button key={"r-" + r.place + r.group} onClick={() => onPick(r.place, r)} style={{
-                display: "flex", alignItems: "center", gap: 9, width: "100%",
-                padding: "12px 14px", minHeight: 48, cursor: "pointer", textAlign: "left",
-                border: "none", borderBottom: `1px solid ${T.line}`,
-                background: T.white, color: T.ink, fontSize: 15, fontFamily: "inherit",
-              }}>
-                <span style={{ color: T.inkFaint, flexShrink: 0 }}><Icon name="pin" size={16} /></span>
-                <span style={{ minWidth: 0 }}>
-                  {r.place}
-                  {r.group && (
-                    <span style={{ color: T.inkFaint, fontSize: 12.5 }}> · {r.group}</span>
-                  )}
-                </span>
-              </button>
-            ))}
-          </>
-        )}
-
-        {looking && (
-          <div style={{ padding: "11px 14px", fontSize: 13, color: T.inkFaint }}>
-            {t("area_looking")}
-          </div>
-        )}
-
-        {/* Styled as an ordinary choice, not a warning. It used to be orange
-            on orange, which reads as "you are doing something wrong" -- and
-            for somebody whose village genuinely is not in any list, they are
-            not. This is the correct answer for them. */}
-        {canUseTyped && (
-          <button onClick={() => onPick(typed)} style={{
-            display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: "13px 14px", minHeight: 52, cursor: "pointer", textAlign: "left",
-            border: "none", borderTop: `1px solid ${T.line}`,
-            background: T.white, color: T.ink, fontFamily: "inherit", fontSize: 15,
-          }}>
-            <span style={{
-              width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-              background: T.brandSoft, color: T.brandDark,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}><Icon name="edit" size={16} /></span>
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontWeight: 800 }}>{typed}</span>
-              <span style={{ display: "block", fontSize: 12.5, color: T.inkFaint, marginTop: 1 }}>
-                {t("area_use_typed_sub")}
-              </span>
-            </span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // -------------------------------------------------------------- CityPicker
 //
 // The city comes from a LIST and the para is TYPED. Those are two different
@@ -1522,57 +1293,6 @@ export function AreaInput({ state, value, onChange, placeholder, autoFocus }) {
         {t("area_free_note")}
       </div>
     </div>
-  );
-}
-
-// A closed control that opens the picker -- what a form field shows when it
-// is not being edited.
-export function AreaField({ state, value, onChange, placeholder }) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  useDismissable(open, () => setOpen(false));
-  return (
-    <>
-      <button onClick={() => setOpen(true)} style={{
-        display: "flex", alignItems: "center", gap: 9, width: "100%",
-        padding: "13px 14px", borderRadius: 11, minHeight: 52, cursor: "pointer",
-        border: `1px solid ${T.line}`, background: T.white, textAlign: "left",
-        fontFamily: "inherit", fontSize: 16,
-        color: value ? T.ink : T.inkFaint,
-      }}>
-        <Icon name="pin" size={18} style={{ color: T.inkFaint }} />
-        <span style={{ flex: 1, minWidth: 0, overflow: "hidden",
-                       textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {value || placeholder || t("area_search_ph")}
-        </span>
-        <Icon name="chev" size={17} style={{ color: T.inkFaint }} />
-      </button>
-
-      {open && (
-        <div
-          role="dialog" aria-modal="true"
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
-          style={{
-            position: "fixed", inset: 0, zIndex: 330, background: "rgba(15,20,25,0.55)",
-            display: "flex", alignItems: "flex-end", justifyContent: "center",
-          }}
-        >
-          <div style={{
-            background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 460,
-            padding: "18px 16px 22px", maxHeight: "86vh", overflowY: "auto",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ fontSize: 16.5, fontWeight: 800, color: T.ink, flex: 1 }}>
-                {t("area_pick_in").replace("{s}", state)}
-              </span>
-              <CloseButton onClick={() => setOpen(false)} />
-            </div>
-            <AreaPicker state={state} value={value} autoFocus
-                        onPick={(p) => { onChange(p); setOpen(false); }} />
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -2005,9 +1725,6 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
       ? `\u2248 ${distance} \u00b7 ${t("dist_area")}`
       : (distance && approx ? `\u2248 ${distance}` : distance);
 
-  const liveMins = row.available_now && row.live_seen_at
-    ? Math.max(0, Math.round((Date.now() - new Date(row.live_seen_at)) / 60000))
-    : null;
 
   const hasMore = !!(
     row.about ||
@@ -2814,53 +2531,6 @@ export function LanguageGate({ onDone }) {
           })}
         </div>
       </div>
-    </div>
-  );
-}
-
-// --------------------------------------------------------- popular trades
-// The trades people ask for most, as big tiles that go straight to people:
-// one tap for "plumber" instead of Repairs -> Plumber. Ordered by how many
-// listings each has, so what shows first is what has somebody behind it.
-export function PopularTrades({ trades, onPick, limit = 8 }) {
-  const { lang } = useI18n();
-  const top = [...trades]
-    .sort((a, b) => Number(b.listing_count || 0) - Number(a.listing_count || 0))
-    .slice(0, limit);
-  if (!top.length) return null;
-  return (
-    <div style={{
-      display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    }}>
-      {top.map((tr) => {
-        const s = groupStyle(tr.group_name);
-        const icon = (
-          <span style={{
-            width: "100%", height: "100%", background: s.bg, color: s.fg,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}><Icon name={s.icon} size={40} /></span>
-        );
-        return (
-          <button key={tr.slug} onClick={() => onPick(tr)} style={{
-            display: "flex", flexDirection: "column", padding: 0, overflow: "hidden",
-            borderRadius: 16, cursor: "pointer", textAlign: "left",
-            background: T.white, border: `1px solid ${T.line}`, fontFamily: "inherit",
-            boxShadow: "0 2px 8px rgba(15,20,25,0.06)",
-          }}>
-            {/* A picture first: somebody who reads little still knows an
-                auto when they see one. */}
-            <span style={{ display: "block", width: "100%", aspectRatio: "16 / 10", background: s.bg }}>
-              {icon}
-            </span>
-            <span style={{
-              display: "block", padding: "9px 11px 11px", fontSize: 15, fontWeight: 800,
-              color: T.ink, lineHeight: 1.25,
-            }}>
-              {tradeName(tr, lang)}
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }

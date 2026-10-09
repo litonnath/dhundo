@@ -162,7 +162,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const [sel, setSel] = useState(null);
   const [busy, setBusy] = useState(null);
   const [spin, setSpin] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const [stamp, setStamp] = useState(null);
   const [taking, setTaking] = useState(null);
   const [docAlert, setDocAlert] = useState(0);

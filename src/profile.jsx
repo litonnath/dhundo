@@ -31,11 +31,7 @@
 //     still works.
 // ===========================================================================
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import {
-  T, Icon, Btn, Chip, Notice, input, ConfirmDelete,
-  groupStyle, groupLabel,
-  plateLooksRight, ReqTag,
-} from "./ui.jsx";
+import { T, Icon, Btn, Chip, Notice, input, ConfirmDelete, groupLabel, plateLooksRight, ReqTag } from "./ui.jsx";
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import { PlaceField, workPlace } from "./locpicker.jsx";
 import { plateExample } from "./states.js";

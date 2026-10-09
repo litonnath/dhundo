@@ -483,55 +483,6 @@ export function LocationSheet({ place, onChange, onClose }) {
   );
 }
 
-// ----------------------------------------------------- the front-screen bar
-// The first thing on the home screen: a field that opens the search, and a
-// button for the phone's position.
-export function LocationBar({ place, onOpen, onLocate, locating, errorKey }) {
-  const { t, lang } = useI18n();
-  const has = place && place.area;
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <button onClick={onOpen} style={{
-        width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "12px 14px",
-        minHeight: 56, borderRadius: 14, border: `1.5px solid ${T.brandDark}`, background: T.white,
-        textAlign: "left", cursor: "pointer", fontFamily: "inherit", boxSizing: "border-box",
-      }}>
-        <span style={{ color: T.brandDark, flexShrink: 0 }}><Icon name={has ? "pin" : "search"} size={21} /></span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          {has ? (
-            <>
-              <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink,
-                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {place.address || place.area}
-              </span>
-              <span style={{ display: "block", fontSize: 12.5, color: T.inkFaint }}>
-                {stateName(place.state, lang)}
-              </span>
-            </>
-          ) : (
-            <span style={{ fontSize: 16, fontWeight: 700, color: T.inkSoft }}>{t("loc_front")}</span>
-          )}
-        </span>
-        {has && <span style={{ color: T.brandDark, fontWeight: 800, fontSize: 13.5, flexShrink: 0 }}>{t("loc_change")}</span>}
-      </button>
-      {onLocate && (
-        <button onClick={onLocate} disabled={locating} style={{
-          display: "inline-flex", alignItems: "center", gap: 7, marginTop: 8, padding: "9px 14px",
-          borderRadius: 20, minHeight: 40, border: "1px solid rgba(5,66,145,0.28)",
-          background: T.brandSoft, color: T.brandDeep, fontSize: 13.5, fontWeight: 700,
-          fontFamily: "inherit", cursor: locating ? "default" : "pointer",
-        }}>
-          <Icon name="crosshair" size={16} />
-          {locating ? t("loc_detecting") : t("loc_detect")}
-        </button>
-      )}
-      {errorKey && (
-        <div style={{ fontSize: 12.5, color: T.red, marginTop: 6, lineHeight: 1.5 }}>{t(errorKey)}</div>
-      )}
-    </div>
-  );
-}
-
 // ---------------------------------------------------- the field in a form
 // Shows the chosen place and opens the same sheet to change it. The form
 // keeps its own copy, so choosing a shop's location while listing never moves

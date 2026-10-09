@@ -6,7 +6,7 @@
 // when this is first shown, not with the app.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef } from "react";
-import { T, Icon, Btn, CloseButton, useDismissable } from "./ui.jsx";
+import { T, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import * as CFG from "./config.js";
 
@@ -18,54 +18,6 @@ const TILES = CFG.CARTO_KEY
   : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const SUBS = CFG.CARTO_KEY ? "abcd" : "abc";
 const CREDIT = CFG.CARTO_KEY ? "&copy; OpenStreetMap contributors &copy; CARTO" : "&copy; OpenStreetMap contributors";
-
-export function DriverMap({ me, pins, height }) {
-  const box = useRef(null);
-  const st = useRef({});
-  useEffect(() => {
-    let dead = false;
-    (async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-      if (dead || !box.current) return;
-      if (!st.current.map) {
-        st.current.L = L;
-        st.current.map = L.map(box.current, { zoomControl: true, attributionControl: true }).setView([me.lat, me.lng], 13);
-        st.current.map.attributionControl.setPrefix(false); ensureCss();
-        L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
-        st.current.layer = L.layerGroup().addTo(st.current.map);
-      }
-      const { map, layer } = st.current;
-      layer.clearLayers();
-      L.marker([me.lat, me.lng], {
-        zIndexOffset: 1000,
-        icon: L.divIcon({ className: "", html: '<div style="width:20px;height:20px;border-radius:50%;background:#1D4ED8;border:4px solid #fff;box-shadow:0 0 0 3px rgba(29,78,216,.35),0 2px 6px rgba(0,0,0,.4)"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }),
-      }).addTo(layer);
-      L.circle([me.lat, me.lng], { radius: 250, color: "#1D4ED8", weight: 1, fillOpacity: 0.08 }).addTo(layer);
-      const pts = [[me.lat, me.lng]];
-      pins.forEach((p) => {
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="width:30px;height:30px;border-radius:50%;background:${p.color || (p.online ? "#16A34A" : "#6B7280")};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font:800 13px sans-serif">${String(p.name || "?").trim().charAt(0).toUpperCase()}</div>`,
-          iconSize: [30, 30], iconAnchor: [15, 15],
-        });
-        const m = L.marker([p.lat, p.lng], { icon }).addTo(layer);
-        const tip = document.createElement("div");
-        tip.style.cssText = "font:600 13px sans-serif";
-        tip.textContent = `${p.name}${p.vehicle ? " · " + p.vehicle : ""}${p.km != null ? " · " + p.km + " km" : ""}`;
-        m.bindPopup(tip);
-        pts.push([p.lat, p.lng]);
-      });
-      if (pts.length > 1) map.fitBounds(pts, { padding: [28, 28], maxZoom: 15 });
-      else map.setView([me.lat, me.lng], 14);
-      setTimeout(() => map.invalidateSize(), 50);
-    })();
-    return () => { dead = true; };
-  }, [me.lat, me.lng, JSON.stringify(pins.map((p) => [p.id, p.online]))]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
-  return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />;
-}
-
 
 // ---------------------------------------------------------------------------
 // The ride-app map: your blue dot, vehicles as icons with a minutes-away

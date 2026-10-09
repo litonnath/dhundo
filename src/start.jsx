@@ -18,42 +18,6 @@ const shell = {
   display: "flex", justifyContent: "center", alignItems: "safe center",
   fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
 };
-const wrap = { width: "100%", maxWidth: 520, margin: "auto", padding: "28px 18px 34px", boxSizing: "border-box" };
-
-function BigChoice({ icon, bg, fg, title, sub, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left",
-      minHeight: 88, padding: "14px 16px", marginBottom: 12, borderRadius: 18,
-      border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
-      boxShadow: "0 2px 8px rgba(15,20,25,0.05)",
-    }}>
-      <span style={{
-        width: 54, height: 54, borderRadius: 16, background: bg, color: fg, flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}><Icon name={icon} size={28} /></span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{title}</span>
-        {sub && <span style={{ display: "block", fontSize: 13.5, color: T.inkSoft, lineHeight: 1.45, marginTop: 3 }}>{sub}</span>}
-      </span>
-      <Icon name="chev" size={20} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
-    </button>
-  );
-}
-
-// Screen 1: who are you today.
-export function StartGate({ onNeed, onOffer }) {
-  const { t } = useI18n();
-  return (
-    <div style={shell} role="dialog" aria-modal="true">
-      <div style={wrap}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: "0 0 22px", lineHeight: 1.25, textAlign: "center" }}>{t("start_title")}</h1>
-        <BigChoice icon="search" bg="#E8F1FF" fg="#1D4ED8" title={t("start_need")} sub={t("start_need_sub")} onClick={onNeed} />
-        <BigChoice icon="construction" bg="#FFF1E6" fg="#B45309" title={t("start_offer")} sub={t("start_offer_sub")} onClick={onOffer} />
-      </div>
-    </div>
-  );
-}
 
 // Screen 2, for people who offer: what kind of business is it.
 export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {

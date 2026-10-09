@@ -14,7 +14,7 @@ import { RideChat, RideCode } from "./ridechat.jsx";
 import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
-import { TileArt } from "./scenes.jsx";
+;
 import { tripKm } from "./regions.js";
 import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
@@ -27,9 +27,6 @@ const linkBtn = (bg) => ({
   padding: "10px 14px", minHeight: 44, fontWeight: 700, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box",
 });
 const placeText = (p) => (p && (p.address || p.area)) || "";
-const dirUrl = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-
-const VEHICLES = [["any", "rd_any", "search"], ["bike", "rd_bike", "drivers"], ["auto", "rd_auto", "drivers"], ["car", "rd_car", "drivers"]];
 
 export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = [] }) {
   const { t, lang } = useI18n();
@@ -197,8 +194,6 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     return all.length ? Math.min(...all.map((x) => x.total)) : null;
   })();
   const cur = vehicle === "any" ? null : priceFor(vehicle);
-  const basis = cur ? cur.basis : "fuel";
-  const perKm = cur ? cur.perKm : null;
   const fareOnly = cur ? cur.fare : cheapest;
   const est = vehicle === "any" ? cheapest : cur ? cur.total : null;
 

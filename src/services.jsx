@@ -21,37 +21,30 @@
 //   onSignIn, onSignOut    navigation callbacks
 // ===========================================================================
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import {
-  T, Icon, Btn, Chip, VoiceButton, Notice, input, Header, Hero, CategoryGrid,
-  ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea,
-  groupStyle, groupLabel, WalletSheet,
-  plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot,
-  BottomNav, AccountPage, ProfilePage, InstallBanner, SignupHelp, LanguageGate, PopularTrades, matchTrade, matchTrades,
-} from "./ui.jsx";
-import { snapToKnown, placeCoords, nearestPlaces, bestNearName, pinForPlace, placeIsCoherent, roadDistances, lineDistances } from "./regions.js";
+import { T, Icon, Btn, Chip, VoiceButton, Notice, input, Header, Hero, CategoryGrid, ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea, groupStyle, groupLabel, WalletSheet, plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot, BottomNav, AccountPage, ProfilePage, SignupHelp, LanguageGate, matchTrade, matchTrades } from "./ui.jsx";
+import { placeCoords, pinForPlace, placeIsCoherent, roadDistances, lineDistances } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
 import { MarketPage, ItemDetail, SellPage, AdminAds, shrink } from "./market.jsx";
 import { useMyLocation, isInstalledApp, locErrorKey } from "./device.jsx";
 import MyListing from "./profile.jsx";
 import { useAvailability, WorkerHome } from "./worker.jsx";
-import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE, stateName } from "./i18n.jsx";
+import { useI18n, tNow, tradeName, STATES, DEFAULT_STATE } from "./i18n.jsx";
 import { plateExample } from "./states.js";
 import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
-import { TileArt } from "./scenes.jsx";
+;
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
-import { MenuSheet } from "./menu.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { OrdersPage } from "./orders.jsx";
-import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, MyRequestsSheet, PartnerSheet } from "./hub.jsx";
-import { LocationSheet, LocationBar, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
+import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, PartnerSheet } from "./hub.jsx";
+import { LocationSheet, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
 import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 
 // ---------------------------------------------------------------- data layer
@@ -524,44 +517,7 @@ function rateLabel(min, max, suffix = "/day") {
   return `${range}${suffix}`;
 }
 
-// -------------------------------------------------------------------- browse
-// THE SIX WAYS IN: big tiles on the customer home. Each opens the search
-// already narrowed to that kind of thing; Buy & Sell opens the ads; Partner is
-// shown as coming soon until it exists.
-function HomeTiles({ onWorker, onRide, onShop, onEat, onMarket, onPartner }) {
-  const { t } = useI18n();
-  const tiles = [
-    ["construction", t("home_worker"), onWorker, "#FFF1E6", "#B45309"],
-    ["drivers", t("home_ride"), onRide, "#E8F1FF", "#1D4ED8"],
-    ["suppliers", t("home_shop"), onShop, "#EAF7EE", "#15803D"],
-    ["food", t("home_eat"), onEat, "#FFF4D6", "#A16207"],
-    ["tag", t("mk_tab"), onMarket, "#F3E8FF", "#7E22CE"],
-    ["user", t("home_partner"), onPartner, "#E0F2F1", "#0F766E"],
-  ];
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, margin: "0 0 22px" }}>
-      {tiles.map(([icon, label, go, bg, fg]) => (
-        <button key={icon + label} onClick={go || undefined} disabled={!go} style={{
-          display: "flex", alignItems: "center", gap: 12, minHeight: 74, padding: "10px 14px",
-          borderRadius: 16, border: `1px solid ${T.line}`, background: T.white, textAlign: "left",
-          cursor: go ? "pointer" : "default", fontFamily: "inherit", opacity: go ? 1 : 0.7,
-        }}>
-          <span style={{
-            width: 46, height: 46, borderRadius: 14, background: bg, color: fg, flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}><Icon name={icon} size={24} /></span>
-          <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{label}</span>
-            {!go && <span style={{ display: "block", fontSize: 12, color: T.inkFaint, fontWeight: 600 }}>{t("home_soon")}</span>}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // Remembered between visits so Back from Buy something lands on the I need tiles.
-let lastSide = null;
 function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, onInstall, onPickLocation, onMarket, onPartner, onBook, onOffer, hasBusiness = false, liveNow = [], onLive, biz = null, homeMode = "user", onHomeMode, showSwitch = true }) {
   const { t, lang } = useI18n();
   const geo = useMyLocation();
@@ -569,9 +525,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // Which front tile this person entered: null shows the six tiles.
   // A shop owner who chose to hire a vehicle for an order lands on the hire screen.
   const [section, setSection] = useState(() => { try { const x = window.localStorage.getItem("dhundo_open_section"); if (x) { window.localStorage.removeItem("dhundo_open_section"); return x; } } catch (_) {} return null; });
-  // The very first choice: I need / I offer. Stays on "need" while browsing tiles.
-  const [side, setSideState] = useState(lastSide);
-  const setSide = (v) => { lastSide = v; setSideState(v); };
   const [trade, setTrade] = useState(null);
   // "Show everyone in this category" instead of picking a sub-category.
   const [allIn, setAllIn] = useState(false);
@@ -692,7 +645,6 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
   // switches on shows up without anybody pulling to refresh. On the home
   // screen it is everyone nearby; inside a category, that category.
   const [live, setLive] = useState([]);
-  const [liveLoaded, setLiveLoaded] = useState(false);
   // True when nobody is live within NEAR_KM and the list shows the nearest
   // people farther out instead -- better a driver 40 km away who can be
   // called than an empty screen.
@@ -731,9 +683,9 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
           const far = near.length === 0 && rows.length > 0;
           setLive(far ? rows : near);
           setLiveFar(far);
-          setLiveLoaded(true);
+          
         })
-        .catch(() => { if (alive) { setLive([]); setLiveFar(false); setLiveLoaded(true); } });
+        .catch(() => { if (alive) { setLive([]); setLiveFar(false); } });
     fetchLive();
     const id = setInterval(fetchLive, 60000);
     return () => { alive = false; clearInterval(id); };
@@ -2667,7 +2619,6 @@ export default function ServicesPage({
     setLangGate(false);
   };
   const [installOpen, setInstallOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [offerPick, setOfferPick] = useState(false);
   const [offerTrade, setOfferTrade] = useState(null);
   const [locOpen, setLocOpen] = useState(false);
@@ -2682,26 +2633,15 @@ export default function ServicesPage({
   const [editItem, setEditItem] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
-  const [requestsOpen, setRequestsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifJobs, setNotifJobs] = useState([]);
   const [chatItem, setChatItem] = useState(null);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [bookRow, setBookRow] = useState(null);
   const [myTrade, setMyTrade] = useState(null);
-  // FIRST SCREENS: after the language, "I need" or "I offer"; for "I offer",
-  // what is offered. Shown once on a new phone, and never to somebody who is
-  // already signed in.
-  const [start, setStart] = useState(() => {
-    return null;
-  });
   const [offerType, setOfferType] = useState(() => {
     try { return window.localStorage.getItem("dhundo_offer_type") || null; } catch (_) { return null; }
   });
-  const finishStart = () => {
-    try { window.localStorage.setItem("dhundo_started", "1"); } catch (_) {}
-    setStart(null);
-  };
   const [phoneOk, setPhoneOk] = useState(null);
   useEffect(() => {
     if (!user || !user.id) { setPhoneOk(null); return undefined; }
@@ -3135,49 +3075,6 @@ export default function ServicesPage({
         </div>
       )}
 
-      {menuOpen && (() => {
-        // Everything in one list, not tucked inside other screens.
-        const biz = hasListing && !isAdmin;
-        const isOwner = biz && (myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier");
-        const isRider = biz && (myDriverKind === "delivery" || myDriverKind === "travel");
-        const go = (tb) => () => setTab(tb);
-        const bizMode = effMode === "business";
-        const talk = [
-          { icon: "bell", title: t("nt_title"), badge: inbox.alerts + rideReqs.length, go: openNotif },
-        ];
-        // NORMAL USER: only what a customer uses.
-        const activity = [
-          { icon: "bag", title: t("or_mine"), badge: ordersBadge, go: () => openOrders("mine") },
-          { icon: "tag", title: t("mb_mine"), go: () => openOrders("items") },
-          { icon: "drivers", title: t("rh_title"), go: () => openOrders("rides") },
-          ...talk,
-        ];
-        // BUSINESS: only what the owner, driver or rider uses.
-        const business = [];
-        if (isOwner) {
-          business.push({ icon: "bag", title: t("m_received"), badge: ordersBadge, go: () => openOrders("work") });
-          business.push({ icon: "edit", title: t("m_menu_items"), sub: t("m_hours"), go: () => openBiz("menu") });
-        }
-        if (biz && myDriverKind === "delivery") business.push({ icon: "drivers", title: t("m_rider_jobs"), go: () => openOrders("work") });
-        if (biz && myDriverKind === "travel") business.push({ icon: "drivers", title: t("m_rides"), go: () => openOrders("work") });
-        if (isRider) business.push({ icon: "check", title: t("m_online"), sub: avail.online ? t("av_on") : t("av_off"), go: go("work") });
-        if (biz && !isOwner && myDriverKind !== "delivery") business.push({ icon: "edit", title: t("m_rates"), go: () => openBiz("rates") });
-        if (biz && !isOwner && !isRider && myDriverKind !== "hire") business.push({ icon: "check", title: t("m_online"), go: go("work") });
-        if (biz) business.push({ icon: "user", title: t("nav_mine"), go: go("mine") });
-        if (!biz && signedIn) business.push({ icon: "plus", title: t("nav_list"), go: go("add") });
-        if (signedIn) business.push({ icon: "tag", title: t("offer_sell"), go: go("sell") });
-        const sections = (bizMode ? [
-          { title: t("nm_mode_biz"), rows: business },
-          { title: t("ms_activity"), rows: talk },
-        ] : [
-          { title: t("ms_activity"), rows: activity },
-        ]).filter((x) => x.rows.length);
-        return (
-          <MenuSheet api={api} mode={effMode === "business" ? "offer" : "need"} onMode={switchMode} signedIn={signedIn} sections={sections}
-                     onInstall={() => setInstallOpen(true)} onAccount={() => setTab("account")}
-                     onClose={() => setMenuOpen(false)} />
-        );
-      })()}
       {installOpen && <InstallSheet onClose={() => setInstallOpen(false)} />}
       {bookRow && signedIn && <BookingSheet api={api} row={bookRow} place={place} onClose={() => setBookRow(null)} />}
       {notifOpen && signedIn && (

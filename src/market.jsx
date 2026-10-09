@@ -15,7 +15,7 @@
 // ===========================================================================
 import { BuySheet, ItemOrdersSheet } from "./itemorders.jsx";
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable, VoiceButton, Hero } from "./ui.jsx";
+import { T, Icon, Btn, Notice, input, ConfirmDelete, CloseButton, useDismissable, Hero } from "./ui.jsx";
 import { useI18n, stateName } from "./i18n.jsx";
 import { ITEM_CATEGORIES, itemCategoryFor } from "./itemwords.js";
 import { hasIndic, variants } from "./translit.js";
