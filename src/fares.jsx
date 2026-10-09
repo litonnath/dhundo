@@ -45,6 +45,17 @@ export function orderBill(o) {
   return { items, gst, delivery, dGst, misc, mGst, total: items + gst + delivery + dGst + misc + mGst };
 }
 
+// Dhundo's registered details, for the bill. Empty until the admin saves them.
+export function useBusinessInfo(api) {
+  const [b, setB] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.businessInfo ? api.businessInfo() : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x && x.gstin) setB(x); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  return b;
+}
+
 // The GST on what is bought from a restaurant or a shop, set by the admin.
 export function useGstRates(api) {
   const [r, setR] = useState({ restaurant: 0, shop: 0 });
@@ -187,6 +198,7 @@ export function FareCalculator({ api }) {
           </tr></tfoot>
         </table>
       </div>
+      <BusinessEditor api={api} />
       <GstRatesEditor api={api} />
       <GstReport api={api} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 0" }}>Rate card</h3>
@@ -276,6 +288,55 @@ function GstReport({ api }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+const SAMPLE = { legal_name: "Sample Business Pvt Ltd", gstin: "22AAAAA0000A1Z5", address: "Sample address, Agartala, Tripura" };
+
+// Admin: Dhundo's registered name, GSTIN and address. Customers see them on
+// their bill once a GSTIN is saved. The preview uses an obvious sample.
+function BusinessEditor({ api }) {
+  const [f, setF] = useState({ name: "", gstin: "", address: "" });
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.businessInfo()).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) setF({ name: x.legal_name || "", gstin: x.gstin || "", address: x.address || "" }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  const set = (k, v) => { setMsg(""); setF((p) => ({ ...p, [k]: v })); };
+  const save = async () => {
+    setMsg("");
+    try {
+      const r = await api.businessInfoSet(f.name, f.gstin.trim().toUpperCase(), f.address);
+      const x = Array.isArray(r) ? r[0] : r;
+      if (x && x.reason === "bad_gstin") return setMsg("That GSTIN is not in the right format (15 characters, like 22AAAAA0000A1Z5).");
+      if (x && x.ok === false) throw new Error("no");
+      setMsg("Saved");
+    } catch (_) { setMsg("Could not save"); }
+  };
+  const shown = f.gstin.trim() ? { legal_name: f.name, gstin: f.gstin.trim().toUpperCase(), address: f.address } : null;
+  const p = shown || SAMPLE;
+  return (
+    <div style={{ margin: "18px 0 0", padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>Business details for the bill</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Enter your registered name, GSTIN and address. Customers see them on their bill. Nothing is shown until you save a GSTIN.</div>
+      <div style={lbl}>Registered business name</div>
+      <input style={{ ...cell, marginBottom: 8 }} maxLength={120} value={f.name} onChange={(e) => set("name", e.target.value)} />
+      <div style={lbl}>GSTIN</div>
+      <input style={{ ...cell, marginBottom: 8 }} maxLength={15} value={f.gstin} placeholder="22AAAAA0000A1Z5" onChange={(e) => set("gstin", e.target.value.toUpperCase())} />
+      <div style={lbl}>Registered address</div>
+      <input style={{ ...cell, marginBottom: 8 }} maxLength={300} value={f.address} onChange={(e) => set("address", e.target.value)} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Btn onClick={save}>Save</Btn>
+        {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg === "Saved" ? "#157A43" : "#B91C1C" }}>{msg}</span>}
+      </div>
+      <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "#F7F8FA", fontSize: 13.5 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 4 }}>{shown ? "How customers will see it" : "PREVIEW WITH A SAMPLE (not real, not shown to customers)"}</div>
+        <div style={{ fontWeight: 800 }}>{p.legal_name || "Dhundo"}</div>
+        <div>GSTIN: {p.gstin}</div>
+        {p.address && <div style={{ color: T.inkSoft }}>{p.address}</div>}
+      </div>
     </div>
   );
 }

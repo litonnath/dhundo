@@ -4,7 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
-import { FeeHelper, useGstRates, useRateCard, orderBill } from "./fares.jsx";
+import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -60,8 +60,9 @@ const fmtTime = (t) => {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 };
 // The customer's bill: items, then each extra on its own line, then what to pay.
-function Bill({ o, t }) {
+function Bill({ o, t, api }) {
   const b = orderBill(o);
+  const biz = useBusinessInfo(api);
   const line = (k, label, v) => v > 0 && (
     <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
   );
@@ -74,6 +75,7 @@ function Bill({ o, t }) {
       {line("m", t("fr_misc"), b.misc)}
       {line("mg", `${t("fr_gst")} (${t("fr_misc")})`, b.mGst)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
+      {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} · ` : ""}GSTIN {biz.gstin}</div>}
     </div>
   );
 }
@@ -736,7 +738,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             </div>
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
-            <Bill o={o} t={t} />
+            <Bill o={o} t={t} api={api} />
             <OrderTrack o={o} />
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>

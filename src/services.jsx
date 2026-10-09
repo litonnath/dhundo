@@ -206,6 +206,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     gstRates: () => rpc("services_gst_rates", {}),
     gstSet: (kind, percent) => rpc("services_gst_set", { p_kind: kind, p_percent: percent }, true),
     gstReport: (from, to) => rpc("services_admin_gst_report", { p_from: from || null, p_to: to || null }, true),
+    businessInfo: () => rpc("services_business_info", {}),
+    businessInfoSet: (name, gstin, address) => rpc("services_business_info_set", { p_name: name, p_gstin: gstin, p_address: address }, true),
     adminWithdrawals: (status) => rpc("services_admin_withdrawals", { p_status: status || null }, true),
     adminWithdrawalSet: (id, status, note) =>
       rpc("services_admin_withdrawal_set", { p_id: id, p_status: status, p_note: note || null }, true),
