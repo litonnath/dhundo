@@ -1,4 +1,4 @@
--- 163 part 2: order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
+-- 164 part 2: order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
 drop function if exists public.services_my_orders();
 create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
@@ -53,4 +53,4 @@ $fn$;
 revoke all on function public.services_my_orders() from public, anon, authenticated;
 grant execute on function public.services_my_orders() to authenticated;
 notify pgrst, 'reload schema';
-select '163 part 2 done' as "163_part2";
+select '164 orders gst done' as "164_orders_gst";

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- 164_order_charges.sql -- run after 163_gst_rates.sql, before 163_orders_gst.sql.
+-- 164_order_charges.sql -- run after 163_gst_rates.sql, before 164_orders_gst.sql.
 -- The extra charges a CUSTOMER pays are saved on the order when it is made, so
 -- changing a rate later never changes an old order:
 --   gst_paise          GST on the items (restaurant / shop rate)

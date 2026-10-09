@@ -1,5 +1,5 @@
 -- ===========================================================================
--- 165_gst_report.sql -- run after 164. Admin only: the GST and fee totals on
+-- 165_gst_report.sql -- run after 164_orders_gst.sql. Admin only: the GST and fee totals on
 -- delivered orders in a date range, month by month, for your accountant and
 -- GST returns. Amounts are in paise.
 -- ===========================================================================
