@@ -35,7 +35,7 @@ import { PrivacyLinks } from "./privacy.jsx";
 import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 ;
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
-import { StoreHome, OwnerFood } from "./food.jsx";
+import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -3188,6 +3188,7 @@ export default function ServicesPage({
         if (hasListing && !isAdmin) {
           if (ownerKind) {
             parts.push({ key: "menu", icon: "edit", label: t("m_menu_items"), node: <OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={hireIt} onOpenOrders={() => setTab("orders")} /> });
+            parts.push({ key: "hours", icon: "construction", label: t("ow_hours"), node: <StoreSettings api={api} shop={tr.group_name !== "Eat & Stay"} /> });
             if (tr.group_name !== "Eat & Stay") parts.push({ key: "rider", icon: "drivers", label: t("jp_title"), node: <ShopJobs api={api} hasListing={hasListing} /> });
           } else if (dk === "delivery") {
             parts.push({ key: "alerts", icon: "bell", label: t("nt_title"), node: <AlertsCard api={api} /> });
@@ -3215,7 +3216,7 @@ export default function ServicesPage({
               <div style={{ background: "linear-gradient(135deg,#032C61,#0A5BB8)", color: "#fff", borderRadius: 20, padding: "18px 16px", margin: "0 0 16px" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{t("bz_setup")}</div>
                 <div style={{ fontSize: 13.5, opacity: 0.88, marginBottom: 12, lineHeight: 1.5 }}>{t("bz_setup_sub")}</div>
-                {[[t("bp_title"), () => setBizOpen("payments")], [ownerKind ? t("m_menu_items") : t("m_rates"), () => setBizOpen(ownerKind ? "menu" : "rates")], [t("bz_photos"), () => setTab("mine")], [t("hm_goon"), () => setTab("browse")]].map(([label, go], i) => (
+                {[[t("bp_title"), () => setBizOpen("payments")], [ownerKind ? t("m_menu_items") : t("m_rates"), () => setBizOpen(ownerKind ? "menu" : "rates")], ownerKind ? [t("ow_hours"), () => setBizOpen("hours")] : [t("sc_title"), () => setBizOpen("schedule")], [t("bz_photos"), () => setTab("mine")], [t("hm_goon"), () => setTab("browse")]].map(([label, go], i) => (
                   <button key={i} onClick={go} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 50, padding: "0 14px", marginTop: 8, borderRadius: 14, border: "none", background: "rgba(255,255,255,0.14)", color: "#fff", fontFamily: "inherit", fontSize: 15.5, fontWeight: 800, textAlign: "left", cursor: "pointer" }}>
                     <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", color: "#054291", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>{i + 1}</span>
                     <span style={{ flex: 1 }}>{label}</span>

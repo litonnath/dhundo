@@ -795,7 +795,7 @@ export function SetupCard({ steps }) {
   );
 }
 
-function StoreSettings({ api, shop, onSaved }) {
+export function StoreSettings({ api, shop, onSaved }) {
   const { t } = useI18n();
   const [f, setF] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -858,7 +858,7 @@ function StoreSettings({ api, shop, onSaved }) {
             <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("ow_rider_sub")}</span></span>
         </label>
       )}
-      <Btn kind="ghost" onClick={save}>{saved ? t("ow_store_saved") : t("ow_save")}</Btn>
+      <Btn full onClick={save} style={{ minHeight: 54, fontSize: 17, background: saved ? "#16A34A" : undefined }}>{saved ? "\u2713 " + t("ow_store_saved") : t("ow_save")}</Btn>
     </div>
   );
 }
@@ -1019,7 +1019,6 @@ export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
         { done: !!(store.open_time && store.close_time), label: t("su_hours") },
         { done: !!store.promo_text, label: t("su_promo") },
       ] : []} />
-      <StoreSettings api={api} shop={shop} onSaved={load} />
       <AlertsCard api={api} />
       <div style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{t("ow_title_orders")}{pending ? ` (${pending})` : ""}</span>
@@ -1172,7 +1171,7 @@ function ItemForm({ api, item, shop, onClose, onSaved }) {
           <input type="checkbox" checked={f.available} onChange={(e) => set("available", e.target.checked)} /> {t("ow_avail")}
         </label>
         {msg && <div style={{ marginBottom: 8 }}><Notice tone="bad">{msg}</Notice></div>}
-        <Btn full disabled={busy || f.name.trim().length < 2 || !f.price} onClick={save}>{busy ? "…" : t("ow_save")}</Btn>
+        <Btn full disabled={busy} onClick={() => { if (f.name.trim().length < 2 || !(Number(f.price) >= 1)) { setMsg(t("lf_item_need")); return; } save(); }} style={{ minHeight: 54, fontSize: 17 }}>{busy ? "…" : t("ow_save")}</Btn>
         {item.id && <button onClick={del} disabled={busy} style={{ marginTop: 8, background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 44, fontFamily: "inherit" }}>{t("ow_delete")}</button>}
       </div>
     </div>
