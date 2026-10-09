@@ -9,19 +9,21 @@ import { useI18n } from "./i18n.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : []);
 const num = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
-const rs = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const GST_PERCENT = 18; // the only GST rate: 18%, on Dhundo's fee
+const r2 = (n) => Math.round(n * 100) / 100;
+const rs = (n) => `\u20b9${r2(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 export function calcFare(card, km, orderValue = 0) {
   if (!card) return null;
   const k = Math.max(0, num(km));
   const rider = Math.round(Math.max(num(card.min_rupees), num(card.base_rupees) + num(card.per_km_rupees) * k));
   const platform = Math.round(num(card.platform_rupees));
-  const gst = Math.round(platform * num(card.gst_percent) / 100);
+  const gst = r2(platform * GST_PERCENT / 100);
   // rider: what the partner earns, whole. The customer also pays Dhundo's
   // platform fee and the GST on it.
   // What Dhundo charges the shop for the order: flat + a percent of its value.
   const shop = Math.round(num(card.shop_flat_rupees) + num(orderValue) * num(card.shop_percent) / 100);
-  return { shop, rider, platform, gst, customer: rider + platform + gst, fare: rider, payout: rider };
+  return { shop, rider, platform, gst, customer: r2(rider + platform + gst), fare: rider, payout: rider };
 }
 
 // The card, loaded once per screen. Empty until it arrives or if the server
@@ -78,14 +80,14 @@ const cell = { ...input, minHeight: 40, marginBottom: 0, padding: "6px 8px", wid
 const lbl = { fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 3 };
 
 function RateRow({ api, row, onSaved }) {
-  const [f, setF] = useState({ base: String(row.base_rupees), perKm: String(row.per_km_rupees), min: String(row.min_rupees), platform: String(row.platform_rupees), gst: String(row.gst_percent), shopFlat: String(row.shop_flat_rupees || 0), shopPct: String(row.shop_percent || 0) });
+  const [f, setF] = useState({ base: String(row.base_rupees), perKm: String(row.per_km_rupees), min: String(row.min_rupees), platform: String(row.platform_rupees), shopFlat: String(row.shop_flat_rupees || 0), shopPct: String(row.shop_percent || 0) });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const set = (k, v) => { setMsg(""); setF((p) => ({ ...p, [k]: k === "shopPct" ? v.replace(/[^\d.]/g, "") : v.replace(/\D/g, "") })); };
   const save = async () => {
     setBusy(true); setMsg("");
     try {
-      const r = await api.rateSet(row.key, num(f.base), num(f.perKm), num(f.min), num(f.platform), num(f.gst));
+      const r = await api.rateSet(row.key, num(f.base), num(f.perKm), num(f.min), num(f.platform), GST_PERCENT);
       const x = Array.isArray(r) ? r[0] : r;
       if (x && x.ok === false) throw new Error("no");
       const r2 = await api.rateSetShop(row.key, num(f.shopFlat), num(f.shopPct));
@@ -99,7 +101,7 @@ function RateRow({ api, row, onSaved }) {
     <div style={{ padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
       <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{row.label}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8 }}>
-        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Platform fee \u20b9"], ["gst", "GST % on fee"], ["shopFlat", "Shop fee flat \u20b9"], ["shopPct", "Shop fee % of order"]].map(([k, l]) => (
+        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Platform fee \u20b9"], ["shopFlat", "Shop fee flat \u20b9"], ["shopPct", "Shop fee % of order"]].map(([k, l]) => (
           <div key={k}><div style={lbl}>{l}</div><input style={cell} inputMode="numeric" maxLength={4} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
         ))}
       </div>
@@ -174,7 +176,7 @@ export function FareCalculator({ api }) {
         </table>
       </div>
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 0" }}>Rate card</h3>
-      {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees + "g" + c.gst_percent + "s" + c.shop_flat_rupees + "p" + c.shop_percent} api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
+      {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees  + "s" + c.shop_flat_rupees + "p" + c.shop_percent} api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
     </div>
   );
 }
