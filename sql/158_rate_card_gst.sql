@@ -26,6 +26,7 @@ revoke all on function public.services_rate_card() from public;
 grant execute on function public.services_rate_card() to anon, authenticated;
 
 drop function if exists public.services_rate_set(text, int, int, int, int);
+drop function if exists public.services_rate_set(text, int, int, int, int, int);
 create function public.services_rate_set(
   p_key text, p_base int, p_per_km int, p_min int, p_platform int, p_gst int)
 returns table (ok boolean, reason text)
