@@ -36,6 +36,15 @@ export function useRateCard(api) {
   return rows;
 }
 
+// What a customer pays for a placed order, from the amounts saved on it.
+export function orderBill(o) {
+  const n = (v) => Number(v) || 0;
+  const items = n(o.total_paise), gst = n(o.gst_paise);
+  const delivery = n(o.delivery_fee_paise), dGst = n(o.delivery_gst_paise);
+  const misc = n(o.misc_fee_paise), mGst = n(o.misc_gst_paise);
+  return { items, gst, delivery, dGst, misc, mGst, total: items + gst + delivery + dGst + misc + mGst };
+}
+
 // The GST on what is bought from a restaurant or a shop, set by the admin.
 export function useGstRates(api) {
   const [r, setR] = useState({ restaurant: 0, shop: 0 });

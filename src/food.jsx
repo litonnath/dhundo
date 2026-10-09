@@ -4,7 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
-import { FeeHelper, useGstRates } from "./fares.jsx";
+import { FeeHelper, useGstRates, useRateCard, orderBill } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -59,6 +59,25 @@ const fmtTime = (t) => {
   const [h, m] = String(t).split(":").map(Number);
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 };
+// The customer's bill: items, then each extra on its own line, then what to pay.
+function Bill({ o, t }) {
+  const b = orderBill(o);
+  const line = (k, label, v) => v > 0 && (
+    <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
+  );
+  if (b.gst + b.delivery + b.dGst + b.misc + b.mGst <= 0) return null;
+  return (
+    <div style={{ margin: "4px 0 2px" }}>
+      {line("g", `${t("fr_gst")} (${t("fr_items")})`, b.gst)}
+      {line("d", t("st_fee"), b.delivery)}
+      {line("dg", `${t("fr_gst")} (${t("st_fee")})`, b.dGst)}
+      {line("m", t("fr_misc"), b.misc)}
+      {line("mg", `${t("fr_gst")} (${t("fr_misc")})`, b.mGst)}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
+    </div>
+  );
+}
+
 // "Open · 30 min", "Closed · opens 9:00 AM" under a name.
 function OpenLine({ info, t }) {
   if (!info) return null;
@@ -582,6 +601,10 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const addrText = addr ? (addr.address || addr.area || "") : "";
   // The delivery fee is set by the server when the order is placed (10 rupees
   // a km, at least 20); this is the same sum, shown before ordering.
+  const card = useRateCard(api);
+  const cardRow = card.find((c) => c.key === (eat ? "delivery_food" : "delivery_small"));
+  const miscP = mode !== "pickup" && cardRow ? Math.round(Number(cardRow.platform_rupees) * 100) : 0;
+  const miscG = Math.round(miscP * 0.18);
   const feeRs = mode === "delivery" ? Math.max(20, Math.round((row.distance_km != null ? Number(row.distance_km) : 2.3) * 1.3 * 10)) : 0;
 
   const send = async () => {
@@ -621,15 +644,30 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             <span>{t("fr_gst")} ({gstPct}%)</span><span>{rupees(gstP)}</span>
           </div>
         )}
+        {mode !== "pickup" && miscP > 0 && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+              <span>{t("fr_misc")}</span><span>{rupees(miscP)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+              <span>{t("fr_gst")} ({t("fr_misc")})</span><span>{rupees(miscG)}</span>
+            </div>
+          </>
+        )}
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
               <span>{t("st_fee")}</span><span>~{"\u20B9"}{feeRs}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-              <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round((total + gstP) / 100) + feeRs}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+              <span>{t("fr_gst")} ({t("st_fee")})</span><span>~{"\u20B9"}{Math.round(feeRs * 0.18 * 100) / 100}</span>
             </div>
           </>
+        )}
+        {(gstP > 0 || mode !== "pickup") && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
+            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + feeRs * 1.18) * 100) / 100}</span>
+          </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {[[tooBig ? "shop_delivery" : "delivery", tooBig ? "sh_shopdel" : "st_delivery"], ["pickup", "st_pickup"]].map(([k, label]) => (
@@ -698,8 +736,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             </div>
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
-            {o.gst_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("fr_gst")}: {rupees(o.gst_paise)}{!(o.delivery_fee_paise > 0) && <> {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.gst_paise)}</b></>}</div>}
-            {o.delivery_fee_paise > 0 && <div style={{ fontSize: 13.5, color: T.inkSoft }}>{t("st_fee")}: {rupees(o.delivery_fee_paise)} {"\u00B7"} <b style={{ color: T.ink }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise + (o.gst_paise || 0))}</b></div>}
+            <Bill o={o} t={t} />
             <OrderTrack o={o} />
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
@@ -710,7 +747,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(o.total_paise + o.delivery_fee_paise + (o.gst_paise || 0))}</div>}
+                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(o).total)}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
