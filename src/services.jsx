@@ -3129,7 +3129,7 @@ export default function ServicesPage({
           homeMode={effMode} showSwitch={!signedIn} onHomeMode={(m) => setHomeMode(m === "offer" ? "business" : "user")}
           hasBusiness={hasListing && !isAdmin}
           biz={signedIn && hasListing && !isAdmin ? { dash: <BizDashboard api={api} kind={isOwnerHome && myDriverKind !== "hire" ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "travel" : "other"} views={myViews} requests={rideReqs.length} auto={myDriverKind === "travel" ? { on: autoAccept, set: setAutoAccept } : null}
-              bookings={inbox.items} onBookingAnswer={async (id, ok) => { await api.bookingAnswer(id, ok); inbox.reload(); }} shareName={(myRow && (myRow.business_name || myRow.full_name)) || ""} onDocs={() => openBiz("docs")}
+              bookings={inbox.items} onBookingAnswer={async (id, ok) => { await api.bookingAnswer(id, ok); inbox.reload(); }} shareName={(myRow && (myRow.business_name || myRow.full_name)) || ""} onDocs={() => openBiz("docs")} onHours={() => openBiz("hours")}
               profile={(() => {
                 if (!myRow) return null;
                 const gaps = myRow.gaps || [];

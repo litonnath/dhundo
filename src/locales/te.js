@@ -732,6 +732,7 @@ export default {
   rd_note: "ఛార్జీని మీరు, డ్రైవర్ మాట్లాడుకుని నిర్ణయించుకోండి. యాప్ డబ్బు తీసుకోదు.",
   rd_searching: "మీ దగ్గర డ్రైవర్ కోసం వెతుకుతున్నాం…",
   rd_alerts_more: "యాప్ మూసి ఉన్నప్పుడు అలర్ట్",
+  pn_hours_closed: "Customers see you as Closed now because your opening hours say {t}. Change your hours to open now.",
   wal_wd_hold: "భద్రత కోసం కొత్త UPI ఐడిని 24 గంటల తర్వాత ఉపయోగించవచ్చు. రేపు మళ్ళీ ప్రయత్నించండి.",
   bnk_nokey: "బ్యాంక్ వివరాలు సేవ్ చేయడం ఇంకా ఆన్ కాలేదు. తర్వాత ప్రయత్నించండి.",
   sc_title: "పని రోజులు మరియు సమయం",

@@ -732,6 +732,7 @@ export default {
   rd_note: "ਕਿਰਾਇਆ ਤੁਸੀਂ ਤੇ ਡਰਾਈਵਰ ਆਪਸ ਵਿੱਚ ਤੈਅ ਕਰੋ। ਐਪ ਕੋਈ ਪੈਸਾ ਨਹੀਂ ਲੈਂਦੀ।",
   rd_searching: "ਤੁਹਾਡੇ ਨੇੜੇ ਡਰਾਈਵਰ ਲੱਭ ਰਹੇ ਹਾਂ…",
   rd_alerts_more: "ਐਪ ਬੰਦ ਹੋਣ 'ਤੇ ਅਲਰਟ",
+  pn_hours_closed: "Customers see you as Closed now because your opening hours say {t}. Change your hours to open now.",
   wal_wd_hold: "ਸੁਰੱਖਿਆ ਲਈ ਨਵੀਂ UPI ਆਈਡੀ 24 ਘੰਟੇ ਬਾਅਦ ਵਰਤੀ ਜਾ ਸਕਦੀ ਹੈ। ਕੱਲ੍ਹ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   bnk_nokey: "ਬੈਂਕ ਵੇਰਵੇ ਸੰਭਾਲਣਾ ਹਾਲੇ ਚਾਲੂ ਨਹੀਂ। ਬਾਅਦ ਵਿੱਚ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   sc_title: "ਕੰਮ ਦੇ ਦਿਨ ਅਤੇ ਸਮਾਂ",

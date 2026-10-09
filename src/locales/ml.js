@@ -732,6 +732,7 @@ export default {
   rd_note: "നിരക്ക് നിങ്ങളും ഡ്രൈവറും തമ്മിൽ തീരുമാനിക്കുക. ആപ്പ് പണം വാങ്ങുന്നില്ല.",
   rd_searching: "നിങ്ങളുടെ അടുത്ത് ഡ്രൈവറെ തിരയുന്നു…",
   rd_alerts_more: "ആപ്പ് അടച്ചിരിക്കുമ്പോൾ അലേർട്ട്",
+  pn_hours_closed: "Customers see you as Closed now because your opening hours say {t}. Change your hours to open now.",
   wal_wd_hold: "സുരക്ഷയ്ക്കായി പുതിയ UPI ഐഡി 24 മണിക്കൂറിന് ശേഷം ഉപയോഗിക്കാം. നാളെ വീണ്ടും ശ്രമിക്കൂ.",
   bnk_nokey: "ബാങ്ക് വിവരങ്ങൾ സൂക്ഷിക്കുന്നത് ഇതുവരെ ഓണല്ല. പിന്നീട് ശ്രമിക്കൂ.",
   sc_title: "ജോലി ദിവസങ്ങളും സമയവും",

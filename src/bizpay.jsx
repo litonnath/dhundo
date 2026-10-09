@@ -155,7 +155,7 @@ export function EarningsPanel({ api, kind, bizName = "" }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [range, setRange] = useState(7);
@@ -165,6 +165,23 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const [, setTick] = useState(0);
   const [stamp, setStamp] = useState(null);
   const [taking, setTaking] = useState(null);
+  const [closedBy, setClosedBy] = useState(null);
+  useEffect(() => {
+    if (kind !== "owner" || !api.myStore) return undefined;
+    let alive = true;
+    Promise.resolve(api.myStore()).then((r) => {
+      const x = Array.isArray(r) ? r[0] : r;
+      const o = x && x.open_time ? String(x.open_time).slice(0, 5) : "", c = x && x.close_time ? String(x.close_time).slice(0, 5) : "";
+      if (!o || !c) return;
+      const ist = new Date(Date.now() + (new Date().getTimezoneOffset() + 330) * 60000);
+      const nowM = ist.getHours() * 60 + ist.getMinutes();
+      const mm = (v) => Number(v.split(":")[0]) * 60 + Number(v.split(":")[1]);
+      const inside = mm(o) <= mm(c) ? nowM >= mm(o) && nowM <= mm(c) : nowM >= mm(o) || nowM <= mm(c);
+      const f = (v) => { const [h, m] = v.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+      if (alive) setClosedBy(inside ? null : `${f(o)} – ${f(c)}`);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, kind, taking]);
   const [docAlert, setDocAlert] = useState(0);
   useEffect(() => {
     if (kind === "owner" || !api.docsList || !onDocs) return undefined;
@@ -273,6 +290,12 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
               <span style={{ position: "absolute", top: 4, left: taking ? 30 : 4, width: 28, height: 28, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
             </button>
           </div>
+          {taking && closedBy && (
+            <div role="alert" style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "#FFF7E0", color: "#8A5A00", fontSize: 14, fontWeight: 700 }}>
+              {String(t("pn_hours_closed")).replace("{t}", closedBy)}
+              {onHours && <div><button onClick={onHours} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: "none", background: "#8A5A00", color: "#fff", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("av_change")}</button></div>}
+            </div>
+          )}
           {taking && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft }}>{t("pn_pause")}</span>

@@ -732,6 +732,7 @@ export default {
   rd_note: "ದರವನ್ನು ನೀವು ಮತ್ತು ಚಾಲಕ ನಿರ್ಧರಿಸಿ. ಆ್ಯಪ್ ಹಣ ಪಡೆಯುವುದಿಲ್ಲ.",
   rd_searching: "ನಿಮ್ಮ ಬಳಿ ಚಾಲಕರನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ…",
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
+  pn_hours_closed: "Customers see you as Closed now because your opening hours say {t}. Change your hours to open now.",
   wal_wd_hold: "ಸುರಕ್ಷತೆಗಾಗಿ ಹೊಸ UPI ಐಡಿಯನ್ನು 24 ಗಂಟೆಗಳ ನಂತರ ಬಳಸಬಹುದು. ನಾಳೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   bnk_nokey: "ಬ್ಯಾಂಕ್ ವಿವರ ಉಳಿಸುವುದು ಇನ್ನೂ ಆನ್ ಆಗಿಲ್ಲ. ನಂತರ ಪ್ರಯತ್ನಿಸಿ.",
   sc_title: "ಕೆಲಸದ ದಿನ ಮತ್ತು ಸಮಯ",

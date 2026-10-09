@@ -732,6 +732,7 @@ export default {
   rd_note: "ભાડું તમે અને ડ્રાઇવર જાતે નક્કી કરો. એપ કોઈ ચુકવણી લેતી નથી.",
   rd_searching: "તમારી નજીક ડ્રાઇવર શોધી રહ્યા છીએ…",
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
+  pn_hours_closed: "Customers see you as Closed now because your opening hours say {t}. Change your hours to open now.",
   wal_wd_hold: "સલામતી માટે નવી UPI આઈડી 24 કલાક પછી વાપરી શકાશે. કાલે ફરી પ્રયાસ કરો.",
   bnk_nokey: "બેંક વિગતો સાચવવાનું હજુ ચાલુ નથી. પછી ફરી પ્રયાસ કરો.",
   sc_title: "કામના દિવસો અને સમય",
