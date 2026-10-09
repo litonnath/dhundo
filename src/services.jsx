@@ -42,7 +42,7 @@ import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
-import { FareCalculator } from "./fares.jsx";
+import { AdminConsole } from "./admin.jsx";
 import { OrdersPage } from "./orders.jsx";
 import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
@@ -208,6 +208,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     gstReport: (from, to) => rpc("services_admin_gst_report", { p_from: from || null, p_to: to || null }, true),
     businessInfo: () => rpc("services_business_info", {}),
     businessInfoSet: (name, gstin, address) => rpc("services_business_info_set", { p_name: name, p_gstin: gstin, p_address: address }, true),
+    adminOverview: () => rpc("services_admin_overview", {}, true),
+    adminOrders: (status) => rpc("services_admin_orders", { p_status: status || null, p_limit: 100 }, true),
+    adminRides: (status) => rpc("services_admin_rides", { p_status: status || null, p_limit: 100 }, true),
+    adminPeople: (q) => rpc("services_admin_people", { p_q: q || null, p_limit: 100 }, true),
     adminWithdrawals: (status) => rpc("services_admin_withdrawals", { p_status: status || null }, true),
     adminWithdrawalSet: (id, status, note) =>
       rpc("services_admin_withdrawal_set", { p_id: id, p_status: status, p_note: note || null }, true),
@@ -3355,11 +3359,12 @@ export default function ServicesPage({
           {tab === "manage" && isAdmin && (
             <>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("manage_title")}</h1>
-              <AdminMfaCard api={api} onSession={onSessionTokens} onSignOut={onSignOut} />
-              <AdminList api={api} trades={trades} reloadKey={reloadKey} />
-              <FareCalculator api={api} />
-              <AdminWithdrawals api={api} />
-              <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />
+              <AdminConsole api={api} panels={{
+                partners: <AdminList api={api} trades={trades} reloadKey={reloadKey} />,
+                money: <AdminWithdrawals api={api} />,
+                ads: <AdminAds api={api} onOpenItem={(it) => setItemOpen({ id: it.id })} />,
+                security: <AdminMfaCard api={api} onSession={onSessionTokens} onSignOut={onSignOut} />,
+              }} />
             </>
           )}
         </div>
