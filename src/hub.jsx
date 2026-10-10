@@ -14,6 +14,7 @@ import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { RouteNav, RiderJobMap } from "./nearmap.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
+import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -363,6 +364,7 @@ export function BookingSheet({ api, row, onClose, place }) {
   const [rates, setRates] = useState([]);
   const [rate, setRate] = useState(null);
   const [sched, setSched] = useState(null);
+  const busySlots = useBusy(api, row.id);
   useEffect(() => { let live = true; Promise.resolve(api.schedulePublic ? api.schedulePublic(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (live && x) setSched(x); }).catch(() => {}); return () => { live = false; }; }, [api, row.id]);
   useEffect(() => {
     let live = true;
@@ -440,6 +442,9 @@ export function BookingSheet({ api, row, onClose, place }) {
               <input type="datetime-local" min={localStamp(new Date(Date.now() - 600000))} value={start}
                      onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 4 }} />
             )}
+
+            <BusyCalendar slots={busySlots} picked={ok ? startDate : null} />
+            {ok && clashWith(busySlots, startDate, endDate) && <div role="alert" style={{ margin: "0 0 8px", padding: "9px 12px", borderRadius: 10, background: "#FEF2F2", border: "1px solid #FCA5A5", color: "#B91C1C", fontSize: 13.5, fontWeight: 700, lineHeight: 1.45 }}>{t("bc_clash")}</div>}
 
             <div style={head}><span style={num}>2</span>{t("bk_period")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
