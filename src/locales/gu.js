@@ -789,7 +789,7 @@ export default {
   sp_title: "Who gets what",
   sp_shop: "Restaurant / shop",
   sp_rider: "Delivery rider",
-  sp_platform: "Dhundo (miscellaneous fee)",
+  sp_platform: "Miscellaneous fee",
   sp_gst: "GST (for the government)",
   sp_total: "Customer pays",
   pay_cod: "Cash on delivery",
