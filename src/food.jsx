@@ -805,6 +805,12 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   if (view && orders && orders.length === 0 && !showEmpty) return null;
   // In Active, one card per shop (the latest); older ones sit behind a button.
   const latestPerShop = (list) => { const seen = new Set(); return list.filter((o) => { if (seen.has(o.other_name)) return false; seen.add(o.other_name); return true; }); };
+  // Until a rider accepts, the customer is held for the highest delivery partner fee.
+  const held = (o) => {
+    const r = feeRange[o.id];
+    const up = r && !r.rider_taken ? Number(r.fee_max_paise) - Number(o.delivery_fee_paise) : 0;
+    return up > 0 ? { ...o, delivery_fee_paise: Number(r.fee_max_paise) } : o;
+  };
   const olderCount = view === "active" && orders ? orders.length - latestPerShop(orders).length : 0;
   return (
     <div>
@@ -812,7 +818,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
         {!view && <AlertsCard api={api} compact />}
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (showAll || view !== "active" ? orders : latestPerShop(orders)).map((o) => (
           <div key={o.id} style={cardStyle}>
-            <OrderHeader name={o.other_name} amount={orderBill(o).total}
+            <OrderHeader name={o.other_name} amount={orderBill(held(o)).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} />
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
@@ -834,7 +840,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
-              <SplitBox o={o} t={t} />
+              <SplitBox o={held(o)} t={t} />
             </Fold>
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
