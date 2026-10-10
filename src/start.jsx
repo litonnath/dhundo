@@ -4,7 +4,7 @@
 // remembered, so these show once.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect } from "react";
-import { T, Icon, groupStyle, groupLabel, VoiceButton, ListenButton, Hero } from "./ui.jsx";
+import { T, Icon, groupStyle, groupLabel, VoiceButton, ListenButton, Hero, BLUE_WASH } from "./ui.jsx";
 import { useI18n, tradeName } from "./i18n.jsx";
 import { TileArt } from "./scenes.jsx";
 import { tradeIcon, vividFor } from "./tradeicons.js";
@@ -203,7 +203,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
           </div>
         ) : null;
   return (
-    <div style={{ padding: "22px 16px 120px", boxSizing: "border-box" }}>
+    <div style={{ padding: "22px 16px 120px", boxSizing: "border-box", background: BLUE_WASH, minHeight: "70vh" }}>
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
         {showSwitch && <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 auto 18px", maxWidth: 440 }}>
           {[["user", "user", t("nm_mode_user")], ["business", "construction", t("nm_mode_biz")]].map(([k, icon, label]) => (

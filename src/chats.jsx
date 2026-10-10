@@ -5,7 +5,7 @@
 // when its request is declined or cancelled and is deleted 24 hours later.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, Icon, Notice, input, CloseButton, useDismissable } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, BLUE_WASH, PageHero, blueCard, blueTile } from "./ui.jsx";
 import { fmtLength } from "./hub.jsx";
 import { useI18n } from "./i18n.jsx";
 
@@ -65,11 +65,11 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
   const { t } = useI18n();
   const [ask, setAsk] = useState(null);
   return (
+    <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 16px 120px" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, color: T.ink, margin: "4px 0 4px" }}>{t("ch_tab")}</h1>
-      <p style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5, margin: "0 0 14px" }}>{t("ch_note")}</p>
+      <PageHero title={t("ch_tab")} sub={t("ch_note")} />
       {onRequests && (
-        <button onClick={onRequests} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 12, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={onRequests} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", ...blueCard, borderRadius: 14, padding: "12px 14px", marginBottom: 12, cursor: "pointer", fontFamily: "inherit" }}>
           <span style={{ width: 40, height: 40, borderRadius: 12, background: T.brandSoft, color: T.brandDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name="bell" size={20} /></span>
           <span style={{ flex: 1 }}>
             <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink }}>{t("nt_requests")}</span>
@@ -131,6 +131,7 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
           })}
         </div>
       )}
+    </div>
     </div>
   );
 }

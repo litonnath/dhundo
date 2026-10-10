@@ -2203,6 +2203,22 @@ export function waLink(phone) {
 // Everything about "me" in one place, as big rows: sign in, my listing,
 // wallet, install, sign out. It replaces four small controls that used to
 // be spread over two header rows.
+// The blue look shared by the main pages: a pale wash behind the page, a navy
+// to blue banner for the title, and cards with a light-blue edge and a blue icon tile.
+export const BLUE_WASH = "linear-gradient(180deg,#E3EEFF 0,#F4F8FE 280px,#F7F9FC 100%)";
+export const blueCard = { border: "1px solid #CFE0F7", background: "#fff", boxShadow: "0 1px 3px rgba(11,58,120,0.08)" };
+export const blueTile = { background: "linear-gradient(135deg,#1D63D1,#0B3A78)", color: "#fff" };
+export function PageHero({ kicker, title, sub, children }) {
+  return (
+    <div style={{ background: "linear-gradient(135deg,#0B3A78,#1D63D1)", color: "#fff", borderRadius: 18, padding: "18px 18px 16px", margin: "6px 0 16px", boxShadow: "0 6px 18px rgba(11,58,120,0.22)" }}>
+      {kicker && <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", opacity: 0.8 }}>{kicker}</div>}
+      <div style={{ fontSize: 22, fontWeight: 800, marginTop: kicker ? 4 : 0, lineHeight: 1.25, overflowWrap: "anywhere" }}>{title}</div>
+      {sub && <div style={{ fontSize: 13.5, opacity: 0.88, marginTop: 4, lineHeight: 1.5 }}>{sub}</div>}
+      {children}
+    </div>
+  );
+}
+
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
   hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, onOpenAdmin = null, onPartner = null, extra = null, viewRow = null, showCredits = false,
@@ -2212,12 +2228,12 @@ export function AccountPage({
   const row = (icon, label, onClick, extra, sub) => (
     <button onClick={onClick} style={{
       width: "100%", display: "flex", alignItems: "center", gap: 14, minHeight: 60,
-      padding: "12px 16px", background: T.white, border: `1px solid ${T.line}`,
+      padding: "12px 16px", ...blueCard,
       borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-      fontSize: 16, fontWeight: 700, color: T.ink,
+      fontSize: 16, fontWeight: 700, color: "#0B3A78",
     }}>
       <span style={{
-        width: 40, height: 40, borderRadius: 12, background: T.brandSoft, color: T.brandDark,
+        width: 40, height: 40, borderRadius: 12, ...blueTile,
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}><Icon name={icon} size={21} /></span>
       <span style={{ flex: 1 }}>
@@ -2232,6 +2248,7 @@ export function AccountPage({
     </button>
   );
   return (
+    <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "22px 16px 30px" }}>
       {!account ? (
         <div style={{
@@ -2247,28 +2264,7 @@ export function AccountPage({
           <SignupHelp compact />
         </div>
       ) : (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
-          padding: "4px 2px",
-        }}>
-          <span style={{
-            width: 52, height: 52, borderRadius: "50%", background: T.brandDark, color: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 21, fontWeight: 800,
-          }}>{account.full_name
-                ? account.full_name.trim().charAt(0).toUpperCase()
-                : <Icon name="user" size={24} />}</span>
-          <span>
-            {/* The name when there is one; otherwise a plain heading, so
-                the phone number is not printed twice. */}
-            <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>
-              {account.full_name || t("acc_title")}
-            </span>
-            <span style={{ display: "block", fontSize: 14, color: T.inkSoft }}>
-              {prettyPhone(account.phone)}
-            </span>
-          </span>
-        </div>
+        <PageHero kicker={t("acc_title")} title={account.full_name || prettyPhone(account.phone)} sub={account.full_name ? prettyPhone(account.phone) : null} />
       )}
 
       {account && phoneOk === false && (
@@ -2314,6 +2310,7 @@ export function AccountPage({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  or_hero_sub: "Your orders and deliveries, in one place",
   op_title: "What you get",
   op_items: "Items at your prices",
   op_gst: "GST on the items",
