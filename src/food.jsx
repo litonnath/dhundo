@@ -711,6 +711,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
 export function MyOrdersList({ api, view = null, title = null, showEmpty = false }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState(null);
+  const [showAll, setShowAll] = useState(false);
   const load = useCallback(async () => {
     try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
   }, [api, view]);
@@ -719,11 +720,14 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const [rated, setRated] = useState(() => { try { return JSON.parse(window.localStorage.getItem("dhundo_rated") || "[]"); } catch (_) { return []; } });
   const markRated = (id) => { const n = [...rated, id]; setRated(n); try { window.localStorage.setItem("dhundo_rated", JSON.stringify(n.slice(-200))); } catch (_) {} };
   if (view && orders && orders.length === 0 && !showEmpty) return null;
+  // In Active, one card per shop (the latest); older ones sit behind a button.
+  const latestPerShop = (list) => { const seen = new Set(); return list.filter((o) => { if (seen.has(o.other_name)) return false; seen.add(o.other_name); return true; }); };
+  const olderCount = view === "active" && orders ? orders.length - latestPerShop(orders).length : 0;
   return (
     <div>
         {view && orders && orders.length > 0 && title}
         {!view && <AlertsCard api={api} compact />}
-        {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : orders.map((o) => (
+        {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (showAll || view !== "active" ? orders : latestPerShop(orders)).map((o) => (
           <div key={o.id} style={card}>
             <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
               <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
@@ -772,6 +776,11 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
           </div>
         ))}
+        {olderCount > 0 && (
+          <button onClick={() => setShowAll((v) => !v)} style={{ width: "100%", minHeight: 46, borderRadius: 14, border: `1.5px solid ${T.line}`, background: "#fff", color: T.brandDark, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
+            {showAll ? t("od_hide_older") : String(t("od_show_older")).replace("{n}", olderCount)}
+          </button>
+        )}
     </div>
   );
 }

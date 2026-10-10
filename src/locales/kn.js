@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  od_show_older: "Show {n} earlier orders",
+  od_hide_older: "Hide earlier orders",
   cn_err_done: "This can no longer be cancelled. It may already be delivered or cancelled.",
   cn_err_not_yours: "You cannot cancel this order.",
   cn_err_update: "Cancelling is not switched on yet. Please try again later.",
