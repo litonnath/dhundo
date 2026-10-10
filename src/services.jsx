@@ -400,7 +400,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     docSave: (kind, no, exp) => rpc("services_doc_save", { p_kind: kind, p_no: no || null, p_expires: exp || null }, true),
     bankGet: () => rpc("services_bank_get", {}, true),
     bankSave: (holder, acct, ifsc, bank) => rpc("services_bank_save", { p_holder: holder, p_acct: acct, p_ifsc: ifsc, p_bank: bank || null }, true),
-    resumeDue: () => rpc("services_resume_due", {}),
+    resumeDue: () => rpc("services_resume_due", {}, true),
     myResume: () => rpc("services_my_resume", {}, true),
     rateSave: (r) => rpc("services_rate_save", { p_id: r.id || null, p_label: r.label, p_unit: r.unit, p_rupees: r.rupees }, true),
     rateDelete: (id) => rpc("services_rate_delete", { p_id: id }, true),
