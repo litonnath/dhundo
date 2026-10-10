@@ -82,7 +82,7 @@ function Bill({ o, t, api, range = null }) {
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{spread > 0 ? `${rupees(b.total)} \u2013 ${rupees(b.total + spread)}` : rupees(b.total)}</span></div>
-      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("fr_range_note")}</div>}
+      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("dq_head")} {t("dq_cash")} {t("dq_upi")}</div>}
       {range && range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) && (
         <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
           {o.pay_method === "upi" && o.paid
@@ -695,10 +695,16 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
               <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{dq && feeMaxRs > feeMinRs ? `${feeMinRs} \u2013 \u20B9${feeMaxRs}` : feeRs}</span>
             </div>
             {dq && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.5 }}>
-                {String(t("dq_line")).replace("{a}", dq.pickup_km).replace("{b}", dq.drop_km).replace("{c}", Math.round(Number(dq.total_km) * 10) / 10)}
-                {!dq.rider_found && ` ${t("dq_norider")}`}
-                {feeMaxRs > feeMinRs && <div style={{ marginTop: 3 }}>{t("fr_range_note")}</div>}
+              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.55 }}>
+                {Number(dq.drop_km) > 0 && <div>{String(t("dq_dist2")).replace("{b}", dq.drop_km)}</div>}
+                {!dq.rider_found && <div>{t("dq_norider2")}</div>}
+                {feeMaxRs > feeMinRs && (
+                  <>
+                    <div style={{ marginTop: 4 }}>{t("dq_head")}</div>
+                    <div>{"\u2022 "}{t("dq_cash")}</div>
+                    <div>{"\u2022 "}{t("dq_upi")}</div>
+                  </>
+                )}
               </div>
             )}
           </>
