@@ -914,6 +914,8 @@ function PinDoor({ api, orderId, place, onDone }) {
 }
 
 // What is happening to this order, said plainly, for the customer.
+const avgTag = (avg, n) => (Number(n) > 0 ? ` \u2605 ${Number(avg).toFixed(1)} (${n})` : "");
+
 function CustomerBanner({ o, t }) {
   const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
   const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
@@ -925,8 +927,8 @@ function CustomerBanner({ o, t }) {
   if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" title={t("ob_decide")} />;
   if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_norider")} sub={t("ob_norider_sub")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
-    if (o.job_status === "picked_up") return <Banner tone="go" title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) : null}>{timer}</Banner>;
-    if (o.rider_name) return <Banner tone="go" title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name)}>{timer}</Banner>;
+    if (o.job_status === "picked_up") return <Banner tone="go" title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) + avgTag(o.rider_avg, o.rider_n) : null}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name) + avgTag(o.rider_avg, o.rider_n)}>{timer}</Banner>;
     if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" title={t("ob_finding")} sub={t("st_finding_rider")}>{timer}</Banner>;
     return <Banner tone="go" title={t("ob_prep")} sub={String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}>{timer}</Banner>;
   }

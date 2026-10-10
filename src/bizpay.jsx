@@ -625,3 +625,10 @@ export function DeliveryRateBox({ api, orderId, who, onDone }) {
   return <RateBox api={api} orderId={orderId} onDone={onDone} title={t(who === "rider" ? "rt_rate_rider" : "rt_rate_customer")}
                   submit={({ stars, comment, complaint }) => api.deliveryRate(orderId, stars, comment, complaint)} />;
 }
+
+// After a ride: the passenger rates the driver, or the driver rates the passenger.
+export function RideRateBox({ api, rideId, who, onDone }) {
+  const { t } = useI18n();
+  return <RateBox api={api} orderId={rideId} onDone={onDone} title={t(who === "driver" ? "rt_rate_driver" : "rt_rate_passenger")}
+                  submit={({ stars, comment, complaint }) => api.rideRate(rideId, stars, comment, complaint)} />;
+}

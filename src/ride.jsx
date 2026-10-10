@@ -4,6 +4,7 @@
 // between the two; the app takes no payment.
 // ---------------------------------------------------------------------------
 import { useRateCard, calcFare, KmRateFields, rateKeyFor } from "./fares.jsx";
+import { RideRateBox } from "./bizpay.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, Icon, Notice, input, useDismissable, ListenButton } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
@@ -318,7 +319,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   return (
     <div style={wrap}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 14px" }}><h1 style={{ flex: 1, fontSize: 24, fontWeight: 800, color: T.ink, margin: 0 }}>{t("rd_title")}</h1><ListenButton compact lines={[t("rd_title")]} /></div>
-      {finished && <RideDone ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
+      {finished && <RideDone api={api} ride={lastRide.current} who="passenger" onClose={() => setFinished(false)} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {[["travel", "rd_mode_travel"], ["hire", "rd_mode_hire"]].map(([k, key]) => (
           <button key={k} onClick={() => { setMode(k); setVehicle("any"); }} aria-pressed={mode === k} style={{
@@ -440,7 +441,7 @@ function Timeline({ pick, drop }) {
 
 // Shown to both sides when a ride has been finished: a clear success message
 // with the trip and the fare.
-function RideDone({ ride, who, onClose }) {
+function RideDone({ api, ride, who, onClose }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
   return (
@@ -452,6 +453,7 @@ function RideDone({ ride, who, onClose }) {
         <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.5, margin: "6px 0 4px" }}>{t(who === "driver" ? "rdn_drv" : "rdn_pax")}</div>
         {ride && ride.fare_paise != null && <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: "8px 0" }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</div>}
         {ride && <div style={{ textAlign: "left", margin: "8px 0 14px", background: "#F7F9FB", borderRadius: 14, padding: "4px 12px" }}><Timeline pick={ride.pick_text} drop={ride.drop_text} /></div>}
+        {api && ride && ride.id && <div style={{ textAlign: "left" }}><RideRateBox api={api} rideId={ride.id} who={who === "driver" ? "passenger" : "driver"} /></div>}
         <Btn full onClick={onClose}>{t("rdn_ok")}</Btn>
       </div>
     </div>
@@ -463,9 +465,15 @@ export function RideHistory({ api }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(null);
+  const [rated, setRated] = useState(() => new Set());
   const show = async () => {
     setOpen(true);
-    try { setRows(many(await api.rideHistory())); } catch (_) { setRows([]); }
+    try {
+      const list = many(await api.rideHistory());
+      setRows(list);
+      const ids = list.filter((x) => x.status === "done").map((x) => x.id);
+      if (ids.length && api.rideRated) { try { setRated(new Set(many(await api.rideRated(ids)).map((y) => (typeof y === "string" ? y : y.ride_id)))); } catch (_) { /* keep */ } }
+    } catch (_) { setRows([]); }
   };
   const col = { done: "#16A34A", cancelled: "#B91C1C", expired: "#6B7280" };
   return (
@@ -486,6 +494,7 @@ export function RideHistory({ api }) {
                 {r.other_name ? ` \u00B7 ${t(r.role === "driver" ? "rh_drv" : "rh_pax")} ${r.other_name}` : ""}
               </div>
               <Route pick={r.pick_text} drop={r.drop_text} />
+              {r.status === "done" && !rated.has(r.id) && <RideRateBox api={api} rideId={r.id} who={r.role === "driver" ? "passenger" : "driver"} onDone={(id) => setRated((s) => new Set([...s, id]))} />}
             </div>
           ))}
         </FormSheet>
@@ -637,7 +646,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
 
   return (
     <div style={{ marginTop: 4 }}>
-      {doneRide && <RideDone ride={doneRide} who="driver" onClose={() => setDoneRide(null)} />}
+      {doneRide && <RideDone api={api} ride={doneRide} who="driver" onClose={() => setDoneRide(null)} />}
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
       {mine.map((r) => (
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>

@@ -13,7 +13,7 @@ const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 
 const th = { padding: "7px 8px", fontWeight: 800, textAlign: "left", color: T.inkSoft, whiteSpace: "nowrap" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
-const TABS = [["overview", "Overview"], ["partners", "Partners"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
+const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
 
 export function AdminConsole({ api, panels }) {
   const [tab, setTab] = useState("overview");
@@ -27,6 +27,7 @@ export function AdminConsole({ api, panels }) {
       </div>
       {tab === "overview" && <Overview api={api} go={setTab} />}
       {tab === "partners" && panels.partners}
+      {tab === "quality" && <Quality api={api} />}
       {tab === "orders" && <Orders api={api} />}
       {tab === "rides" && <Rides api={api} />}
       {tab === "people" && <People api={api} />}
@@ -145,6 +146,54 @@ function People({ api }) {
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
       <Table head={["Name", "Phone", "Joined", "Listings", "Orders", "Rides"]} empty="Nobody found."
              rows={rows && rows.map((p) => [p.full_name, p.phone, p.joined ? when(p.joined) : "—", p.listings, p.orders, p.rides])} />
+    </div>
+  );
+}
+
+const stars = (n) => `\u2605 ${Number(n).toFixed(1)}`;
+
+// Who is rated badly, and every rating and complaint. A partner with 3 or more
+// ratings averaging under 3.5, or 2 or more complaints, is flagged; the admin
+// can hide it until it has been looked at, and bring it back.
+function Quality({ api }) {
+  const [rows, err, load] = useList(() => api.adminQuality(), [api]);
+  const [only, setOnly] = useState(false);
+  const [feed, ferr] = useList(() => api.adminRatings(only), [api, only]);
+  const [busy, setBusy] = useState(null);
+  const [actErr, setActErr] = useState("");
+  const setStatus = async (id, s) => {
+    setBusy(id); setActErr("");
+    try {
+      const r = await api.adminSetStatus(id, s, null, s === "hidden" ? "Poor ratings: under review" : null);
+      const x = Array.isArray(r) ? r[0] : r;
+      if (x && x.ok === false) throw new Error("no");
+      load();
+    } catch (_) { setActErr("Could not change that listing."); }
+    setBusy(null);
+  };
+  return (
+    <div>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Rated by customers</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 10 }}>Flagged: 3 or more ratings averaging under 3.5, or 2 or more complaints. Hiding a partner takes it out of search until you bring it back.</div>
+      {(err || ferr) && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err || ferr}</div>}
+      {actErr && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{actErr}</div>}
+      <Table head={["Partner", "Work", "Average", "Ratings", "Complaints", "Status", ""]} empty="Nobody has been rated yet."
+             rows={rows && rows.map((r) => [
+               <span key="n" style={{ fontWeight: 700 }}>{r.name}<br /><span style={{ color: T.inkSoft, fontWeight: 400 }}>{r.phone}</span></span>,
+               r.trade, <span key="a" style={{ fontWeight: 800, color: r.flagged ? "#B91C1C" : T.ink }}>{stars(r.avg_stars)}</span>,
+               r.ratings, r.complaints > 0 ? <span key="c" style={{ color: "#B91C1C", fontWeight: 800 }}>{r.complaints}</span> : 0,
+               <span key="s">{r.status}{r.flagged ? " \u00B7 flagged" : ""}</span>,
+               r.status === "hidden"
+                 ? <Btn key="b" kind="ghost" disabled={busy === r.worker_id} onClick={() => setStatus(r.worker_id, "approved")}>Restore</Btn>
+                 : <Btn key="b" kind="ghost" disabled={busy === r.worker_id} onClick={() => setStatus(r.worker_id, "hidden")}>Hide</Btn>,
+             ])} />
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "20px 0 8px" }}>All ratings and complaints</h2>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+        <input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} style={{ width: 18, height: 18 }} /> Complaints only
+      </label>
+      <Table head={["When", "Type", "From", "To", "Stars", "Comment"]} empty="No ratings yet."
+             rows={feed && feed.map((f) => [when(f.created_at), `${f.kind} \u00B7 ${f.by_role === "customer" ? "customer \u2192 partner" : "partner \u2192 customer"}`, f.from_name, f.to_name,
+               <span key="s" style={{ fontWeight: 800, color: f.complaint ? "#B91C1C" : T.ink }}>{stars(f.stars)}{f.complaint ? " \u00B7 complaint" : ""}</span>, f.comment || "\u2014"])} />
     </div>
   );
 }

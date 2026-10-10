@@ -1,4 +1,4 @@
--- 164 part 2: order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
+-- 164 part 2 (needs 187_delivery_ratings.sql first): order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
 drop function if exists public.services_my_orders();
 create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
@@ -6,7 +6,7 @@ returns table (id uuid, role text, status text, mode text, total_paise int,
                lines jsonb, created_at timestamptz, delivery_mins int,
                rider_name text, rider_phone text, delivery_fee_paise int, job_status text, dist_km numeric, job_id uuid, gst_paise int, delivery_gst_paise int, misc_fee_paise int, misc_gst_paise int, cust_lat double precision, cust_lng double precision,
                updated_at timestamptz, cancelled_by text, cancel_reason text, rider_after timestamptz, worker_id uuid,
-               pay_method text, paid boolean, upi_claimed boolean, rider_fee_paise int)
+               pay_method text, paid boolean, upi_claimed boolean, rider_fee_paise int, rider_avg numeric, rider_n int)
 language sql
 stable
 security definer
@@ -27,7 +27,9 @@ as $fn$
          o.job_id,
          o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
-         o.pay_method, o.paid, o.upi_claimed, j.fee_paise
+         o.pay_method, o.paid, o.upi_claimed, j.fee_paise,
+         (select round(avg(x.stars)::numeric, 1) from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer'),
+         (select count(*)::int from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer')
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id
     left join public.services_jobs j on j.id = o.job_id
@@ -47,7 +49,9 @@ as $fn$
          o.job_id,
          o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
-         o.pay_method, o.paid, o.upi_claimed, j.fee_paise
+         o.pay_method, o.paid, o.upi_claimed, j.fee_paise,
+         (select round(avg(x.stars)::numeric, 1) from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer'),
+         (select count(*)::int from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer')
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id and w.user_id = public.services_account_id()
     join public.services_signups c on c.id = o.customer_id

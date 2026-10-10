@@ -1,13 +1,13 @@
 -- ===========================================================================
 -- 182_job_distances.sql -- a job offered to a rider also says how far the
 -- customer is from the restaurant (drop_km), next to how far the rider is from
--- the restaurant (km). Replaces services_jobs_nearby from 179. Run after 179_widen_radius_1.sql.
+-- the restaurant (km). Replaces services_jobs_nearby from 179. Run after 179_widen_radius_1.sql and 187_delivery_ratings.sql.
 -- ===========================================================================
 drop function if exists public.services_jobs_nearby();
 create function public.services_jobs_nearby()
 returns table (id uuid, shop text, note text, drop_text text, fee_paise int,
                km double precision, created_at timestamptz, expires_at timestamptz,
-               drop_km double precision)
+               drop_km double precision, cust_avg numeric, cust_n int)
 language plpgsql
 stable
 security definer
@@ -37,7 +37,9 @@ begin
                 else round(public.services_km(v_lat, v_lng, p.lat, p.lng)::numeric, 1)::double precision end,
            j.created_at, j.expires_at,
            case when p.lat is null or o.lat is null then null
-                else round((1.3 * public.services_km(p.lat, p.lng, o.lat, o.lng))::numeric, 1)::double precision end
+                else round((1.3 * public.services_km(p.lat, p.lng, o.lat, o.lng))::numeric, 1)::double precision end,
+           (select round(avg(x.stars)::numeric, 1) from public.services_delivery_ratings x where x.to_account = o.customer_id and x.by_role = 'rider'),
+           (select count(*)::int from public.services_delivery_ratings x where x.to_account = o.customer_id and x.by_role = 'rider')
       from public.services_jobs j
       join public.services_workers p on p.id = j.poster_work
       left join public.services_orders o on o.job_id = j.id

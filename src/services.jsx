@@ -37,7 +37,7 @@ import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { RatesCard } from "./rates.jsx";
-import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
+import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
 import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind, pricedByKm } from "./start.jsx";
@@ -443,6 +443,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     deliveryRate: (id, stars, comment, complaint) => rpc("services_delivery_rate", { p_order: id, p_stars: stars, p_comment: comment || null, p_complaint: !!complaint }, true),
     myDeliveryRatings: () => rpc("services_my_delivery_ratings", {}, true),
     deliveryRated: (ids) => rpc("services_delivery_rated", { p_orders: ids }, true),
+    rideRate: (id, stars, comment, complaint) => rpc("services_ride_rate", { p_ride: id, p_stars: stars, p_comment: comment || null, p_complaint: !!complaint }, true),
+    rideRated: (ids) => rpc("services_ride_rated", { p_rides: ids }, true),
+    adminQuality: () => rpc("services_admin_quality", {}, true),
+    adminRatings: (onlyComplaints) => rpc("services_admin_ratings", { p_complaints_only: !!onlyComplaints }, true),
     orderPay: (id, action) => rpc("services_order_pay", { p_order: id, p_action: action }, true),
     ordersReleaseDue: () => rpc("services_orders_release_due", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
@@ -3417,7 +3421,7 @@ export default function ServicesPage({
           onPartner={() => setPartnerOpen(true)}
           showCredits={inApp}
           privacy={<PrivacyLinks api={api} />}
-          extra={signedIn ? <><AlertsCard api={api} compact /><SignupHelp compact /></> : null}
+          extra={signedIn ? <><AlertsCard api={api} compact /><RatingsCard api={api} source="delivery" title={t("rt_received")} /><SignupHelp compact /></> : null}
         />
       )}
 

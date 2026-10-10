@@ -121,11 +121,11 @@ export function RiderJobs({ api, online, where = null }) {
                   )}
                 </div>
                 <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
-                {customer && <Fold title={`${t("jb_customer")}${j.customer_name ? `: ${j.customer_name}` : ""}`}>{customer}</Fold>}
+                {customer && <Fold title={`${t("jb_customer")}${j.customer_name ? `: ${j.customer_name}` : ""}${Number(j.cust_n) > 0 ? ` \u2605 ${Number(j.cust_avg).toFixed(1)} (${j.cust_n})` : ""}`}>{customer}</Fold>}
               </>
             ) : (
               <>
-                <div style={label}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>
+                <div style={label}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}{Number(j.cust_n) > 0 ? ` \u2605 ${Number(j.cust_avg).toFixed(1)} (${j.cust_n})` : ""}</div>
                 {customer}
                 <DeliveryHandover api={api} jobId={j.id} role="rider" ready onChanged={load} />
               </>
@@ -155,6 +155,7 @@ export function RiderJobs({ api, online, where = null }) {
           </div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0" }}>{j.note}</div>
           <div style={{ fontSize: 14, color: T.ink }}>{t("jb_to")} {j.drop_text}</div>
+          {Number(j.cust_n) > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{t("jb_customer")}: {"\u2605"} {Number(j.cust_avg).toFixed(1)} ({j.cust_n})</div>}
           {j.km != null && j.drop_km != null && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, margin: "8px 0 0" }}>
               {[["jb_d_pick", j.km], ["jb_d_drop", j.drop_km], ["jb_d_total", Math.round((Number(j.km) + Number(j.drop_km)) * 10) / 10]].map(([k, v]) => (
