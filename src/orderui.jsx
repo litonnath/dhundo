@@ -8,8 +8,8 @@ import { T } from "./ui.jsx";
 const rup = (p) => `₹${(Number(p || 0) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 export const cardStyle = {
-  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, padding: "16px 16px 14px", marginBottom: 12,
-  boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+  background: "#fff", border: "1px solid #D6E3F5", borderRadius: 18, padding: "16px 16px 14px", marginBottom: 14,
+  boxShadow: "0 2px 10px rgba(11,58,120,0.08)", overflow: "hidden",
 };
 
 const TONES = {
@@ -21,16 +21,20 @@ const TONES = {
 
 // Who and how much: a round initial, the name, a small line under it, and the
 // amount on the right.
-export function OrderHeader({ name, sub, amount }) {
+const FACE = ["#1D4ED8", "#0F8A3C", "#B45309", "#7C3AED", "#BE185D", "#0E7490"];
+export function OrderHeader({ name, sub, amount, photo, inset = "-16px -16px 12px" }) {
   const ini = String(name || "?").trim().charAt(0).toUpperCase();
+  const bg = FACE[[...String(name || "?")].reduce((n, c) => n + c.charCodeAt(0), 0) % FACE.length];
+  const face = { width: 52, height: 52, borderRadius: "50%", flexShrink: 0, border: "2px solid #fff", boxShadow: "0 1px 4px rgba(11,58,120,0.25)" };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <span style={{ width: 38, height: 38, borderRadius: 10, background: "#F1F3F6", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>{ini}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: inset, padding: "14px 16px", background: "linear-gradient(135deg,#EEF4FD,#F8FAFE)", borderBottom: "1px solid #E1EAF7" }}>
+      {photo ? <img src={photo} alt="" style={{ ...face, objectFit: "cover" }} />
+        : <span style={{ ...face, background: bg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>{ini}</span>}
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25, overflowWrap: "anywhere" }}>{name}</span>
-        {sub && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{sub}</span>}
+        <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#0B3A78", lineHeight: 1.25, overflowWrap: "anywhere" }}>{name}</span>
+        {sub && <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.inkSoft, marginTop: 2 }}>{sub}</span>}
       </span>
-      {amount != null && <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, flexShrink: 0 }}>{rup(amount)}</span>}
+      {amount != null && <span style={{ fontSize: 15.5, fontWeight: 800, color: "#0B3A78", background: "#fff", border: "1px solid #CFE0F7", borderRadius: 14, padding: "5px 12px", flexShrink: 0 }}>{rup(amount)}</span>}
     </div>
   );
 }
@@ -101,11 +105,11 @@ export function Fold({ title, right, children }) {
 
 // The actions of a card, together at the bottom.
 export function Actions({ children, style }) {
-  return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10, paddingTop: 12, borderTop: "1px solid #EEF0F4", ...style }}>{children}</div>;
+  return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10, paddingTop: 12, borderTop: "1px solid #E1EAF7", ...style }}>{children}</div>;
 }
 
-export const callStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 16px", borderRadius: 10, background: "#166534", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
-export const outlineStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 16px", borderRadius: 10, background: "#fff", color: "#1E4E8C", border: "1px solid #B8C9E0", fontWeight: 600, fontSize: 14, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
+export const callStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 20px", borderRadius: 23, background: "#15803D", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none", flex: "1 1 100px" };
+export const outlineStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 20px", borderRadius: 23, background: "#EEF4FD", color: "#0A5BB8", border: "none", fontWeight: 800, fontSize: 15, textDecoration: "none", flex: "1 1 100px" };
 
 // Paid or unpaid, and how: a clear pill. method is 'cod' or 'upi'.
 export function PayBadge({ method, paid, claimed, t, style }) {

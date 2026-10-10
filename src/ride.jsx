@@ -20,13 +20,14 @@ import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 import { tripKm } from "./regions.js";
 import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
+import { OrderHeader } from "./orderui.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const card = { background: T.white, border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 15px", marginBottom: 12, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" };
+const card = { background: T.white, border: "1px solid #D6E3F5", borderRadius: 18, padding: "14px 15px", marginBottom: 14, boxShadow: "0 2px 10px rgba(11,58,120,0.08)", overflow: "hidden" };
 const linkBtn = (bg) => ({
-  display: "inline-flex", alignItems: "center", background: bg, color: "#fff", borderRadius: 10,
-  padding: "10px 14px", minHeight: 44, fontWeight: 700, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box",
+  display: "inline-flex", alignItems: "center", justifyContent: "center", background: bg, color: "#fff", borderRadius: 23,
+  padding: "10px 20px", minHeight: 46, fontWeight: 800, fontSize: 15, textDecoration: "none", boxSizing: "border-box", flex: "1 1 110px",
 });
 const placeText = (p) => (p && (p.address || p.area)) || "";
 
@@ -484,7 +485,7 @@ export function RideHistory({ api }) {
           {rows === null && <div style={{ fontSize: 14, color: T.inkSoft }}>{"\u2026"}</div>}
           {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("rh_none")}</div>}
           {(rows || []).map((r) => (
-            <div key={r.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${col[r.status] || T.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+            <div key={r.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${col[r.status] || T.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 10, boxShadow: "0 1px 6px rgba(11,58,120,0.07)" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: col[r.status] || T.inkSoft }}>{t("rh_" + r.status)}</span>
                 {r.fare_paise != null && <span style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(r.fare_paise / 100)}</span>}
@@ -650,8 +651,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
       {mine.map((r) => (
         <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{t("rdr_active")}</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{r.other_name}</div>
+          <OrderHeader name={r.other_name} sub={t("rdr_active")} inset="-14px -15px 10px" />
           <DriverLive api={api} ride={r} where={where} />
           <RideCode api={api} rideId={r.id} role="driver" onState={setStarted} />
           <RideChat api={api} rideId={r.id} role="driver" />
