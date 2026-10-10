@@ -6,9 +6,9 @@
 import React, { useState } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
-import { OwnerOrders, MyOrdersList } from "./food.jsx";
+import { OwnerOrders, OwnerHistory, MyOrdersList } from "./food.jsx";
 import { ItemOrdersList } from "./itemorders.jsx";
-import { RiderJobs } from "./hub.jsx";
+import { RiderJobs, RiderHistory } from "./hub.jsx";
 import { RideRequests, RideHistory } from "./ride.jsx";
 
 
@@ -69,7 +69,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
               {role === "ride" && <RideRequests api={api} online={online} trades={trades} where={where} />}
             </>
           )}
-          {part === "work" && view === "past" && (role === "ride" ? <RideHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
+          {part === "work" && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
           {part === "mine" && <MyOrdersList api={api} view={view} showEmpty />}
           {part === "items" && <ItemOrdersList api={api} onHire={onHire} view={view} />}
         </>

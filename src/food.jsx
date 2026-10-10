@@ -939,6 +939,37 @@ export function StoreSettings({ api, shop, onSaved }) {
 
 // The orders a restaurant or shop has received: those to deal with, and the
 // history. Used on the Orders tab.
+// A shop's finished orders: delivered, rejected and cancelled, newest first.
+export function OwnerHistory({ api }) {
+  const { t } = useI18n();
+  const [orders, setOrders] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const pull = async () => { try { const r = many(await api.myOrders()).filter((x) => x.role === "owner" && ["delivered", "rejected", "cancelled"].includes(x.status)); if (alive) setOrders(r); } catch (_) { if (alive) setOrders((o) => o || []); } };
+    pull();
+    const id = setInterval(() => { if (!document.hidden) pull(); }, 30000);
+    return () => { alive = false; clearInterval(id); };
+  }, [api]);
+  if (orders === null) return <div style={{ height: 80 }} />;
+  if (orders.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
+  return (
+    <div>
+      {orders.map((o) => (
+        <div key={o.id} style={card}>
+          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+            <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
+          </div>
+          <OrderDates o={o} />
+          <Lines lines={o.lines} />
+          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
+          <CancelNote o={o} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function OwnerOrders({ api, onHire }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState([]);

@@ -3,7 +3,7 @@
 // workers and customers, and the partner programme. Money is never handled
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
-import { CancelButton } from "./cancel.jsx";
+import { CancelButton, dateTime } from "./cancel.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
@@ -128,6 +128,31 @@ const linkBtn = (bg) => ({
 });
 
 // ------------------------------------------------------------------ SHOP
+// A rider's finished deliveries, newest first.
+export function RiderHistory({ api }) {
+  const { t } = useI18n();
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.myJobs()).then((r) => { if (alive) setRows(many(r).filter((j) => j.role === "rider" && ["delivered", "cancelled", "expired"].includes(j.status))); }).catch(() => { if (alive) setRows([]); });
+    return () => { alive = false; };
+  }, [api]);
+  if (rows === null) return <div style={{ height: 80 }} />;
+  if (rows.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
+  return (
+    <div>
+      {rows.map((j) => (
+        <div key={j.id} style={card}>
+          <div style={{ fontSize: 15.5, fontWeight: 800, color: T.ink }}>{j.other_name || j.drop_text}</div>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>{t("jb_to")} {j.drop_text}</div>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{dateTime(j.done_at || j.created_at)} · {t("jp_status_" + j.status)}</div>
+          {j.fee_paise != null && j.status === "delivered" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.brandDark, marginTop: 3 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ShopJobs({ api, hasListing, collapsed = false }) {
   const { t } = useI18n();
   const [f, setF] = useState({ note: "", drop: "", fee: "" });
