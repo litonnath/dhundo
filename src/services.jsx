@@ -3386,6 +3386,7 @@ export default function ServicesPage({
           onOpenListing={() => setTab("mine")}
           onList={() => setTab("add")}
           onOpenProfile={() => setTab("profile")}
+          onOpenAdmin={isAdmin ? () => setTab("manage") : undefined}
           onOpenAds={effMode === "business" ? () => setTab("sell") : undefined}
           viewRow={!signedIn || isAdmin ? null : isBizAccount ? { label: viewAsCustomer ? t("nm_view_business") : t("nm_view_customer"), icon: viewAsCustomer ? "construction" : "search", go: () => { setViewAsCustomer(!viewAsCustomer); setTab("browse"); } } : { label: t("nm_start_biz"), icon: "plus", go: () => { setOfferPick(true); setTab("browse"); } }}
           onPartner={() => setPartnerOpen(true)}

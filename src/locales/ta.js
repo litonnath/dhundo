@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "செயலி மூடியிருக்கும்போது அறிவிப்பு",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  ac_admin: "Admin console",
+  ac_admin_sub: "Approve partners, see orders, rides and money",
   od_show_older: "Show {n} earlier orders",
   od_hide_older: "Hide earlier orders",
   cn_err_done: "This can no longer be cancelled. It may already be delivered or cancelled.",

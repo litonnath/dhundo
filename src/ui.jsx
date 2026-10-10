@@ -2205,7 +2205,7 @@ export function waLink(phone) {
 // be spread over two header rows.
 export function AccountPage({
   account, walletPaise = null, onOpenWallet, onSignIn, onSignOut, onInstall,
-  hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, onPartner = null, extra = null, viewRow = null, showCredits = false,
+  hasListing = false, onOpenListing, onList, onOpenProfile, onOpenAds, onOpenAdmin = null, onPartner = null, extra = null, viewRow = null, showCredits = false,
   privacy = null, phoneOk = null, onVerifyPhone = null, onOpenRequests = null,
 }) {
   const { t } = useI18n();
@@ -2287,6 +2287,7 @@ export function AccountPage({
         {account && row("user", account.full_name ? t("prof_edit") : t("prof_create"),
           onOpenProfile, null, t("prof_sub"))}
         {account && hasListing && row("edit", t("nav_mine"), onOpenListing, null, t("acc_mine_sub"))}
+        {account && onOpenAdmin && row("check", t("ac_admin"), onOpenAdmin, null, t("ac_admin_sub"))}
         {account && onOpenAds && row("tag", t("mk_my_ads"), onOpenAds, null, t("mk_my_ads_sub"))}
         {account && viewRow && row(viewRow.icon, viewRow.label, viewRow.go)}
         {account && onPartner && row("user", t("home_partner"), onPartner, null, t("home_partner_sub"))}
