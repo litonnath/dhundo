@@ -38,7 +38,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
       const x = Array.isArray(r) ? r[0] : r;
       if (x && x.ok === false) throw new Error(x.reason);
       setResched(null);
-    } catch (_) { setRmsg(t("mbk_resched_err")); }
+    } catch (e) { setRmsg(t(e && e.message === "worker_busy" ? "mbk_busy_err" : "mbk_resched_err")); }
     setBusy(null); onChanged && onChanged();
   };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
@@ -74,6 +74,21 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               </span>
               <span style={{ fontSize: 12.5, fontWeight: 800, padding: "5px 11px", borderRadius: 14, color: fg, background: bg, whiteSpace: "nowrap" }}>{label[x.status] || x.status}</span>
             </div>
+            {x.prev_start_at && live && (
+              <div style={{ margin: "10px 14px 0", padding: "8px 12px", background: "#EEF4FD", border: "1px solid #CFDDF0", borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: "#0B3A78", lineHeight: 1.45 }}>
+                {String(t(x.resched_by === "customer" ? "mbk_moved_cust" : "mbk_moved_work")).replace("{old}", stamp(x.prev_start_at))}
+              </div>
+            )}
+            {asWorker && x.status === "requested" && x.start_at && (() => {
+              const s0 = new Date(x.start_at).getTime(), e0 = s0 + (Number(x.duration_mins) || 60) * 60000;
+              const clash = mine.find((y) => y.id !== x.id && y.status === "accepted" && y.start_at
+                && new Date(y.start_at).getTime() < e0 && new Date(y.start_at).getTime() + (Number(y.duration_mins) || 60) * 60000 > s0);
+              return clash ? (
+                <div role="alert" style={{ margin: "10px 14px 0", padding: "8px 12px", background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, fontSize: 13.5, fontWeight: 700, color: "#B91C1C", lineHeight: 1.45 }}>
+                  {String(t("mbk_clash")).replace("{name}", clash.other_name || "").replace("{when}", stamp(clash.start_at))}
+                </div>
+              ) : null;
+            })()}
             <div style={{ padding: "6px 14px 4px" }}>
               {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
               {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
@@ -96,7 +111,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 )}
               </div>
             )}
-            {asWorker && live && resched && resched.id === x.id && (
+            {live && resched && resched.id === x.id && (
               <div style={{ margin: "4px 14px 10px", padding: "10px 12px", background: "#F3F7FD", border: "1px solid #CFDDF0", borderRadius: 12 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0B3A78", marginBottom: 6 }}>{t("mbk_resched_title")}</div>
                 <input type="datetime-local" value={resched.value} onChange={(e) => setResched({ id: x.id, value: e.target.value })}
@@ -112,7 +127,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
-                {asWorker && !(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}
+                {!(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}
                 {x.other_phone && <a href={`tel:${x.other_phone}`} style={pill("#15803D", "#fff", { flex: "1 1 100px" })}><Icon name="phone" size={17} /> {t("mbk_call")}</a>}
                 {onChat && <button onClick={() => onChat(x)} style={pill("#EEF4FD", "#0A5BB8", { flex: "1 1 90px" })}>{t("mbk_chat")}</button>}
                 {!asWorker && <button disabled={busy === x.id} onClick={() => cancel(x)} style={pill("#fff", "#6B7280", { flex: "1 1 90px", border: "1.5px solid #D1D5DB" })}>{t("bk_cancel")}</button>}
