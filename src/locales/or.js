@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  jv_wait_ready: "Go to the restaurant and wait. You can collect the order once the restaurant marks the food ready.",
+  rv_not_ready: "The food is not ready yet. Wait for the restaurant to mark it ready.",
   st_tl_prep: "Preparing",
   st_prep_msg: "Your food is being prepared. A delivery rider is called at about {t}, or sooner when the food is ready.",
   st_prep_owner: "Preparing. A rider is called at about {t}, or as soon as you press Mark ready.",

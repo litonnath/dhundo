@@ -159,10 +159,17 @@ export function JobCode({ api, jobId, role, onChanged }) {
     setBusy(true); setMsg("");
     try {
       const r = many(await api.jobVerify(jobId, val))[0];
-      if (r && r.ok) { setVal(""); await load(); onChanged && onChanged(); } else setMsg(t("rv_wrong"));
+      if (r && r.ok) { setVal(""); await load(); onChanged && onChanged(); } else setMsg(r && r.reason === "not_ready" ? t("rv_not_ready") : t("rv_wrong"));
     } catch (_) { setMsg(t("rv_wrong")); }
     setBusy(false);
   };
+  if (st.food_ready === false) {
+    return (
+      <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A", fontSize: 14.5, fontWeight: 800, color: "#7A4A00", lineHeight: 1.45 }}>
+        {t("jv_wait_ready")}
+      </div>
+    );
+  }
   return (
     <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A" }}>
       <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7A4A00", marginBottom: 8 }}>{t("jv_enter")}</div>
