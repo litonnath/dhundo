@@ -1064,12 +1064,14 @@ export function SetupCard({ steps }) {
     <div style={{ ...card, border: `1.5px solid ${T.brandDark}`, background: T.brandSoft }}>
       <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{t("su_title")}</div>
       {steps.map((x) => (
-        <div key={x.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", fontSize: 14.5, fontWeight: x.done ? 600 : 800, color: x.done ? T.inkSoft : T.ink }}>
+        <div key={x.label} role={x.go && !x.done ? "button" : undefined} tabIndex={x.go && !x.done ? 0 : undefined} onClick={x.go && !x.done ? x.go : undefined}
+             style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", fontSize: 14.5, fontWeight: x.done ? 600 : 800, color: x.done ? T.inkSoft : T.ink, cursor: x.go && !x.done ? "pointer" : "default" }}>
           <span style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                          background: x.done ? "#16A34A" : T.white, border: `2px solid ${x.done ? "#16A34A" : T.brandDark}`, color: "#fff" }}>
             {x.done && <Icon name="check" size={13} />}
           </span>
-          <span style={{ textDecoration: x.done ? "line-through" : "none" }}>{x.label}</span>
+          <span style={{ flex: 1, textDecoration: x.done ? "line-through" : "none" }}>{x.label}</span>
+          {x.go && !x.done && <span style={{ color: T.brandDark, fontWeight: 800 }}>{"\u203A"}</span>}
         </div>
       ))}
     </div>
@@ -1410,7 +1412,7 @@ function MenuPhotosView({ api, workerId }) {
   );
 }
 
-export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
+export function OwnerFood({ api, shop, onHire, onOpenOrders, onOpenSettings }) {
   const { t } = useI18n();
   const [pending, setPending] = useState(0);
   const [menu, setMenu] = useState([]);
@@ -1443,9 +1445,9 @@ export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
       <MenuPhotosEditor api={api} shop={shop} />
 
       <SetupCard steps={store ? [
-        { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu") },
-        { done: !!(store.open_time && store.close_time), label: t("su_hours") },
-        { done: !!store.promo_text, label: t("su_promo") },
+        { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu"), go: () => setEditing({}) },
+        { done: !!(store.open_time && store.close_time), label: t("su_hours"), go: onOpenSettings },
+        { done: !!store.promo_text, label: t("su_promo"), go: onOpenSettings },
       ] : []} />
       <AlertsCard api={api} />
       <div style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>

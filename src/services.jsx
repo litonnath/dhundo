@@ -3238,7 +3238,7 @@ export default function ServicesPage({
         const parts = [];
         if (hasListing && !isAdmin) {
           if (ownerKind) {
-            parts.push({ key: "menu", icon: "edit", label: t("m_menu_items"), node: <OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={hireIt} onOpenOrders={() => setTab("orders")} /> });
+            parts.push({ key: "menu", icon: "edit", label: t("m_menu_items"), node: <OwnerFood api={api} shop={tr.group_name !== "Eat & Stay"} onHire={hireIt} onOpenOrders={() => setTab("orders")} onOpenSettings={() => setBizOpen("hours")} /> });
             parts.push({ key: "hours", icon: "construction", label: t("ow_hours"), node: <StoreSettings api={api} shop={tr.group_name !== "Eat & Stay"} /> });
             if (tr.group_name !== "Eat & Stay") parts.push({ key: "rider", icon: "drivers", label: t("jp_title"), node: <ShopJobs api={api} hasListing={hasListing} /> });
           } else if (dk === "delivery") {
