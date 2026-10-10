@@ -32,7 +32,13 @@ export function CancelButton({ role, label, onConfirm, style }) {
       if (x && x.ok === false) throw new Error(x.reason || "no");
       setOpen(false);
     } catch (e) {
-      setErr(e && e.message === "already_picked_up" ? t("cn_picked") : t("e_save"));
+      const m = (e && e.message) || "";
+      setErr(m === "already_picked_up" ? t("cn_picked")
+        : m === "no_change" ? t("cn_err_done")
+        : m === "not_allowed" ? t("cn_err_not_yours")
+        : e && e.code ? m
+        : /could not find the function|schema cache|does not exist|404/i.test(m) ? t("cn_err_update")
+        : t("e_save"));
     }
     setBusy(false);
   };
