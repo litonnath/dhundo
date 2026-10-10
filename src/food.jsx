@@ -83,7 +83,13 @@ function Bill({ o, t, api, range = null }) {
       {line("g", t("fr_gst"), gstAll)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{spread > 0 ? `${rupees(b.total)} \u2013 ${rupees(b.total + spread)}` : rupees(b.total)}</span></div>
       {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("fr_range_note")}</div>}
-      {refund > 0 && <div style={{ fontSize: 13, fontWeight: 600, color: "#166534", marginTop: 4 }}>{String(t("fr_refund")).replace("{n}", rupees(refund))}</div>}
+      {range && range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) && (
+        <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
+          {o.pay_method === "upi" && o.paid
+            ? String(t("fr_settle_upi")).replace("{held}", rupees(range.fee_max_paise)).replace("{rider}", rupees(range.fee_paise)).replace("{back}", rupees(refund))
+            : String(t("fr_settle_cod")).replace("{rider}", rupees(range.fee_paise))}
+        </div>
+      )}
       {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} · ` : ""}GSTIN {biz.gstin}</div>}
     </div>
   );

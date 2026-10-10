@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "செயலி மூடியிருக்கும்போது அறிவிப்பு",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  fr_settle_upi: "Held {held} for the delivery partner fee. The rider gets {rider}, and {back} is returned to you.",
+  fr_settle_cod: "The rider is fixed. The delivery partner fee is {rider}. You pay only this in cash.",
   fr_range_note: "The delivery partner fee depends on how far the rider is when they accept. Cash on delivery: you pay only the final fee. UPI: you pay the highest amount and the difference is refunded.",
   fr_refund: "Refund of the difference: {n}",
   jb_r_from_cust: "Customer\u2019s rating of you",
