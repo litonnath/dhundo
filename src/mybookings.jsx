@@ -95,8 +95,8 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     try {
       const r = await api.bookingReport(rep.id, rep.reason, rep.note);
       const x = Array.isArray(r) ? r[0] : r;
-      setRep({ ...rep, state: x && x.ok === false ? "err" : "done" });
-    } catch (_) { setRep({ ...rep, state: "err" }); }
+      setRep({ ...rep, state: x && x.ok === false ? "err" : "done", off: false });
+    } catch (e) { setRep({ ...rep, state: "err", off: /could not find the function|schema cache|does not exist|404/i.test((e && e.message) || "") }); }
   };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   // A listed rate is per 8-hour day. The rate card scales it to hours.
@@ -237,7 +237,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                       </div>
                       <textarea value={rep.note} maxLength={500} placeholder={t("mbk_report_ph")} onChange={(e) => setRep({ ...rep, note: e.target.value })}
                                 style={{ width: "100%", boxSizing: "border-box", minHeight: 70, fontSize: 15, padding: "8px 10px", borderRadius: 10, border: "1px solid #E5C9B0", fontFamily: "inherit", resize: "vertical" }} />
-                      {rep.state === "err" && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{t("e_save")}</div>}
+                      {rep.state === "err" && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{t(rep.off ? "mbk_report_off" : "e_save")}</div>}
                       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                         <button disabled={!rep.reason || rep.state === "busy"} onClick={sendReport} style={pill("#B45309", "#fff", { flex: 1, opacity: rep.reason ? 1 : 0.5 })}>{rep.state === "busy" ? "\u2026" : t("mbk_report_send")}</button>
                         <button onClick={() => setRep(null)} style={pill("#fff", "#6B7280", { flex: 1, border: "1.5px solid #D1D5DB" })}>{t("cancel")}</button>

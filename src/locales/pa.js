@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "ਐਪ ਬੰਦ ਹੋਣ 'ਤੇ ਅਲਰਟ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  mbk_report_off: "Reporting is not switched on yet. Please try again later.",
   rt_err_kind: "Rating a booking is not switched on yet. Please try again later.",
   rt_err_notcompleted: "You can rate once the booking is completed.",
   mbk_report: "Report abuse",

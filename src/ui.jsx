@@ -1665,6 +1665,12 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
                               otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm, onBook, extra = null }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
+  const [wideCard, setWideCard] = useState(() => typeof window !== "undefined" && window.innerWidth >= 760);
+  useEffect(() => {
+    const on = () => setWideCard(window.innerWidth >= 760);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
   const s = groupStyle(row.trade_group);
   const isSupplier = row.trade_kind === "supplier";
   const initial = (row.display_name || "?").trim().charAt(0).toUpperCase();
@@ -1743,6 +1749,7 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
       background: T.white, border: `1px solid ${T.line}`, borderRadius: 18,
       boxShadow: "0 4px 16px rgba(15,20,25,0.07)", overflow: "hidden",
     }}>
+      <div style={{ display: wideCard ? "grid" : "block", gridTemplateColumns: wideCard ? "minmax(0, 1.15fr) minmax(0, 1fr)" : undefined }}>
       <div style={{ display: "flex", gap: 15, alignItems: "flex-start", padding: "16px 16px 12px" }}>
         {/* Face first, then a work photo, then a picture of the trade --
             an auto for an auto driver -- with the initial on it. Round for
@@ -1881,7 +1888,11 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
         </div>
       </div>
 
-      {extra}
+      {/* On a wide screen the rates, rating and booking history sit in a
+          panel on the right instead of leaving that half of the card empty. */}
+      {wideCard && extra && <div style={{ borderLeft: `1px solid ${T.line}`, background: "#F8FAFE", padding: "14px 0 4px" }}>{extra}</div>}
+      </div>
+      {!wideCard && extra}
 
       {/* ------------------------------------------------------- expanded */}
       {open && (
