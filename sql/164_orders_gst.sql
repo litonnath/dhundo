@@ -1,4 +1,4 @@
--- 164 part 2 (needs 187_delivery_ratings.sql first): order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
+-- 164 part 2 (needs 187_delivery_ratings.sql first). A shop or restaurant's own rows carry only its part: the items and the GST on them, never Dhundo's fee or the rider's fee. order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
 drop function if exists public.services_my_orders();
 create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
@@ -47,11 +47,11 @@ as $fn$
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id,
-         o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
+         o.gst_paise, 0, 0, 0, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
-         o.pay_method, o.paid, o.upi_claimed, j.fee_paise,
-         (select round(avg(x.stars)::numeric, 1) from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer'),
-         (select count(*)::int from public.services_delivery_ratings x where x.to_account = r.user_id and x.by_role = 'customer')
+         o.pay_method, o.paid, o.upi_claimed, null::int,
+         null::numeric,
+         null::int
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id and w.user_id = public.services_account_id()
     join public.services_signups c on c.id = o.customer_id

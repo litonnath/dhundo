@@ -152,3 +152,21 @@ export function SplitBox({ o, t, who = "all" }) {
     </div>
   );
 }
+
+// What the restaurant or shop gets from an order: the items at the prices it
+// set, and the GST on them. Nothing about the rider's fee or Dhundo's fee.
+export function OwnerPart({ o, t }) {
+  const items = Number(o.total_paise) || 0, gst = Number(o.gst_paise) || 0;
+  const row = (label, v, strong) => (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: strong ? 15 : 14, fontWeight: strong ? 700 : 500, color: strong ? T.ink : T.inkSoft, padding: "3px 0" }}>
+      <span>{label}</span><span>{rup(v)}</span>
+    </div>
+  );
+  return (
+    <div>
+      {row(t("op_items"), items)}
+      {gst > 0 && row(t("op_gst"), gst)}
+      <div style={{ borderTop: "1px solid #EEF0F3", marginTop: 4, paddingTop: 4 }}>{row(t("op_total"), items + gst, true)}</div>
+    </div>
+  );
+}

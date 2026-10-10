@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 import { DeliveryLive } from "./nearmap.jsx";
 import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
-import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
+import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, OwnerPart, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo, calcFare } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -1085,7 +1085,7 @@ export function OwnerHistory({ api }) {
             </Banner>
             <ItemsBox lines={o.lines} />
             {done && <div style={{ margin: "6px 0" }}><PayBadge method={o.pay_method} paid={o.paid} t={t} /></div>}
-            {done && <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>}
+            {done && <Fold title={t("op_title")} right={rupees(o.total_paise + (o.gst_paise || 0))}><OwnerPart o={o} t={t} /></Fold>}
           </div>
         );
       })}
@@ -1114,7 +1114,7 @@ export function OwnerOrders({ api, onHire }) {
                        sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
           <OwnerBanner o={o} t={t} />
           <ItemsBox lines={o.lines} />
-          <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>
+          <Fold title={t("op_title")} right={rupees(o.total_paise + (o.gst_paise || 0))}><OwnerPart o={o} t={t} /></Fold>
           {(o.address_text || o.note) && (
             <div style={{ padding: "10px 12px", background: "#F7F8FA", borderRadius: 12, margin: "8px 0" }}>
               {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{o.address_text}</div>}
