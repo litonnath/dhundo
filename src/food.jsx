@@ -388,6 +388,14 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
   const [cartOpen, setCartOpen] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
+  // Only a customer who has ordered here can message the place.
+  const [hasOrder, setHasOrder] = useState(false);
+  useEffect(() => {
+    if (!user || !user.id || !api.myOrders) return undefined;
+    let alive = true;
+    Promise.resolve(api.myOrders()).then((r) => { if (alive) setHasOrder(many(r).some((o) => o.role === "customer" && o.worker_id === row.id)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, user && user.id, row.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pay, setPay] = useState(null);
   const [rating, setRating] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -462,7 +470,9 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
           )}
           {!catering && kind !== "tiffin" && (
             <div style={{ marginBottom: 12 }}>
-              <Btn full kind="ghost" onClick={() => (user && user.id ? setAskOpen(true) : onSignIn && onSignIn())}>{t(eat ? "ea_ask" : "sh_ask")}</Btn>
+              {hasOrder
+                ? <Btn full kind="ghost" onClick={() => setAskOpen(true)}>{t(eat ? "ea_ask" : "sh_ask")}</Btn>
+                : <div style={{ fontSize: 13.5, color: T.inkSoft, textAlign: "center", padding: "6px 4px" }}>{t("sh_ask_after_order")}</div>}
             </div>
           )}
           {(catering || kind === "tiffin") && (
@@ -541,7 +551,7 @@ function AskSheet({ api, row, onClose }) {
     try {
       const r = one(await api.bookingRequest(row.id, new Date(Date.now() + 5 * 60000).toISOString(), 60, ("Enquiry: " + text.trim()).slice(0, 300)));
       if (r && r.ok) setSent(true);
-      else setMsg(r && r.reason === "already_open" ? t("sh_ask_open") : t("e_save"));
+      else setMsg(r && r.reason === "already_open" ? t("sh_ask_open") : r && r.reason === "order_needed" ? t("sh_ask_after_order") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
   };

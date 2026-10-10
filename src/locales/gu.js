@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  sh_ask_after_order: "You can message this place after you place an order with it.",
   st_call_shop: "Call restaurant / shop",
   st_call_rider: "Call rider",
   jb_customer: "Customer",
