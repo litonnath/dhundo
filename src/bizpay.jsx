@@ -273,12 +273,12 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const tiles = money
     ? [
         [rangeKey, rupees(sum(inRange)), "#0A5BB8", "#E8F0FB", null],
-        ["db_count", inRange.length, "#15803D", "#E7F5EC", null],
-        ["db_avg", rupees(inRange.length ? sum(inRange) / inRange.length : 0), "#A16207", "#FDF3DC", null],
+        ["db_count", inRange.length, "#0B3A78", "#DDEAFB", null],
+        ["db_avg", rupees(inRange.length ? sum(inRange) / inRange.length : 0), "#1D63D1", "#E8F0FB", null],
         ["db_waiting", waiting, "#C2410C", "#FFF1E6", onOrders],
-        ["db_active", active, "#7E22CE", "#F3E8FD", onOrders],
+        ["db_active", active, "#2563EB", "#E3EDFF", onOrders],
       ]
-    : [["db_waiting", bkWait.length, "#C2410C", "#FFF1E6", null], ["db_upcoming", bkUp.length, "#15803D", "#E7F5EC", null], ["db_views", views == null ? "\u2014" : views, "#0A5BB8", "#E8F0FB", null]];
+    : [["db_waiting", bkWait.length, "#C2410C", "#FFF1E6", null], ["db_upcoming", bkUp.length, "#0B3A78", "#DDEAFB", null], ["db_views", views == null ? "\u2014" : views, "#0A5BB8", "#E8F0FB", null]];
   const dayRows = sel !== null && days[sel] ? days[sel].rows : [];
   const waNum = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   return (

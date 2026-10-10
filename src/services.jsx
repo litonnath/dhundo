@@ -3256,9 +3256,17 @@ export default function ServicesPage({
         }
         const cur = parts.find((x) => x.key === bizOpen && x.node) || null;
         return (
+          <div style={{ background: "linear-gradient(180deg,#E3EEFF 0,#F4F8FE 280px,#F7F9FC 100%)", minHeight: "70vh" }}>
           <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 120px" }}>
             <HomeButton onClick={() => (cur && parts.length > 1 ? setBizOpen(null) : setTab("browse"))} />
-            <h1 style={{ fontSize: 23, fontWeight: 800, margin: "14px 0 12px" }}>{cur ? cur.label : t("hm_mybiz")}</h1>
+            {cur ? (
+              <h1 style={{ fontSize: 22, fontWeight: 800, margin: "14px 0 12px", color: "#0B3A78" }}>{cur.label}</h1>
+            ) : (
+              <div style={{ background: "linear-gradient(135deg,#0B3A78,#1D63D1)", color: "#fff", borderRadius: 18, padding: "18px 18px 16px", margin: "12px 0 16px", boxShadow: "0 6px 18px rgba(11,58,120,0.22)" }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", opacity: 0.8 }}>{t("hm_mybiz")}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4, lineHeight: 1.25, overflowWrap: "anywhere" }}>{(myRow && (myRow.business_name || myRow.full_name)) || t("hm_mybiz")}</div>
+              </div>
+            )}
             {cur ? cur.node : (<>
               <div style={{ background: "linear-gradient(135deg,#032C61,#0A5BB8)", color: "#fff", borderRadius: 20, padding: "18px 16px", margin: "0 0 16px" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{t("bz_setup")}</div>
@@ -3274,14 +3282,15 @@ export default function ServicesPage({
                 {parts.map((x) => (
                   <button key={x.key} onClick={() => (x.action ? x.action() : setBizOpen(x.key))} style={{
                     display: "flex", alignItems: "center", gap: 10, minHeight: 72, padding: "10px 12px", borderRadius: 14, textAlign: "left",
-                    border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit",
+                    border: "1px solid #CFE0F7", background: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 1px 3px rgba(11,58,120,0.08)",
                   }}>
-                    <span style={{ width: 40, height: 40, borderRadius: 11, background: T.brandSoft, color: T.brandDark, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={x.icon} size={20} /></span>
-                    <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>{x.label}</span>
+                    <span style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg,#1D63D1,#0B3A78)", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={x.icon} size={20} /></span>
+                    <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#0B3A78", lineHeight: 1.25 }}>{x.label}</span>
                   </button>
                 ))}
               </div>
             </>)}
+          </div>
           </div>
         );
       })()}
