@@ -623,7 +623,16 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const miscP = mode !== "pickup" && cardRow ? Math.round(Number(cardRow.platform_rupees) * 100) : 0;
   const miscG = Math.round(miscP * 0.18);
   const roadKm = row.distance_km != null ? Number(row.distance_km) * 1.3 : 3;
-  const feeRs = mode === "delivery" ? (cardRow ? calcFare(cardRow, roadKm).rider : 30) : 0;
+  // The server's quote: the nearest online rider to the restaurant, the
+  // restaurant to you, and the total, then the rate card's price for it.
+  const [dq, setDq] = useState(null);
+  useEffect(() => {
+    if (mode !== "delivery" || !api.deliveryQuote) { setDq(null); return undefined; }
+    let alive = true;
+    Promise.resolve(api.deliveryQuote(row.id, addr && addr.lat, addr && addr.lng)).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive) setDq(x || null); }).catch(() => { if (alive) setDq(null); });
+    return () => { alive = false; };
+  }, [api, row.id, mode, addr && addr.lat, addr && addr.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const feeRs = mode === "delivery" ? (dq ? Math.round(dq.fee_paise / 100) : cardRow ? calcFare(cardRow, roadKm).rider : 30) : 0;
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
@@ -667,8 +676,14 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("st_fee_rider")}</span><span>~{"\u20B9"}{feeRs}</span>
+              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{feeRs}</span>
             </div>
+            {dq && (
+              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.5 }}>
+                {String(t("dq_line")).replace("{a}", dq.pickup_km).replace("{b}", dq.drop_km).replace("{c}", Math.round(Number(dq.total_km) * 10) / 10)}
+                {!dq.rider_found && ` ${t("dq_norider")}`}
+              </div>
+            )}
           </>
         )}
         {gstP + miscG > 0 && (

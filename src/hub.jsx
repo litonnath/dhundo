@@ -152,7 +152,17 @@ export function RiderJobs({ api, online, where = null }) {
           </div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0" }}>{j.note}</div>
           <div style={{ fontSize: 14, color: T.ink }}>{t("jb_to")} {j.drop_text}</div>
-          <div style={{ fontSize: 16, color: T.brandDark, fontWeight: 800, margin: "6px 0 10px" }}>
+          {j.km != null && j.drop_km != null && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, margin: "8px 0 0" }}>
+              {[["jb_d_pick", j.km], ["jb_d_drop", j.drop_km], ["jb_d_total", Math.round((Number(j.km) + Number(j.drop_km)) * 10) / 10]].map(([k, v]) => (
+                <div key={k} style={{ background: k === "jb_d_total" ? "#EAF2FF" : "#F7F8FA", borderRadius: 10, padding: "7px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{v} km</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: T.inkSoft, lineHeight: 1.2 }}>{t(k)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ fontSize: 16, color: T.brandDark, fontWeight: 800, margin: "8px 0 10px" }}>
             {j.fee_paise != null ? String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100)) : t("jb_fee_none")}
           </div>
           <Btn full disabled={busy === j.id} onClick={() => accept(j)}>{busy === j.id ? "…" : t("jb_accept")}</Btn>
