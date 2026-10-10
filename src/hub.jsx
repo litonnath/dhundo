@@ -3,7 +3,7 @@
 // workers and customers, and the partner programme. Money is never handled
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
-import { CancelButton, dateTime } from "./cancel.jsx";
+import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
@@ -78,6 +78,7 @@ export function RiderJobs({ api, online, where = null }) {
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}</div>
           <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{j.status === "picked_up" ? j.drop_text : j.other_name}</div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0 10px" }}>{j.note}</div>
+          {j.due_at && <DueTimer due={j.due_at} style={{ margin: "0 0 10px" }} />}
           {(j.customer_phone || typeof j.drop_lat === "number") && (
             <div style={{ background: "#F3F6FA", borderRadius: 12, padding: "10px 12px", margin: "0 0 10px" }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>

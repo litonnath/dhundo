@@ -2,7 +2,8 @@
 -- 174_rider_calls_customer.sql -- the delivery rider can call the customer, and
 -- navigate to the drop, once the job is accepted. The customer's name, phone
 -- and map point come from the order linked to the job, and are shown only to
--- the rider who holds the job (not while it is open). Replaces 113 part 5.
+-- the rider who holds the job (not while it is open). Also due_at: when the
+-- customer was promised the food (order time + the shop's delivery estimate). Replaces 113 part 5.
 -- ===========================================================================
 drop function if exists public.services_my_jobs();
 create function public.services_my_jobs()
@@ -10,7 +11,8 @@ returns table (id uuid, role text, status text, note text, drop_text text, fee_p
                other_name text, other_phone text, created_at timestamptz, expires_at timestamptz,
                pickup_lat double precision, pickup_lng double precision,
                customer_name text, customer_phone text,
-               drop_lat double precision, drop_lng double precision)
+               drop_lat double precision, drop_lng double precision,
+               due_at timestamptz)
 language sql
 stable
 security definer
@@ -21,7 +23,7 @@ as $fn$
          case when j.rider_work is not null then r.full_name::text end,
          case when j.rider_work is not null then r.phone::text end,
          j.created_at, j.expires_at, null::double precision, null::double precision,
-         null::text, null::text, null::double precision, null::double precision
+         null::text, null::text, null::double precision, null::double precision, null::timestamptz
     from public.services_jobs j
     left join public.services_workers r on r.id = j.rider_work
    where j.poster_id = public.services_account_id() and j.created_at > now() - interval '3 days'
@@ -34,7 +36,8 @@ as $fn$
          case when j.status in ('accepted', 'picked_up') then c.full_name::text end,
          case when j.status in ('accepted', 'picked_up') then c.phone::text end,
          case when j.status in ('accepted', 'picked_up') then o.lat end,
-         case when j.status in ('accepted', 'picked_up') then o.lng end
+         case when j.status in ('accepted', 'picked_up') then o.lng end,
+         case when o.id is not null then o.created_at + make_interval(mins => coalesce(p.delivery_mins, 60)) end
     from public.services_jobs j
     join public.services_workers rw on rw.id = j.rider_work and rw.user_id = public.services_account_id()
     join public.services_workers p on p.id = j.poster_work

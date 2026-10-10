@@ -4,7 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
-import { CancelButton, CancelNote, OrderDates } from "./cancel.jsx";
+import { CancelButton, CancelNote, OrderDates, DueTimer } from "./cancel.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -745,6 +745,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(o.total_paise + (o.delivery_fee_paise || 0))}`]} />
             </div>
             <OrderDates o={o} />
+            {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && o.delivery_mins && <DueTimer due={new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000)} />}
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
             <Bill o={o} t={t} api={api} />
@@ -1037,6 +1038,7 @@ export function OwnerOrders({ api, onHire }) {
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
           <OrderDates o={o} />
+          {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && o.delivery_mins && <DueTimer due={new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000)} />}
           <CancelNote o={o} />
           {o.mode === "delivery" && o.status === "accepted" && !o.job_id && (
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "4px 0" }}>

@@ -93,3 +93,29 @@ export function OrderDates({ o }) {
     </div>
   );
 }
+
+// A clock that re-renders every 20 seconds.
+export function useTick() {
+  const [, setN] = useState(0);
+  React.useEffect(() => { const id = setInterval(() => setN((n) => n + 1), 20000); return () => clearInterval(id); }, []);
+  return Date.now();
+}
+
+const spanText = (mins, t) => (mins >= 60 ? `${Math.floor(mins / 60)} ${t("tm_h")} ${mins % 60} ${t("tm_min")}` : `${mins} ${t("tm_min")}`);
+
+// "Due by 7:30 PM · 42 min left", or "Late by 8 min" in red.
+export function DueTimer({ due, style }) {
+  const { t } = useI18n();
+  const now = useTick();
+  if (!due) return null;
+  const at = new Date(due).getTime();
+  if (!Number.isFinite(at)) return null;
+  const diff = Math.round((at - now) / 60000);
+  const late = diff < 0;
+  return (
+    <div role="timer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 800, padding: "5px 11px", borderRadius: 14, margin: "4px 0", background: late ? "#FEF2F2" : "#ECFDF3", color: late ? "#B91C1C" : "#0F6B33", ...style }}>
+      <span aria-hidden="true">{"\u23F1"}</span>
+      {t("tm_due")} {new Date(due).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} {"\u00B7"} {late ? String(t("tm_late")).replace("{n}", spanText(-diff, t)) : String(t("tm_left")).replace("{n}", spanText(Math.max(diff, 0), t))}
+    </div>
+  );
+}
