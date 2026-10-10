@@ -1,7 +1,8 @@
 -- ===========================================================================
--- 171_realert_returned_job.sql -- when a rider gives a job back, the other
+-- 171_realert_returned_job.sql -- a rider gives a job back before pickup: it goes
+-- out to other riders again and the order is not cancelled. The other
 -- online delivery riders near the shop are alerted again (the rider who gave
--- it back is not). Replaces services_job_rider_cancel from 170. Run after 170.
+-- it back is not). Run after 170.
 -- ===========================================================================
 create or replace function public.services_job_rider_cancel(p_job uuid, p_reason text)
 returns table (ok boolean, reason text)
