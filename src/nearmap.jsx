@@ -581,7 +581,7 @@ export function JobPositionSender({ api, where = null }) {
 
 // The rider's map for a delivery: the restaurant, the customer's door, himself,
 // and the road to the next stop with the distance and time.
-export function RiderJobMap({ api, job, where = null }) {
+export function RiderJobMap({ api, job, where = null, onChanged = null }) {
   const { t } = useI18n();
   const me = useJobPosition(api, where);
   const shop = typeof job.pickup_lat === "number" ? { lat: job.pickup_lat, lng: job.pickup_lng } : null;
@@ -605,9 +605,27 @@ export function RiderJobMap({ api, job, where = null }) {
   if (!shop && !door && !me) return null;
   const km = me && target ? kmBetween(me, target) : null;
   const reached = km != null && km < 0.12;
+  // A point that is missing can be saved from the rider's own phone, standing
+  // at the restaurant or at the customer's door.
+  const [pinMsg, setPinMsg] = useState("");
+  const save = async (kind) => {
+    setPinMsg("");
+    try {
+      const r = many(await api.jobSetPoint(job.id, kind, me.lat, me.lng))[0];
+      if (r && r.ok) { onChanged && onChanged(); } else setPinMsg(t("rm_pin_fail"));
+    } catch (_) { setPinMsg(t("rm_pin_fail")); }
+  };
+  const missing = !picked && !shop ? "shop" : picked && !door ? "drop" : null;
   return (
     <div style={{ margin: "10px 0" }}>
       <LiveRideMap pick={shop} drop={door} driver={me} route={route} delivery />
+      {missing && (
+        <div style={{ background: "#FFF7E6", border: "1px solid #F5D58C", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: "#8A5A00", marginBottom: 8 }}>{t(missing === "shop" ? "rm_no_shop" : "rm_no_drop")}</div>
+          <button disabled={!me} onClick={() => save(missing)} style={{ minHeight: 46, padding: "0 16px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: me ? "pointer" : "default", fontFamily: "inherit", opacity: me ? 1 : 0.5 }}>{t(missing === "shop" ? "rm_save_shop" : "rm_save_drop")}</button>
+          {pinMsg && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, fontSize: 13, marginTop: 6 }}>{pinMsg}</div>}
+        </div>
+      )}
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink }}>
         {reached ? `\u2705 ${picked ? t("rm_at_customer") : t("rm_at_shop")}`
           : !me ? t("rm_locating")

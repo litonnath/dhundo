@@ -99,7 +99,7 @@ export function RiderJobs({ api, online, where = null }) {
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
           </Banner>
           <Steps steps={[t("jb_s_accepted"), t("jb_s_shop"), t("jb_s_picked"), t("jb_s_done")]} at={j.status === "picked_up" ? 2 : 1} />
-          <RiderJobMap api={api} job={j} where={where} />
+          <RiderJobMap api={api} job={j} where={where} onChanged={load} />
           {(() => {
             const grid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
             const hasMap = typeof j.drop_lat === "number" && typeof j.drop_lng === "number";

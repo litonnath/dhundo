@@ -1,3 +1,4 @@
+-- (Run 186_rider_points.sql first: this reads the points a rider saved.)
 -- ===========================================================================
 -- 184_order_rider_position.sql -- where the delivery rider is, for the customer
 -- who ordered. Only that customer, only while the rider holds the job (accepted
@@ -17,7 +18,8 @@ as $fn$
   select case when pr.seen_at > now() - interval '10 minutes' then round(pr.lat::numeric, 5)::double precision end,
          case when pr.seen_at > now() - interval '10 minutes' then round(pr.lng::numeric, 5)::double precision end,
          pr.seen_at, j.status::text,
-         coalesce(s.lat, pc.lat), coalesce(s.lng, pc.lng), o.lat, o.lng
+         coalesce(s.lat, j.pickup_lat, pc.lat), coalesce(s.lng, j.pickup_lng, pc.lng),
+         coalesce(o.lat, j.drop_lat), coalesce(o.lng, j.drop_lng)
     from public.services_orders o
     join public.services_jobs j on j.id = o.job_id and j.status in ('accepted', 'picked_up')
     join public.services_workers s on s.id = o.worker_id

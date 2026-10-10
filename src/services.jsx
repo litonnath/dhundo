@@ -439,6 +439,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     deliveryQuote: (workerId, lat, lng) => rpc("services_delivery_quote", { p_worker: workerId, p_lat: lat == null ? null : lat, p_lng: lng == null ? null : lng }),
     orderRiderPos: (id) => rpc("services_order_rider_position", { p_order: id }, true),
     orderSetDrop: (id, lat, lng) => rpc("services_order_set_drop", { p_order: id, p_lat: lat, p_lng: lng }, true),
+    jobSetPoint: (id, kind, lat, lng) => rpc("services_job_set_point", { p_job: id, p_kind: kind, p_lat: lat, p_lng: lng }, true),
     orderPay: (id, action) => rpc("services_order_pay", { p_order: id, p_action: action }, true),
     ordersReleaseDue: () => rpc("services_orders_release_due", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
