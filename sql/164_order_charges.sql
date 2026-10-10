@@ -15,7 +15,8 @@ alter table public.services_orders
   add column if not exists misc_fee_paise int not null default 0,
   add column if not exists misc_gst_paise int not null default 0,
   add column if not exists cancelled_by text check (cancelled_by in ('customer', 'shop')),
-  add column if not exists cancel_reason text;
+  add column if not exists cancel_reason text,
+  add column if not exists rider_after timestamptz;
 
 create or replace function public.services_order_charges()
 returns trigger

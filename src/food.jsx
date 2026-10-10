@@ -713,7 +713,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const [orders, setOrders] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const load = useCallback(async () => {
-    try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
+    try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
   }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
   const cancel = async (o, reason) => { try { await api.orderCancel(o.id, reason); } catch (_) {} load(); };
@@ -762,7 +762,11 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
             )}
             {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && !o.rider_name && (
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 4 }}>{t("st_finding_rider")}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 4 }}>
+                {o.job_id || o.status === "ready" || !o.rider_after
+                  ? t("st_finding_rider")
+                  : String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}
+              </div>
             )}
             {o.rider_name && (
               <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}{" "}
@@ -825,10 +829,10 @@ function OrderTrack({ o }) {
     );
   }
   const steps = delivery
-    ? [t("st_status_placed"), t("st_status_accepted"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
+    ? [t("st_status_placed"), t("st_status_accepted"), t("st_tl_prep"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
     : [t("st_status_placed"), t("st_status_accepted"), t("st_status_ready"), t("st_status_delivered")];
-  const at = o.status === "delivered" ? 3
-    : delivery ? (o.rider_name || o.job_status === "picked_up" ? 2 : o.status === "placed" ? 0 : 1)
+  const at = o.status === "delivered" ? (delivery ? 4 : 3)
+    : delivery ? (o.rider_name || o.job_status === "picked_up" ? 3 : o.status === "placed" ? 0 : 2)
     : o.status === "ready" ? 2 : o.status === "accepted" ? 1 : 0;
   return (
     <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
@@ -985,7 +989,7 @@ export function OwnerOrders({ api, onHire }) {
   const [busy, setBusy] = useState(null);
   const [quote, setQuote] = useState({});
   const load = useCallback(async () => {
-    try { setOrders(many(await api.myOrders()).filter((x) => x.role === "owner")); } catch (_) { /* next tick */ }
+    try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); setOrders(many(await api.myOrders()).filter((x) => x.role === "owner")); } catch (_) { /* next tick */ }
   }, [api]);
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id); }, [load]);
   const act = async (o, action) => { setBusy(o.id); try { await api.orderUpdate(o.id, action); } catch (_) {} setBusy(null); load(); };
@@ -1018,6 +1022,11 @@ export function OwnerOrders({ api, onHire }) {
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
           <OrderDates o={o} />
           <CancelNote o={o} />
+          {o.mode === "delivery" && o.status === "accepted" && !o.job_id && (
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "4px 0" }}>
+              {o.rider_after ? String(t("st_prep_owner")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) : t("st_finding_rider")}
+            </div>
+          )}
           {["confirmed", "quoted", "accepted", "ready"].includes(o.status) && (
             <div><CancelButton role="shop" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} /></div>
           )}

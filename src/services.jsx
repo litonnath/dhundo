@@ -430,6 +430,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     orderQuote: (id, rupees) => rpc("services_order_quote", { p_order: id, p_fee_rupees: rupees }, true),
     orderCancel: (id, reason) => rpc("services_order_cancel", { p_order: id, p_reason: reason }, true),
     jobRiderCancel: (id, reason) => rpc("services_job_rider_cancel", { p_job: id, p_reason: reason }, true),
+    ordersReleaseDue: () => rpc("services_orders_release_due", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),
     rideUpdate: (id, action) => rpc("services_ride_update", { p_ride: id, p_action: action }, true),
     bookingRequest: (worker, startIso, minutes, note) =>
