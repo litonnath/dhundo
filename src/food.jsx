@@ -463,7 +463,7 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
             <span style={{ fontSize: 14, fontWeight: 800, background: "#F59E0B", color: "#fff", borderRadius: 12, padding: "4px 10px" }}>{"\u2605"} {Number(rating.avg_stars).toFixed(1)}</span>
             <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{String(t("rt_count")).replace("{n}", rating.n)}</span>
           </div>}
-          <MenuPhotosView api={api} workerId={row.id} />
+          <MenuPhotosView api={api} workerId={row.id} eat={eat} />
           {pay && (pay.accepts_cash || pay.accepts_upi) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "0 0 12px" }}>
             {pay.accepts_cash && <span style={{ fontSize: 13, fontWeight: 800, background: "#ECFDF3", color: "#0F6B33", borderRadius: 14, padding: "5px 11px" }}>{t("bp_cash_chip")}</span>}
             {pay.accepts_upi && <span style={{ fontSize: 13, fontWeight: 800, background: "#E8F0FE", color: "#1D4ED8", borderRadius: 14, padding: "5px 11px" }}>UPI{pay.upi_id ? ` \u00B7 ${pay.upi_id}` : ""}</span>}
@@ -500,7 +500,7 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
           {menu === null ? <div style={{ color: T.inkFaint }}>…</div> : menu.length === 0 ? (
             (catering || kind === "dhaba") ? null : (
             <>
-              <Notice tone="info">{t("st_nomenu")}</Notice>
+              <Notice tone="info">{t(eat ? "st_nomenu" : "st_nomenu_s")}</Notice>
               <div style={{ marginTop: 12 }}>{renderEmpty ? renderEmpty(row) : null}</div>
             </>)
           ) : Object.keys(byCat).map((cat) => (
@@ -702,7 +702,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
               <span>{t("st_fee_rider")}</span><span>{dq && feeMaxRs > feeMinRs ? `\u20B9${feeMinRs} \u2013 \u20B9${feeMaxRs}` : `~\u20B9${feeRs}`}</span>
             </div>
             <div style={{ marginTop: 3 }}>{t("dq_direct")}</div>
-            {dq && Number(dq.drop_km) > 0 && <div style={{ marginTop: 3 }}>{String(t("dq_dist2")).replace("{b}", dq.drop_km)}{!dq.rider_found ? ` \u00B7 ${t("dq_norider2")}` : ""}</div>}
+            {dq && Number(dq.drop_km) > 0 && <div style={{ marginTop: 3 }}>{String(t(eat ? "dq_dist2" : "dq_dist2_s")).replace("{b}", dq.drop_km)}{!dq.rider_found ? ` \u00B7 ${t("dq_norider2")}` : ""}</div>}
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -767,6 +767,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const [givenR, setGivenR] = useState({});
   const [shopSum, setShopSum] = useState({});
   const [feeRange, setFeeRange] = useState({});
+  const [eatIds, setEatIds] = useState({}); // worker id -> is a restaurant (false = shop)
   const load = useCallback(async () => {
     try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); const list = many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)));
       setOrders(list);
@@ -784,6 +785,10 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
           if (wids.length && api.ratingSummary) { const m = {}; many(await api.ratingSummary(wids)).forEach((x) => { m[x.worker_id] = x; }); setShopSum(m); }
         } catch (_) { /* keep */ }
       }
+      try {
+        const wk = [...new Set(list.map((o) => o.worker_id).filter(Boolean))];
+        if (wk.length && api.workerKinds) { const m = {}; many(await api.workerKinds(wk)).forEach((x) => { m[x.id] = !!x.is_eat; }); setEatIds((p) => ({ ...p, ...m })); }
+      } catch (_) { /* wording stays as it was */ }
       const ids = list.filter((o) => o.status === "delivered" && o.job_id).map((o) => o.id);
       if (ids.length && api.deliveryRateable) { try { setCanRateDel(new Set(many(await api.deliveryRateable(ids)).map((x) => (typeof x === "string" ? x : x.order_id)))); } catch (_) { /* keep */ } }
     } catch (_) { setOrders((o) => o || []); }
@@ -804,7 +809,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
-            <CustomerBanner o={o} t={t} />
+            <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {!["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
@@ -854,7 +859,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
             {!["rejected", "cancelled", "delivered"].includes(o.status) && (
               <Actions>
-                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t("st_call_shop")}</a>}
+                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t(eatIds[o.worker_id] === false ? "st_call_shop_s" : "st_call_shop")}</a>}
                 {o.rider_name && o.rider_phone && <a href={`tel:${o.rider_phone}`} style={callStyle}>{t("st_call_rider")}</a>}
                 {o.mode === "delivery" && o.job_status === "expired" && !o.rider_name && (
                   <Btn onClick={async () => { try { await api.orderToPickup(o.id); } catch (_) {} load(); }}>{t("ob_to_pickup")}</Btn>
@@ -992,20 +997,21 @@ function PinDoor({ api, orderId, place, onDone }) {
 // What is happening to this order, said plainly, for the customer.
 const avgTag = (avg, n) => (Number(n) > 0 ? ` \u2605 ${Number(avg).toFixed(1)} (${n})` : "");
 
-function CustomerBanner({ o, t }) {
+function CustomerBanner({ o, t, eat = true }) {
+  const k = (key) => t(eat ? key : key + "_s");
   const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
   const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
   const note = <CancelNote o={o} />;
   if (o.status === "cancelled") return <Banner tone="bad" title={t("ob_cancelled")}>{note}</Banner>;
-  if (o.status === "rejected") return <Banner tone="bad" title={t("ob_rejected")}>{note}</Banner>;
+  if (o.status === "rejected") return <Banner tone="bad" title={k("ob_rejected")}>{note}</Banner>;
   if (o.status === "delivered") return <Banner tone="good" title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
-  if (o.status === "placed") return <Banner tone="wait" title={t("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
+  if (o.status === "placed") return <Banner tone="wait" title={k("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
   if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" title={t("ob_decide")} />;
-  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_norider")} sub={t("ob_norider_sub")} />;
+  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_norider")} sub={k("ob_norider_sub")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
     if (o.job_status === "picked_up") return <Banner tone="go" title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) + avgTag(o.rider_avg, o.rider_n) : null}>{timer}</Banner>;
-    if (o.rider_name) return <Banner tone="go" title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name) + avgTag(o.rider_avg, o.rider_n)}>{timer}</Banner>;
-    if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" title={t("ob_finding")} sub={t("st_finding_rider")}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" title={k("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name) + avgTag(o.rider_avg, o.rider_n)}>{timer}</Banner>;
+    if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" title={t("ob_finding")} sub={k("st_finding_rider")}>{timer}</Banner>;
     return <Banner tone="go" title={t("ob_prep")} sub={String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}>{timer}</Banner>;
   }
   return o.status === "ready"
@@ -1372,7 +1378,7 @@ function MenuPhotosEditor({ api, shop }) {
 
 // What customers see: the menu photos, and the promise that prices are the same
 // as at the restaurant, with no commission.
-function MenuPhotosView({ api, workerId }) {
+function MenuPhotosView({ api, workerId, eat = true }) {
   const { t } = useI18n();
   const [urls, setUrls] = useState([]);
   useEffect(() => {
@@ -1383,12 +1389,12 @@ function MenuPhotosView({ api, workerId }) {
   if (urls.length === 0) return null;
   return (
     <div style={{ margin: "0 0 14px" }}>
-      <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, marginBottom: 2 }}>{t("mp_view_title")}</div>
-      <div style={{ fontSize: 13, color: "#0F6B33", fontWeight: 700, marginBottom: 8 }}>{"\u2705"} {t("mp_same_price")}</div>
+      <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, marginBottom: 2 }}>{t(eat ? "mp_view_title" : "mp_view_title_s")}</div>
+      <div style={{ fontSize: 13, color: "#0F6B33", fontWeight: 700, marginBottom: 8 }}>{"\u2705"} {t(eat ? "mp_same_price" : "mp_same_price_s")}</div>
       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
         {urls.map((u) => (
           <a key={u} href={u} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
-            <img src={u} alt={t("mp_view_title")} style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: `1px solid ${T.line}` }} />
+            <img src={u} alt={t(eat ? "mp_view_title" : "mp_view_title_s")} style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: `1px solid ${T.line}` }} />
           </a>
         ))}
       </div>

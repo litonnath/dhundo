@@ -501,6 +501,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingReport: (id, reason, note) => rpc("services_booking_report", { p_id: id, p_reason: reason, p_note: note || null }, true),
     adminBookingReports: (status) => rpc("services_admin_booking_reports", { p_status: status || "open" }, true),
     adminBookingReportResolve: (id) => rpc("services_admin_booking_report_resolve", { p_id: id }, true),
+    workerKinds: (ids) => rpc("services_workers_kinds", { p_ids: ids }),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
