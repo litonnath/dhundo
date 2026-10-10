@@ -193,14 +193,24 @@ export function RiderHistory({ api }) {
   if (rows.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
   return (
     <div>
-      {rows.map((j) => (
-        <div key={j.id} style={card}>
-          <div style={{ fontSize: 15.5, fontWeight: 800, color: T.ink }}>{j.other_name || j.drop_text}</div>
-          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>{t("jb_to")} {j.drop_text}</div>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{dateTime(j.done_at || j.created_at)} · {t("jp_status_" + j.status)}</div>
-          {j.fee_paise != null && j.status === "delivered" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.brandDark, marginTop: 3 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
-        </div>
-      ))}
+      {rows.map((j) => {
+        const done = j.status === "delivered";
+        return (
+          <div key={j.id} style={cardStyle}>
+            <OrderHeader name={j.other_name || j.drop_text} sub={`${dateTime(j.done_at || j.created_at)}`} />
+            <Banner tone={done ? "good" : "bad"} icon={done ? "\u2705" : "\u274C"} title={done ? t("jb_h_done") : t("jp_status_" + j.status)}>
+              {done && j.fee_paise != null && <div style={{ fontSize: 22, fontWeight: 800, color: "#0F6B33", marginTop: 6 }}>{String(t("jb_h_earned")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
+            </Banner>
+            <div style={{ fontSize: 13.5, color: T.inkSoft, margin: "6px 0" }}>{"\u{1F4CD}"} {j.drop_text}</div>
+            {done && j.pay_method && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <PayBadge method={j.pay_method} paid={j.paid} t={t} />
+                {j.pay_method === "cod" && j.paid && j.due_paise != null && <span style={{ fontSize: 13.5, fontWeight: 700, color: T.inkSoft }}>{String(t("jb_h_cash")).replace("{n}", Math.round(j.due_paise / 100 * 100) / 100)}</span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
