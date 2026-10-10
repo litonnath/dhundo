@@ -851,7 +851,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 14, padding: "12px 14px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                {o.mode !== "pickup" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(o).total)}</div>}
+                {o.mode !== "pickup" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(held(o)).total)}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
@@ -878,7 +878,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
                   <CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} />
                 )}
-                <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(orderBill(o).total)}`]} />
+                <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(orderBill(held(o)).total)}`]} />
               </Actions>
             )}
           </div>
