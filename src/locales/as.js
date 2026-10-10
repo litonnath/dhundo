@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  prof_photo_add: "Add profile photo",
+  prof_photo_change: "Change photo",
   mbk_card: "Rate card",
   mbk_card_you: "Your rate card",
   mbk_1h: "1 hour",

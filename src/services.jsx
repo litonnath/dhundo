@@ -159,6 +159,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     // ------------------------------------------------- account profile (83)
     // About the person, not their work: that is the listing.
     myProfile: () => rpc("services_my_profile", {}, true),
+    setMyAvatar: (url) => rpc("services_set_my_avatar", { p_url: url || null }, true),
     updateMyProfile: (p) =>
       rpc("services_update_my_profile", {
         p_full_name: p.full_name || "", p_email: p.email || null,

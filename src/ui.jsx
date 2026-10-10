@@ -2328,6 +2328,8 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
   });
   // The person own position: where they are, for searching. Not a listing.
   const [home, setHome] = useState(null);
+  const [photo, setPhoto] = useState("");
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -2342,6 +2344,7 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         email: p.email || "", address: p.address || "", city: p.city || "",
         state: p.state || "", pincode: p.pincode || "",
       });
+      if (p.avatar_url) setPhoto(p.avatar_url);
       if (typeof p.home_lat === "number") setHome({ lat: p.home_lat, lng: p.home_lng, exact: p.home_exact === true });
       else if (currentPlace && typeof currentPlace.lat === "number") {
         // Nothing saved yet: start from the location already set on the
@@ -2384,6 +2387,21 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
     } finally { setBusy(false); }
   };
 
+  const pickPhoto = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\//.test(file.type) || file.size > 6 * 1024 * 1024) { setMsg({ tone: "bad", text: t("e_save") }); return; }
+    setPhotoBusy(true); setMsg(null);
+    try {
+      const url = await api.uploadPublic("services-photos", file);
+      const r = await api.setMyAvatar(url);
+      const x = Array.isArray(r) ? r[0] : r;
+      if (x && x.ok === false) throw new Error("no");
+      setPhoto(url);
+    } catch (_) { setMsg({ tone: "bad", text: t("e_save") }); }
+    setPhotoBusy(false);
+  };
   const field = { ...input, minHeight: 52, fontSize: 16, padding: "13px 14px", borderRadius: 11 };
   const label = (text, children) => (
     <label style={{ display: "block", marginBottom: 14 }}>
@@ -2408,6 +2426,17 @@ export function ProfilePage({ api, account, hasListing = false, onBack, onList, 
         background: T.white, border: `1px solid ${T.line}`, borderRadius: 16, padding: 18,
         opacity: loaded ? 1 : 0.6,
       }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          {photo
+            ? <img src={photo} alt="" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: `2px solid ${T.line}` }} />
+            : <span style={{ width: 76, height: 76, borderRadius: "50%", background: "#E8F0FB", color: "#0A5BB8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, fontWeight: 800 }}>{(f.full_name || "?").trim().charAt(0).toUpperCase()}</span>}
+          <label style={{ flex: 1 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 46, padding: "0 18px", borderRadius: 23, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+              {photoBusy ? "\u2026" : t(photo ? "prof_photo_change" : "prof_photo_add")}
+            </span>
+            <input type="file" accept="image/*" onChange={pickPhoto} style={{ display: "none" }} />
+          </label>
+        </div>
         {label(t("au_name"),
           <input style={field} value={f.full_name} autoComplete="name" maxLength={80}
                  onChange={(e) => set("full_name", e.target.value)} />)}

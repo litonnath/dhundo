@@ -3,6 +3,8 @@
 -- so a booking can show what the worker charges. Both sides also get each
 -- other's phone while a request is waiting or accepted, so either can call. Replaces the 141 function.
 -- ===========================================================================
+alter table public.services_signups add column if not exists avatar_url text;
+
 drop function if exists public.services_chat_inbox();
 create function public.services_chat_inbox()
 returns table (id uuid, role text, status text, other_name text, other_phone text, note text,
@@ -16,7 +18,7 @@ as $fn$
   with me as (select public.services_account_id() as id),
   mine as (
     select b.*, case when b.customer_id = (select id from me) then 'customer' else 'worker' end as role,
-           coalesce(nullif(w.business_name, ''), w.full_name) as wname, w.phone as wphone, w.avatar_url as wavatar, (select w2.avatar_url from public.services_workers w2 where w2.user_id = b.customer_id and w2.avatar_url is not null limit 1) as cavatar, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
+           coalesce(nullif(w.business_name, ''), w.full_name) as wname, w.phone as wphone, w.avatar_url as wavatar, coalesce(c.avatar_url, (select w2.avatar_url from public.services_workers w2 where w2.user_id = b.customer_id and w2.avatar_url is not null limit 1)) as cavatar, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
            coalesce((select h.hidden_at from public.services_chat_hidden h
                       where h.booking_id = b.id and h.account_id = (select id from me)), 'epoch') as hid_at
       from public.services_bookings b
