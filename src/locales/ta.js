@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "செயலி மூடியிருக்கும்போது அறிவிப்பு",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  or_grp_work: "My business",
+  or_grp_cust: "As a customer",
   db_buysell: "Buy & sell requests",
   ob_collected: "Collected by you. Enjoy!",
   st_status_collected: "Collected by customer",

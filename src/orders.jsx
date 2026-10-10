@@ -24,12 +24,13 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
     return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : null;
   });
   const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
-  const tiles = (showWork ? [["work", "bag", t(workKey), badge], ["items", "tag", t("mb_mine"), 0]] : [
-    ["mine", "bag", t("or_mine"), 0],
-    ["bookings", "user", t("mbk_title"), 0],
-    ["items", "tag", t("mb_mine"), 0],
-    ["rides", "drivers", t("rh_title"), 0],
-  ]);
+  const custTiles = [["mine", "bag", t("or_mine"), 0], ["bookings", "user", t("mbk_title"), 0], ["rides", "drivers", t("rh_title"), 0]];
+  const itemTile = ["items", "tag", t("mb_mine"), 0];
+  // On a business account the screen is split in two: the work that comes in,
+  // and what the person bought or booked as a customer.
+  const groups = showWork
+    ? [{ title: t("or_grp_work"), tiles: [["work", "bag", t(workKey), badge], itemTile] }, { title: t("or_grp_cust"), tiles: custTiles }]
+    : [{ title: null, tiles: [custTiles[0], custTiles[1], itemTile, custTiles[2]] }];
   const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
     <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
@@ -43,8 +44,12 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
       {part ? <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 12px", color: "#0B3A78" }}>{title}</h1> : <PageHero title={title} sub={t("or_hero_sub")} />}
 
       {!part ? (
-        <div style={{ display: "grid", gap: 10 }}>
-          {tiles.map(([k, icon, label, n]) => (
+        <div>
+          {groups.map((g) => (
+            <div key={g.title || "all"} style={{ marginBottom: 16 }}>
+              {g.title && groups.length > 1 && <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: "#4B6A94", margin: "4px 2px 8px" }}>{g.title}</div>}
+              <div style={{ display: "grid", gap: 10 }}>
+          {g.tiles.map(([k, icon, label, n]) => (
             <button key={k} onClick={() => { setPart(k); setView("active"); }} style={{
               position: "relative", display: "flex", alignItems: "center", gap: 14, minHeight: 76, padding: "12px 14px", borderRadius: 16, textAlign: "left",
               ...blueCard, cursor: "pointer", fontFamily: "inherit",
@@ -54,6 +59,9 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
               {n > 0 && <span style={{ minWidth: 24, height: 24, borderRadius: 12, background: "#DC2626", color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{n}</span>}
               <Icon name="chev" size={18} style={{ color: T.inkFaint, transform: "rotate(-90deg)" }} />
             </button>
+          ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
