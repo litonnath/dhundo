@@ -35,6 +35,8 @@ import { T, Icon, Btn, Chip, Notice, input, ConfirmDelete, groupLabel, plateLook
 import { useI18n, tradeName, DEFAULT_STATE } from "./i18n.jsx";
 import { PlaceField, workPlace } from "./locpicker.jsx";
 import { plateExample } from "./states.js";
+import { pricedByKm } from "./start.jsx";
+import { KmRateFields } from "./fares.jsx";
 import { useConsent } from "./consent-core.js";
 
 const PHOTO_BUCKET = "services-photos";
@@ -125,6 +127,14 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   const [open, setOpen] = useState(null);
   const [msg, setMsg] = useState(null);
   const [uploading, setUploading] = useState(false);
+  // A rider, cab, taxi, auto or delivery driver's per-km price range.
+  const [kmMin, setKmMin] = useState("");
+  const [kmMax, setKmMax] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.myRider ? api.myRider() : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) { setKmMin(x.per_km_min == null ? "" : String(x.per_km_min)); setKmMax(x.per_km_max == null ? "" : String(x.per_km_max)); } }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
   const [pickGroup, setPickGroup] = useState(null);
   // Which group the "also does" chips are drawn from. Default null means the
   // main trade's own group -- the near-certain answer, so it needs no tap.
@@ -354,13 +364,14 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   }
   if (!f.avatar_url) todo.push({ key: "face", label: t("todo_face") });
   if (!f.photos.length) todo.push({ key: "photos", label: t("todo_photos") });
-  if (!f.day_rate_min && !f.day_rate_max && !(isBizTradeEarly(trades, f))) todo.push({ key: "work", label: t("todo_rate") });
+  if (!f.day_rate_min && !f.day_rate_max && !(isBizTradeEarly(trades, f)) && !pricedByKm((trades || []).find((y) => y.slug === f.trade_slug))) todo.push({ key: "work", label: t("todo_rate") });
   if (!f.locality) todo.push({ key: "contact", label: t("todo_area") });
 
   const myTradeRow = trades.find((x) => x.slug === f.trade_slug) || {};
   const isSupplierTrade = myTradeRow.kind === "supplier";
   // Shops and food places are businesses: a name, not a day rate and years of experience.
   const isBizTrade = isSupplierTrade || myTradeRow.group_name === "Eat & Stay";
+  const isKmTrade = pricedByKm(myTradeRow);
   const isEatTrade = myTradeRow.group_name === "Eat & Stay";
 
   // One part at a time: a menu of what can be edited, and only the part you
@@ -662,8 +673,11 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             }
             if (!isBizTrade) {
               const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-              if (!(lo > 0) || !(hi > 0) || hi < lo) return badField("rate", t("e_rate"));
+              if (!isKmTrade && (!(lo > 0) || !(hi > 0) || hi < lo)) return badField("rate", t("e_rate"));
               if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return badField("years", t("e_years"));
+            }
+            if (isKmTrade && (kmMin || kmMax)) {
+              Promise.resolve(api.setRider({ perKmMin: kmMin || kmMax, perKmMax: kmMax || kmMin, rides: true, delivery: true })).catch(() => {});
             }
             return save("work", {
             p_trade_slug: f.trade_slug,
@@ -792,6 +806,11 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           )}
           {!isBizTrade && (
             <>
+          {isKmTrade ? (
+            <Row label={t("rs_per_km_range")}>
+              <KmRateFields api={api} slug={f.trade_slug} min={kmMin} max={kmMax} onChange={(a, b) => { setKmMin(a); setKmMax(b); set("work", "km_dirty", true); }} />
+            </Row>
+          ) : (
           <Row fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}{!isSupplierTrade && <ReqTag />}</>}>
             <div style={{ display: "flex", gap: 9 }}>
               <input style={{ ...field, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
@@ -802,6 +821,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
                      onChange={(e) => set("work", "day_rate_max", e.target.value)} />
             </div>
           </Row>
+          )}
 
           <Row fid="years" error={ferr("years")} label={<>{t("w3_years")}{!isSupplierTrade && <ReqTag />}</>}>
             <input style={{ ...field, maxWidth: 160 }} inputMode="numeric"

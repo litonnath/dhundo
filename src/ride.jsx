@@ -3,6 +3,7 @@
 // nearby see the request and the first to accept gets it. The fare is agreed
 // between the two; the app takes no payment.
 // ---------------------------------------------------------------------------
+import { useRateCard, calcFare, KmRateFields, rateKeyFor } from "./fares.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, Icon, Notice, input, useDismissable, ListenButton } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
@@ -171,9 +172,24 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const KM_PER = { bike: { petrol: 40, electric: 10 }, auto: { cng: 28, petrol: 25, diesel: 22, electric: 8 }, car: { petrol: 15, diesel: 18, cng: 22, electric: 6 } };
   const BASE = { bike: 5.5, auto: 9, car: 8.3 };
   const kindOf = (slug) => (/bike|moto/.test(slug) ? "bike" : /auto|rick|toto/.test(slug) ? "auto" : "car");
+  const rateCard = useRateCard(api);
   const priceFor = (slug) => {
     if (!trip) return null;
     const e = book[slug] || { online: [], listed: [], fuels: [] };
+    // The platform's fare metric, when the admin has set it: max(minimum,
+    // base + per km x distance). The per-km part is the middle of the drivers'
+    // own ranges when there are any (the server keeps them inside the band).
+    const rrow = rateCard.find((c) => c.key === rateKeyFor(slug));
+    if (rrow) {
+      const mid = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
+      const perKm = mid != null ? mid : rrow.per_km_rupees;
+      const band = rrow.band_pct == null ? 20 : rrow.band_pct;
+      const at = (r) => Math.max(rrow.min_rupees, Math.round(rrow.base_rupees + r * trip.km));
+      const lo = at(Math.ceil(rrow.per_km_rupees * (100 - band) / 100)), hi = at(Math.floor(rrow.per_km_rupees * (100 + band) / 100));
+      const fare = at(perKm);
+      const tl0 = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
+      return { perKm, basis: "metric", fuel: null, fare, toll: tl0, total: fare + tl0, lo, hi, base: rrow.base_rupees, min: rrow.min_rupees };
+    }
     const kind = kindOf(slug);
     // The standard (fallback) rate starts from the bike rate, which comes from
     // the petrol price, and an auto is 5 times that and a car 10 times.
@@ -358,7 +374,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         <div style={{ ...card, border: `2px solid ${T.brandDark}`, marginBottom: 10 }}>
           <div style={{ fontSize: 13.5, color: T.inkSoft }}>{String(t("rd_dist")).replace("{n}", trip.km)}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink }}>{String(t("rd_fare_est")).replace("{n}", est)}</div>
-          {cur && <div style={{ fontSize: 14, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{"\u20B9"}{cur.perKm}/km {"\u00D7"} {trip.km} km = {"\u20B9"}{cur.fare}</div>}
+          {cur && cur.lo != null && cur.hi > cur.lo && <div style={{ fontSize: 13.5, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{String(t("rd_range")).replace("{a}", cur.lo + cur.toll).replace("{b}", cur.hi + cur.toll)}</div>}
+          {cur && <div style={{ fontSize: 14, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{cur.basis === "metric" ? `\u20B9${cur.base} + \u20B9${cur.perKm}/km \u00D7 ${trip.km} km${cur.fare === cur.min ? ` (min \u20B9${cur.min})` : ""} = \u20B9${cur.fare}` : `\u20B9${cur.perKm}/km \u00D7 ${trip.km} km = \u20B9${cur.fare}`}</div>}
           {tollVehicle && cur && toll !== null && (
             <div style={{ fontSize: 14, fontWeight: 800, color: toll > 0 ? "#B45309" : "#0F6B33", marginTop: 4 }}>
               {toll > 0 ? String(t("rd_toll_line")).replace("{a}", fareOnly).replace("{n}", toll) : t("rd_toll_none")}
@@ -497,8 +514,8 @@ function RiderSettings({ api, onSaved }) {
   useEffect(() => {
     Promise.all([api.myRider(), api.myFuel ? api.myFuel().catch(() => null) : null]).then(([r, fu]) => {
       const x = one(r) || {};
-      setF({ perKm: x.per_km_rupees == null ? "" : String(x.per_km_rupees), rides: x.serves_rides !== false, delivery: x.serves_delivery !== false, fuel: (one(fu) && one(fu).fuel_type) || "" });
-    }).catch(() => setF({ perKm: "", rides: true, delivery: true, fuel: "" }));
+      setF({ perKmMin: x.per_km_min == null ? "" : String(x.per_km_min), perKmMax: x.per_km_max == null ? "" : String(x.per_km_max), slug: x.trade_slug || "", rides: x.serves_rides !== false, delivery: x.serves_delivery !== false, fuel: (one(fu) && one(fu).fuel_type) || "" });
+    }).catch(() => setF({ perKmMin: "", perKmMax: "", slug: "", rides: true, delivery: true, fuel: "" }));
   }, [api]);
   if (!f) return null;
   const set = (k, v) => { setSaved(false); setF((x) => ({ ...x, [k]: v })); };
@@ -519,16 +536,16 @@ function RiderSettings({ api, onSaved }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800 }}>{t("rs_title")}</div>
           <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>
-            {f.perKm ? String(t("rs_km_show")).replace("{n}", f.perKm) : t("rs_per_km")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
+            {f.perKmMin && f.perKmMax ? String(t("rs_km_range_show")).replace("{a}", f.perKmMin).replace("{b}", f.perKmMax) : t("rs_per_km_range")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
           </div>
         </div>
         <Btn kind="ghost" onClick={() => { setSaved(false); setErr(""); setOpen(true); }}>{t("av_change")}</Btn>
       </div>
       {open && (
         <FormSheet title={t("rs_title")} onClose={() => setOpen(false)}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km")}</div>
-          <input style={{ ...input, marginBottom: 10 }} inputMode="numeric" maxLength={3} value={f.perKm} placeholder="12"
-                 onChange={(e) => set("perKm", e.target.value.replace(/\D/g, ""))} />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km_range")}</div>
+          <KmRateFields api={api} slug={f.slug} min={f.perKmMin} max={f.perKmMax} style={{ marginBottom: 10 }}
+                        onChange={(a, b2) => { setSaved(false); setF((x) => ({ ...x, perKmMin: a, perKmMax: b2 })); }} />
           <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_fuel")}</div>
           <select style={{ ...input, marginBottom: 10 }} value={f.fuel} onChange={(e) => set("fuel", e.target.value)}>
             <option value="">{t("rs_fuel_none")}</option>

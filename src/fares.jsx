@@ -56,6 +56,32 @@ export function useBusinessInfo(api) {
   return b;
 }
 
+// Which rate card row a driver's vehicle is priced from.
+export const rateKeyFor = (slug) => (/deliver/i.test(slug) ? "delivery_food" : /bike|moto|scooter/i.test(slug) ? "ride_bike" : /auto|rick|toto/i.test(slug) ? "ride_auto" : /taxi|cab|\bcar\b/i.test(slug) ? "ride_taxi" : null);
+
+// The only price a rider, cab, taxi, auto or delivery driver gives: a per-km
+// range, inside the band the admin allows around the standard rate.
+export function KmRateFields({ api, slug, min, max, onChange, style }) {
+  const { t } = useI18n();
+  const card = useRateCard(api);
+  const row = card.find((c) => c.key === rateKeyFor(slug || ""));
+  if (!row) return null;
+  const band = row.band_pct == null ? 20 : row.band_pct;
+  const lo = Math.ceil(row.per_km_rupees * (100 - band) / 100), hi = Math.floor(row.per_km_rupees * (100 + band) / 100);
+  const box = { ...input, flex: 1, marginBottom: 0, minHeight: 52, fontSize: 16 };
+  return (
+    <div style={style}>
+      <div style={{ display: "flex", gap: 9 }}>
+        <input style={box} inputMode="numeric" maxLength={3} value={min} placeholder={`${t("w3_rate_from")} (${lo})`} aria-label={t("w3_rate_from")}
+               onChange={(e) => onChange(e.target.value.replace(/\D/g, ""), max)} />
+        <input style={box} inputMode="numeric" maxLength={3} value={max} placeholder={`${t("w3_rate_to")} (${hi})`} aria-label={t("w3_rate_to")}
+               onChange={(e) => onChange(min, e.target.value.replace(/\D/g, ""))} />
+      </div>
+      <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45, marginTop: 6 }}>{String(t("rs_km_allowed")).replace("{a}", lo).replace("{b}", hi).replace("{s}", row.per_km_rupees)}</div>
+    </div>
+  );
+}
+
 // The GST on what is bought from a restaurant or a shop, set by the admin.
 export function useGstRates(api) {
   const [r, setR] = useState({ restaurant: 0, shop: 0 });
@@ -109,7 +135,7 @@ const cell = { ...input, minHeight: 40, marginBottom: 0, padding: "6px 8px", wid
 const lbl = { fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 3 };
 
 function RateRow({ api, row, onSaved }) {
-  const [f, setF] = useState({ base: String(row.base_rupees), perKm: String(row.per_km_rupees), min: String(row.min_rupees), platform: String(row.platform_rupees) });
+  const [f, setF] = useState({ base: String(row.base_rupees), perKm: String(row.per_km_rupees), min: String(row.min_rupees), platform: String(row.platform_rupees), band: String(row.band_pct == null ? 20 : row.band_pct) });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const set = (k, v) => { setMsg(""); setF((p) => ({ ...p, [k]: v.replace(/\D/g, "") })); };
@@ -119,6 +145,11 @@ function RateRow({ api, row, onSaved }) {
       const r = await api.rateSet(row.key, num(f.base), num(f.perKm), num(f.min), num(f.platform), GST_PERCENT);
       const x = Array.isArray(r) ? r[0] : r;
       if (x && x.ok === false) throw new Error("no");
+      if (row.key.startsWith("ride_") && api.rateSetBand) {
+        const r3 = await api.rateSetBand(row.key, num(f.band));
+        const z = Array.isArray(r3) ? r3[0] : r3;
+        if (z && z.ok === false) throw new Error("no");
+      }
       setMsg("Saved"); onSaved();
     } catch (_) { setMsg("Could not save"); }
     setBusy(false);
@@ -127,7 +158,7 @@ function RateRow({ api, row, onSaved }) {
     <div style={{ padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
       <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{row.label}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8 }}>
-        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Miscellaneous fee \u20b9"]].map(([k, l]) => (
+        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Miscellaneous fee \u20b9"]].concat(row.key.startsWith("ride_") ? [["band", "Driver can move rate \u00B1 %"]] : []).map(([k, l]) => (
           <div key={k}><div style={lbl}>{l}</div><input style={cell} inputMode="numeric" maxLength={4} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
         ))}
       </div>
@@ -202,7 +233,7 @@ export function FareCalculator({ api }) {
       <GstRatesEditor api={api} />
       <GstReport api={api} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 0" }}>Rate card</h3>
-      {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees } api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
+      {card.map((c) => <RateRow key={c.key + c.base_rupees + c.per_km_rupees + c.min_rupees + c.platform_rupees + "b" + c.band_pct } api={api} row={c} onSaved={() => setTick((n) => n + 1)} />)}
     </div>
   );
 }

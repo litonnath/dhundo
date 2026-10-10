@@ -40,9 +40,10 @@ import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
-import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind } from "./start.jsx";
+import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind, pricedByKm } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { AdminConsole } from "./admin.jsx";
+import { KmRateFields } from "./fares.jsx";
 import { OrdersPage } from "./orders.jsx";
 import { alertNewJob, RiderJobs, ShopJobs, BookingSheet, PartnerSheet } from "./hub.jsx";
 import { LocationSheet, PlaceField, describePoint, workPlace } from "./locpicker.jsx";
@@ -414,7 +415,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     myFuel: () => rpc("services_my_fuel", {}, true),
     setFuel: (f) => rpc("services_set_fuel", { p_fuel: f || null }, true),
     myRider: () => rpc("services_my_rider", {}, true),
-    setRider: (o) => rpc("services_set_rider", { p_per_km: o.perKm === "" || o.perKm == null ? null : Number(o.perKm), p_rides: !!o.rides, p_delivery: !!o.delivery }, true),
+    setRider: (o) => rpc("services_set_rider", { p_per_km_min: o.perKmMin === "" || o.perKmMin == null ? null : Number(o.perKmMin), p_per_km_max: o.perKmMax === "" || o.perKmMax == null ? null : Number(o.perKmMax), p_rides: !!o.rides, p_delivery: !!o.delivery }, true),
+    rateSetBand: (key, pct) => rpc("services_rate_set_band", { p_key: key, p_pct: pct }, true),
     pushSubscribe: (endpoint, p256dh, auth, lang) => rpc("services_push_subscribe", {
       p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_lang: lang,
     }, true),
@@ -1311,7 +1313,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     // "+91 98620 12345", and the field already prints its own +91 prefix --
     // which is how it first rendered as "+91 +91 98620 12345".
     phone: String((user && user.phone) || "").replace(/\D/g, "").slice(-10),
-    years_experience: "", day_rate_min: "", day_rate_max: "",
+    years_experience: "", day_rate_min: "", day_rate_max: "", km_min: "", km_max: "",
     about: "",
     address_line: "", landmark: "", pincode: "",
     vehicle_number: "",
@@ -1403,6 +1405,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   });
   // Shops and food places are listed under a business name, with no day rate or years of experience.
   const isBiz = isSupplier || formKind === "eat";
+  const priced = !isBiz && picked.some((slug) => pricedByKm(trades.find((y) => y.slug === slug)));
   // The menu or product list is added after the listing exists, from the dashboard: fewer questions up front.
   const hasItemsStep = false;
   const num = (v) => (String(v).trim() === "" ? null : Number(v));
@@ -1439,7 +1442,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     if (isBiz && !f.business_name.trim()) return bad("biz", t(formKind === "eat" ? "ea_need_name" : "e_name"), 2);
     if (!isBiz) {
       const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-      if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"), 3);
+      if (!priced && (!(lo > 0) || !(hi > 0) || hi < lo)) return bad("rate", t("e_rate"), 3);
       if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"), 3);
     }
     // A listing is stored and shown to other people: a yes first. (An admin
@@ -1473,6 +1476,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
       // already been rewritten twice in this project, and every rewrite is
       // a chance to drop a column; update_my_listing already accepts these
       // fields and is the function the profile screen uses anyway.
+      if (r && r.ok && !isAdmin && priced && (f.km_min || f.km_max)) {
+        try { await api.setRider({ perKmMin: f.km_min || f.km_max, perKmMax: f.km_max || f.km_min, rides: true, delivery: true }); } catch (_) { /* can be set later in settings */ }
+      }
       if (r && r.ok && !isAdmin) {
         try {
           await api.updateMyListing({
@@ -1545,7 +1551,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const reset = () => {
     setDone(null); setPosFailed(false); setItems([]); setItemsFailed(0); setStep(1); setSub2(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
     setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
-                   years_experience: "", day_rate_min: "", day_rate_max: "" }));
+                   years_experience: "", day_rate_min: "", day_rate_max: "", km_min: "", km_max: "" }));
   };
 
   // ------------------------------------------------------------------ done
@@ -1903,6 +1909,11 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
 
           {!isBiz && (
             <>
+              {priced ? (
+                <BigField fid="kmrate" label={t("rs_per_km_range")}>
+                  <KmRateFields api={api} slug={picked[0]} min={f.km_min} max={f.km_max} onChange={(a, b) => setF((p) => ({ ...p, km_min: a, km_max: b }))} />
+                </BigField>
+              ) : (
               <BigField fid="rate" error={ferr("rate")} label={<>{formKind === "ride" ? t("w3_rate_drv") : t("w3_rate")}<ReqTag /></>}>
                 <div style={{ display: "flex", gap: 9 }}>
                   <input style={{ ...bigInput, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
@@ -1913,6 +1924,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
                          onChange={(e) => set("day_rate_max", e.target.value)} />
                 </div>
               </BigField>
+              )}
 
               <BigField fid="years" error={ferr("years")} label={<>{t("w3_years")}<ReqTag /></>}>
                 <input style={bigInput} inputMode="numeric" value={f.years_experience}
@@ -1948,7 +1960,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             <Btn full onClick={() => {
               if (!isBiz) {
                 const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-                if (!(lo > 0) || !(hi > 0) || hi < lo) return bad("rate", t("e_rate"));
+                if (!priced && (!(lo > 0) || !(hi > 0) || hi < lo)) return bad("rate", t("e_rate"));
                 if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"));
               }
               setErr(null); setFieldErr(null); setStep(4);
@@ -3162,7 +3174,7 @@ export default function ServicesPage({
                 if (!(myRow.photos && myRow.photos.length)) need.push(t("todo_photos"));
                 if (!myRow.about || myRow.about === "-") need.push(t("w3_about"));
                 if (!myRow.locality) need.push(t("todo_area"));
-                if (!isBizRow && !myRow.day_rate_min && !myRow.day_rate_max) need.push(t("todo_rate"));
+                if (!isBizRow && myDriverKind !== "delivery" && myDriverKind !== "travel" && !myRow.day_rate_min && !myRow.day_rate_max) need.push(t("todo_rate"));
                 if (myRow.loc_source !== undefined && !["device", "picked"].includes(myRow.loc_source || "")) need.push(t("todo_pin"));
                 if (gaps.includes("id_doc")) need.push(t("todo_id"));
                 if (gaps.includes("vehicle_number")) need.push(t("todo_vehicle"));

@@ -359,6 +359,10 @@ export function driverKind(x) {
   return "hire";
 }
 
+// Riders, cabs, taxis and autos are paid by distance, by the platform's fare
+// metric, so they are not asked for a day rate.
+export const pricedByKm = (trade) => !!trade && trade.group_name === "Drivers" && ["delivery", "travel"].includes(driverKind(trade));
+
 export function tradesFor(kind, trades) {
   if (kind === "ride") return trades.filter((x) => x.group_name === "Drivers" && driverKind(x) === "travel");
   if (kind === "hire") return trades.filter((x) => x.group_name === "Drivers" && driverKind(x) === "hire");
