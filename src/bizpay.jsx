@@ -84,7 +84,7 @@ export function EarningsPanel({ api, kind, bizName = "" }) {
       try {
         let list = [];
         if (kind === "owner") {
-          list = many(await api.myOrders()).filter((o) => o.role === "owner" && o.status === "delivered").map((o) => ({ at: o.created_at, paise: o.total_paise, title: o.other_name, lines: Array.isArray(o.lines) ? o.lines : [], mode: o.mode, fee: o.delivery_fee_paise || 0 }));
+          list = many(await api.myOrders()).filter((o) => o.role === "owner" && o.status === "delivered").map((o) => ({ at: o.created_at, paise: o.total_paise, title: o.other_name, lines: Array.isArray(o.lines) ? o.lines : [], mode: o.mode }));
         } else if (kind === "delivery") {
           list = many(await api.myJobs()).filter((j) => j.role === "rider" && j.status === "delivered").map((j) => ({ at: j.created_at, paise: j.fee_paise || 0, title: j.other_name || j.drop_text, sub: j.drop_text, note: j.note }));
         } else {

@@ -1179,14 +1179,20 @@ export function OwnerOrders({ api, onHire }) {
                         {o.mode === "delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderToPickup(o.id); } catch (_) {} setBusy(null); load(); }}>{t("ob_o_to_pickup")}</Btn>}
                       </div>
                     )}
+                    {o.mode === "delivery" ? (
+                      <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Math.round((o.delivery_fee_paise || 3000) / 100)); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
+                    ) : (
+                      <>
                     <FeeHelper api={api} food={o.mode === "delivery"} onPick={(n) => setQuote((q) => ({ ...q, ["r" + o.id]: String(n) }))} />
-                    <div style={{ display: "flex", gap: 8 }}>
-                    <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
-                           value={quote["r" + o.id] !== undefined ? quote["r" + o.id] : String(Math.round((o.delivery_fee_paise || 3000) / 100))}
-                           placeholder={t("ow_rider_fee")} aria-label={t("ow_rider_fee")}
-                           onChange={(e) => setQuote((q) => ({ ...q, ["r" + o.id]: e.target.value.replace(/\D/g, "") }))} />
-                    <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Number(quote["r" + o.id] !== undefined ? quote["r" + o.id] : Math.round((o.delivery_fee_paise || 3000) / 100))); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
-                    </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                      <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
+                             value={quote["r" + o.id] !== undefined ? quote["r" + o.id] : String(Math.round((o.delivery_fee_paise || 3000) / 100))}
+                             placeholder={t("ow_rider_fee")} aria-label={t("ow_rider_fee")}
+                             onChange={(e) => setQuote((q) => ({ ...q, ["r" + o.id]: e.target.value.replace(/\D/g, "") }))} />
+                      <Btn disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderSendRider(o.id, Number(quote["r" + o.id] !== undefined ? quote["r" + o.id] : Math.round((o.delivery_fee_paise || 3000) / 100))); } catch (_) {} setBusy(null); load(); }}>{t("ow_send_rider")}</Btn>
+                      </div>
+                      </>
+                    )}
                   </div>
                 ) : null}
                 {o.job_id && ["accepted", "picked_up"].includes(o.job_status) && (
@@ -1223,7 +1229,7 @@ export function OwnerOrders({ api, onHire }) {
                 </div>
                 <Lines lines={o.lines} />
                 <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>
-                  {rupees(o.total_paise)}{o.delivery_fee_paise > 0 ? ` + ${rupees(o.delivery_fee_paise)} ${t("st_fee").toLowerCase()}` : ""}
+                  {rupees(o.total_paise)}
                 </div>
               </div>
             ))}

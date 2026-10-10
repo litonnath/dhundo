@@ -122,11 +122,6 @@ export function FeeHelper({ api, food, onPick }) {
                onChange={(e) => setKm(e.target.value.replace(/[^\d.]/g, ""))} aria-label={t("fr_km")} />
         {q && <span>{String(t("fr_suggest")).replace("{n}", q.rider)}</span>}
       </div>
-      {q && q.platform + q.gst > 0 && (
-        <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>
-          {String(t("fr_bill")).replace("{c}", q.customer).replace("{p}", q.platform).replace("{g}", q.gst)}
-        </div>
-      )}
     </div>
   );
 }
