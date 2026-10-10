@@ -159,46 +159,67 @@ export function EarningsPanel({ api, kind, bizName = "" }) {
 // card worked out from it (an hour, half a day, a day).
 function RateQuick({ api }) {
   const { t } = useI18n();
-  const [lo, setLo] = useState("");
-  const [hi, setHi] = useState("");
+  const UNITS = [["hour", "rq_hourly"], ["day", "rq_daily"], ["month", "rq_monthly"]];
+  const [v, setV] = useState({ hour: "", day: "", month: "" });
+  const [ids, setIds] = useState({});
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   useEffect(() => {
     let alive = true;
-    Promise.resolve(api.myListing()).then((r) => {
-      const x = Array.isArray(r) ? r[0] : r;
-      if (alive && x) { setLo(x.day_rate_min ? String(x.day_rate_min) : ""); setHi(x.day_rate_max ? String(x.day_rate_max) : ""); }
+    Promise.resolve(api.myRates ? api.myRates() : []).then((r) => {
+      if (!alive) return;
+      const nv = { hour: "", day: "", month: "" }, ni = {};
+      (Array.isArray(r) ? r : []).forEach((x) => { if (nv[x.unit] === "" && x.unit in nv) { nv[x.unit] = String(x.rupees); ni[x.unit] = x.id; } });
+      setV(nv); setIds(ni);
     }).catch(() => {}).finally(() => alive && setReady(true));
     return () => { alive = false; };
   }, [api]);
+  const set = (k, val) => { setMsg(""); setV((p) => ({ ...p, [k]: val.replace(/\D/g, "") })); };
+  const day = Number(v.day) || 0, hour = Number(v.hour) || 0;
   const save = async () => {
-    const a = Number(lo) || 0, b = Number(hi) || 0;
-    if (!a && !b) { setMsg(t("rq_need")); return; }
+    if (!hour && !day && !Number(v.month)) { setMsg(t("rq_need")); return; }
     setBusy(true); setMsg("");
     try {
-      const r = await api.updateMyListing({ p_day_rate_min: Math.min(a || b, b || a), p_day_rate_max: Math.max(a, b) });
-      const x = Array.isArray(r) ? r[0] : r;
-      setMsg(x && x.ok === false ? t("e_save") : t("p_saved"));
+      const ni = { ...ids };
+      for (const [u, key] of UNITS) {
+        const n = Number(v[u]) || 0;
+        if (n > 0) {
+          const r = await api.rateSave({ id: ni[u] || null, label: String(t(key)), unit: u, rupees: n });
+          const x = Array.isArray(r) ? r[0] : r;
+          if (x && x.ok === false) throw new Error("no");
+        } else if (ni[u]) { await api.rateDelete(ni[u]); delete ni[u]; }
+      }
+      // The listing's own day rate follows the daily figure.
+      if (day) await api.updateMyListing({ p_day_rate_min: day, p_day_rate_max: day });
+      const fresh = await api.myRates();
+      const ids2 = {}; (Array.isArray(fresh) ? fresh : []).forEach((x) => { if (!ids2[x.unit]) ids2[x.unit] = x.id; });
+      setIds(ids2);
+      setMsg(t("p_saved"));
     } catch (_) { setMsg(t("e_save")); }
     setBusy(false);
   };
-  const a = Number(lo) || 0, b = Number(hi) || 0;
-  const hour = (r) => Math.max(10, Math.round(r / 8 / 10) * 10);
-  const box = { ...input, minHeight: 46, marginBottom: 0, flex: 1, minWidth: 0, fontSize: 16, padding: "8px 10px" };
+  const box = { ...input, minHeight: 46, marginBottom: 0, width: "100%", boxSizing: "border-box", fontSize: 16, padding: "8px 10px" };
   return (
     <div style={{ margin: "0 0 14px", padding: "14px", borderRadius: 18, background: "#fff", border: "1px solid #CFE0F7", boxShadow: "0 2px 10px rgba(11,58,120,0.08)", opacity: ready ? 1 : 0.6 }}>
       <div style={{ fontSize: 16, fontWeight: 800, color: "#0B3A78" }}>{t("rq_title")}</div>
       <div style={{ fontSize: 13, color: T.inkSoft, margin: "2px 0 10px" }}>{t("rq_sub")}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontWeight: 800 }}>{"\u20B9"}</span>
-        <input style={box} inputMode="numeric" maxLength={6} value={lo} placeholder={t("rq_min")} onChange={(e) => { setMsg(""); setLo(e.target.value.replace(/\D/g, "")); }} />
-        <span>{"\u2013"}</span>
-        <input style={box} inputMode="numeric" maxLength={6} value={hi} placeholder={t("rq_max")} onChange={(e) => { setMsg(""); setHi(e.target.value.replace(/\D/g, "")); }} />
-        <Btn onClick={save} disabled={busy || !ready}>{busy ? "\u2026" : t("p_save")}</Btn>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        {UNITS.map(([u, key]) => (
+          <label key={u} style={{ display: "block" }}>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.inkSoft, marginBottom: 4 }}>{t(key)}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontWeight: 800 }}>{"\u20B9"}</span>
+              <input style={box} inputMode="numeric" maxLength={7} value={v[u]} onChange={(e) => set(u, e.target.value)} />
+            </span>
+          </label>
+        ))}
       </div>
-      {(a || b) ? <div style={{ fontSize: 13, color: "#166534", fontWeight: 700, marginTop: 8 }}>{String(t("rq_hour")).replace("{n}", a && b && a !== b ? `\u20B9${hour(a)} \u2013 \u20B9${hour(b)}` : `\u20B9${hour(a || b)}`)}</div> : null}
-      {msg && <div role="status" style={{ fontSize: 13.5, fontWeight: 700, marginTop: 6, color: msg === t("p_saved") ? "#157A43" : "#B91C1C" }}>{msg}</div>}
+      {day > 0 && !hour && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 8 }}>{String(t("rq_hint")).replace("{n}", Math.max(10, Math.round(day / 8 / 10) * 10))}</div>}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+        <Btn onClick={save} disabled={busy || !ready}>{busy ? "\u2026" : t("p_save")}</Btn>
+        {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg === t("p_saved") ? "#157A43" : "#B91C1C" }}>{msg}</span>}
+      </div>
     </div>
   );
 }
