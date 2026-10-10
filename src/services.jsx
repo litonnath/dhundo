@@ -1347,7 +1347,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     // which is how it first rendered as "+91 +91 98620 12345".
     phone: String((user && user.phone) || "").replace(/\D/g, "").slice(-10),
     years_experience: "", day_rate_min: "", day_rate_max: "", km_min: "", km_max: "",
-    about: "",
+    about: "", other_what: "",
     address_line: "", landmark: "", pincode: "",
     vehicle_number: "",
     // The chosen city: its id is what the database derives district and
@@ -1421,6 +1421,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   // Each kind of business gets its own wording and its own next step.
   // Vehicles and rides read as the vehicle ("Ambulance", "Truck / Lorry"), not
   // the person ("Ambulance driver"), so the form matches what was tapped.
+  // "Other" in any category: the person types what they do or offer.
+  const isOtherPick = !!picked[0] && /(^|-)other$/.test(picked[0]) && picked[0] !== "supply-other";
   const tradeLabelFor = (tr) => (!tr ? "" : tr.group_name === "Drivers" && ["hire", "travel"].includes(driverKind(tr)) ? vehicleLabel(tr, lang) : tradeName(tr, lang));
   const formKind = (chosen && chosen.group_name === "Eat & Stay") ? "eat"
     : ((chosen && chosen.group_name === "Drivers") || group === "Drivers") ? "ride" : isSupplier ? "shop" : "worker";
@@ -1471,6 +1473,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     setFieldErr(null);
     if (!picked.length) return bad("category", t("e_category"), 1);
     if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"), 1);
+    if (isOtherPick && f.other_what.trim().length < 3) return bad("other", t("other_what"), 1);
     if (needsId && !idPath) return bad("id", t("e_id_required"), 1);
     if (!f.full_name.trim()) return bad("name", t("e_name"), 2);
     if (String(f.phone).replace(/\D/g, "").length < 10) return bad("phone", t("e_phone"), 2);
@@ -1495,7 +1498,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
         p_day_rate_max: num(f.day_rate_max),
         p_locality: workPlace(lp).trim() || null,
         p_city: null,
-        p_about: f.about.trim() || null,
+        p_about: [isOtherPick ? f.other_what.trim() : "", f.about.trim()].filter(Boolean).join(" \u2014 ") || null,
         p_languages: [],
         p_photos: [],
         p_business_name: f.business_name.trim() || null,
@@ -1585,7 +1588,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
 
   const reset = () => {
     setDone(null); setPosFailed(false); setItems([]); setItemsFailed(0); setStep(1); setSub2(1); setGroup(null); setErr(null); setPicked([]); setIdPath("");
-    setF((p) => ({ ...p, full_name: "", business_name: "", about: "",
+    setF((p) => ({ ...p, full_name: "", business_name: "", about: "", other_what: "",
                    years_experience: "", day_rate_min: "", day_rate_max: "", km_min: "", km_max: "" }));
   };
 
@@ -1841,9 +1844,17 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             </div>
           )}
 
+          {isOtherPick && (
+            <BigField fid="other" error={ferr("other")} label={<>{t("other_what")}<ReqTag /></>}>
+              <input style={bigInput} value={f.other_what} maxLength={60} placeholder={t("other_what_ph")}
+                     onChange={(e) => set("other_what", e.target.value)} />
+            </BigField>
+          )}
+
           {picked.length > 0 && (
             <Btn full onClick={() => {
               if (needsVehicle && !plateLooksRight(f.vehicle_number)) return bad("vehicle", t("e_vehicle"));
+              if (isOtherPick && f.other_what.trim().length < 3) return bad("other", t("other_what"));
               if (needsId && !idPath) return bad("id", t("e_id_required"));
               setErr(null); setFieldErr(null); setStep(2);
             }}>
