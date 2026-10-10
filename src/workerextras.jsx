@@ -30,6 +30,11 @@ export function WorkerExtras({ api, row, onOpenBookings }) {
   };
   return (
     <div style={{ padding: "0 14px 12px" }}>
+      {rates.length === 0 && (Number(row.day_rate_min) > 0 || Number(row.day_rate_max) > 0) && (
+        <div style={{ margin: "2px 0 8px", fontSize: 13, fontWeight: 800, color: "#0B3A78" }}>
+          {money(row.day_rate_min || row.day_rate_max)}{row.day_rate_max && row.day_rate_max !== row.day_rate_min && row.day_rate_min ? ` \u2013 ${money(row.day_rate_max)}` : ""} {t("per_day")}
+        </div>
+      )}
       {rates.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "2px 0 8px" }}>
           {rates.map((r) => (

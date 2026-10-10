@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  rate_on_dash: "Set your hourly, daily and monthly rates on your dashboard home page after saving. Customers see them on your card.",
   rs_set_by_us: "Fares are set by Dhundo",
   rs_set_by_us_line: "You earn the full fare: \u20B9{base} + \u20B9{km} per km, at least \u20B9{min}. You do not need to enter a price.",
   bc_pick_time: "Now pick a time",

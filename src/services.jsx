@@ -951,7 +951,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     const renderEmpty = (row) => (
       <ListingCard
         row={row}
-        rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+        rate={null}
         tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
         trade={trades.find((x) => x.slug === row.trade_slug)}
         canCall={!!(user && user.id)}
@@ -1037,7 +1037,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                     <ListingCard
                       key={row.id}
                       row={row}
-                      rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                      rate={null}
                       tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
                       trade={trades.find((x) => x.slug === row.trade_slug)}
                       canCall={!!(user && user.id)}
@@ -1205,7 +1205,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 <ListingCard
                   key={row.id}
                   row={row}
-                  rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                  rate={null}
                   tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
                   trade={trades.find((x) => x.slug === row.trade_slug)}
                   canCall={!!(user && user.id)}
@@ -1475,7 +1475,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     if (isBiz && !f.business_name.trim()) return bad("biz", t(formKind === "eat" ? "ea_need_name" : "e_name"), 2);
     if (!isBiz) {
       const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-      if (!priced && (!(lo > 0) || !(hi > 0) || hi < lo)) return bad("rate", t("e_rate"), 3);
       if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"), 3);
     }
     // A listing is stored and shown to other people: a yes first. (An admin
@@ -1947,15 +1946,8 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
                   <KmRateFields api={api} slug={picked[0]} min={f.km_min} max={f.km_max} onChange={(a, b) => setF((p) => ({ ...p, km_min: a, km_max: b }))} />
                 </BigField>
               ) : (
-              <BigField fid="rate" error={ferr("rate")} label={<>{formKind === "ride" ? t("w3_rate_drv") : t("w3_rate")}<ReqTag /></>}>
-                <div style={{ display: "flex", gap: 9 }}>
-                  <input style={{ ...bigInput, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
-                         placeholder={t("w3_rate_from")}
-                         onChange={(e) => set("day_rate_min", e.target.value)} />
-                  <input style={{ ...bigInput, flex: 1 }} inputMode="numeric" value={f.day_rate_max}
-                         placeholder={t("w3_rate_to")}
-                         onChange={(e) => set("day_rate_max", e.target.value)} />
-                </div>
+              <BigField fid="rate" label={t("w3_rate")}>
+                <div style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.5 }}>{t("rate_on_dash")}</div>
               </BigField>
               )}
 
@@ -1993,7 +1985,6 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
             <Btn full onClick={() => {
               if (!isBiz) {
                 const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-                if (!priced && (!(lo > 0) || !(hi > 0) || hi < lo)) return bad("rate", t("e_rate"));
                 if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return bad("years", t("e_years"));
               }
               setErr(null); setFieldErr(null); setStep(4);
@@ -3207,7 +3198,7 @@ export default function ServicesPage({
                 if (!(myRow.photos && myRow.photos.length)) need.push(t("todo_photos"));
                 if (!myRow.about || myRow.about === "-") need.push(t("w3_about"));
                 if (!myRow.locality) need.push(t("todo_area"));
-                if (!isBizRow && myDriverKind !== "delivery" && myDriverKind !== "travel" && !myRow.day_rate_min && !myRow.day_rate_max) need.push(t("todo_rate"));
+                if (!isBizRow && myDriverKind !== "delivery" && myDriverKind !== "travel" && false) need.push(t("todo_rate"));
                 if (myRow.loc_source !== undefined && !["device", "picked"].includes(myRow.loc_source || "")) need.push(t("todo_pin"));
                 if (gaps.includes("id_doc")) need.push(t("todo_id"));
                 if (gaps.includes("vehicle_number")) need.push(t("todo_vehicle"));

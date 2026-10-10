@@ -364,7 +364,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
   }
   if (!f.avatar_url) todo.push({ key: "face", label: t("todo_face") });
   if (!f.photos.length) todo.push({ key: "photos", label: t("todo_photos") });
-  if (!f.day_rate_min && !f.day_rate_max && !(isBizTradeEarly(trades, f)) && !pricedByKm((trades || []).find((y) => y.slug === f.trade_slug))) todo.push({ key: "work", label: t("todo_rate") });
   if (!f.locality) todo.push({ key: "contact", label: t("todo_area") });
 
   const myTradeRow = trades.find((x) => x.slug === f.trade_slug) || {};
@@ -673,7 +672,6 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
             }
             if (!isBizTrade) {
               const lo = Number(f.day_rate_min), hi = Number(f.day_rate_max);
-              if (!isKmTrade && (!(lo > 0) || !(hi > 0) || hi < lo)) return badField("rate", t("e_rate"));
               if (String(f.years_experience).trim() === "" || !(Number(f.years_experience) >= 0)) return badField("years", t("e_years"));
             }
             if (isKmTrade && (kmMin || kmMax)) {
@@ -811,15 +809,8 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
               <KmRateFields api={api} slug={f.trade_slug} min={kmMin} max={kmMax} onChange={(a, b) => { setKmMin(a); setKmMax(b); set("work", "km_dirty", true); }} />
             </Row>
           ) : (
-          <Row fid="rate" error={ferr("rate")} label={<>{t("w3_rate")}{!isSupplierTrade && <ReqTag />}</>}>
-            <div style={{ display: "flex", gap: 9 }}>
-              <input style={{ ...field, flex: 1 }} inputMode="numeric" value={f.day_rate_min}
-                     placeholder={t("w3_rate_from")}
-                     onChange={(e) => set("work", "day_rate_min", e.target.value)} />
-              <input style={{ ...field, flex: 1 }} inputMode="numeric" value={f.day_rate_max}
-                     placeholder={t("w3_rate_to")}
-                     onChange={(e) => set("work", "day_rate_max", e.target.value)} />
-            </div>
+          <Row label={t("w3_rate")}>
+            <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5 }}>{t("rate_on_dash")}</div>
           </Row>
           )}
 
