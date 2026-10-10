@@ -203,19 +203,26 @@ export function RiderHistory({ api }) {
     <div>
       {rows.map((j) => {
         const done = j.status === "delivered";
+        const cash = j.pay_method === "cod" && j.due_paise != null;
+        const tile = (label, value, tone) => (
+          <div style={{ flex: "1 1 120px", background: tone === "good" ? "#F2FAF5" : "#F6F8FB", border: `1px solid ${tone === "good" ? "#BEE3CB" : "#E5E7EB"}`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft, letterSpacing: 0.3, textTransform: "uppercase" }}>{label}</div>
+            <div style={{ fontSize: 19, fontWeight: 700, color: tone === "good" ? "#166534" : T.ink, marginTop: 2 }}>{value}</div>
+          </div>
+        );
         return (
           <div key={j.id} style={cardStyle}>
-            <OrderHeader name={j.other_name || j.drop_text} sub={`${dateTime(j.done_at || j.created_at)}`} />
-            <Banner tone={done ? "good" : "bad"} title={done ? t("jb_h_done") : t("jp_status_" + j.status)}>
-              {done && j.fee_paise != null && <div style={{ fontSize: 22, fontWeight: 800, color: "#0F6B33", marginTop: 6 }}>{String(t("jb_h_earned")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
-            </Banner>
-            <div style={{ fontSize: 13.5, color: T.inkSoft, margin: "6px 0" }}>{j.drop_text}</div>
-            {done && j.pay_method && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <PayBadge method={j.pay_method} paid={j.paid} t={t} />
-                {j.pay_method === "cod" && j.paid && j.due_paise != null && <span style={{ fontSize: 13.5, fontWeight: 700, color: T.inkSoft }}>{String(t("jb_h_cash")).replace("{n}", Math.round(j.due_paise / 100 * 100) / 100)}</span>}
+            <OrderHeader name={j.other_name || j.drop_text} sub={dateTime(j.done_at || j.created_at)} />
+            <Banner tone={done ? "good" : "bad"} title={done ? t("jb_h_done") : t("jp_status_" + j.status)} />
+            {done && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
+                {j.fee_paise != null && tile(t("jb_h_earned_l"), `\u20b9${Math.round(j.fee_paise / 100)}`, "good")}
+                {cash && j.paid && tile(t("jb_h_cash_l"), `\u20b9${Math.round(j.due_paise / 100 * 100) / 100}`)}
+                {j.pay_method === "upi" && tile(t("jb_h_pay_l"), j.paid ? `UPI \u00B7 ${t("pay_paid")}` : `UPI \u00B7 ${t("pay_unpaid")}`)}
               </div>
             )}
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.inkSoft, letterSpacing: 0.3, textTransform: "uppercase", margin: "10px 0 2px" }}>{t("jb_to")}</div>
+            <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.4 }}>{j.drop_text}</div>
             {done && j.order_id && canRate.has(j.order_id) && <DeliveryRateBox api={api} orderId={j.order_id} who="customer" onDone={(id) => setCanRate((s) => { const n = new Set(s); n.delete(id); return n; })} />}
           </div>
         );
