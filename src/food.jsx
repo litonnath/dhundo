@@ -1004,7 +1004,7 @@ function CustomerBanner({ o, t, eat = true }) {
   const note = <CancelNote o={o} />;
   if (o.status === "cancelled") return <Banner tone="bad" title={t("ob_cancelled")}>{note}</Banner>;
   if (o.status === "rejected") return <Banner tone="bad" title={k("ob_rejected")}>{note}</Banner>;
-  if (o.status === "delivered") return <Banner tone="good" title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
+  if (o.status === "delivered") return <Banner tone="good" title={t(o.mode === "pickup" ? "ob_collected" : "ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
   if (o.status === "placed") return <Banner tone="wait" title={k("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
   if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" title={t("ob_decide")} />;
   if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_norider")} sub={k("ob_norider_sub")} />;
@@ -1164,7 +1164,7 @@ export function OwnerHistory({ api }) {
         return (
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={o.total_paise} sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
-            <Banner tone={done ? "good" : "bad"} title={t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
+            <Banner tone={done ? "good" : "bad"} title={o.status === "delivered" && o.mode === "pickup" ? t("st_status_collected") : t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
               <CancelNote o={o} />
             </Banner>
             <ItemsBox lines={o.lines} />
@@ -1290,7 +1290,7 @@ export function OwnerOrders({ api, onHire }) {
             )}
             {o.status === "accepted" && <Btn disabled={busy === o.id} onClick={() => act(o, "ready")}>{t("ow_ready")}</Btn>}
             {/* A delivery rider confirms a delivery with the customer's code; the shop only marks it ready. */}
-            {o.mode === "pickup" && ["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_delivered")}</Btn>}
+            {o.mode === "pickup" && ["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_collected")}</Btn>}
             {o.mode !== "pickup" && o.status === "ready" && <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: T.inkSoft }}>{t("ow_wait_rider")}</div>}
           </div>
         </div>
