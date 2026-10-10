@@ -525,18 +525,20 @@ export function RatingsCard({ api, source = "shop", title = null }) {
 }
 
 // What the customer sees after a delivered order: stars, a few words, or a problem.
-export function RateBox({ api, orderId, onDone, title = null, submit = null }) {
+export function RateBox({ api, orderId, onDone, title = null, submit = null, problemLabel = null }) {
   const { t } = useI18n();
   const [stars, setStars] = useState(0);
   const [text, setText] = useState("");
   const [problem, setProblem] = useState(false);
   const [state, setState] = useState(null);
+  const [errText, setErrText] = useState("");
   const send = async () => {
     setState("busy");
     try {
       const r = one(submit ? await submit({ stars, comment: text, complaint: problem }) : await api.reviewAdd({ kind: "order", ref: orderId, stars, comment: text, complaint: problem }));
-      if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); } else setState("err");
-    } catch (_) { setState("err"); }
+      if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); }
+      else { setErrText(r && r.reason === "not_delivered" ? t("rt_err_notdone") : r && r.reason === "not_allowed" ? t("cn_err_not_yours") : ""); setState("err"); }
+    } catch (e) { setErrText(/could not find the function|schema cache|does not exist|404/i.test((e && e.message) || "") ? t("cn_err_update") : ""); setState("err"); }
   };
   if (state === "done") return <div style={{ margin: "8px 0", fontSize: 15, fontWeight: 800, color: "#157A43" }}>{"\u2713 "}{t("rt_thanks")}</div>;
   return (
@@ -551,9 +553,9 @@ export function RateBox({ api, orderId, onDone, title = null, submit = null }) {
         <>
           <input style={{ ...input, marginBottom: 8 }} value={text} maxLength={200} placeholder={t("rt_comment_ph")} onChange={(e) => setText(e.target.value)} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, marginBottom: 8, cursor: "pointer" }}>
-            <input type="checkbox" checked={problem} onChange={(e) => setProblem(e.target.checked)} style={{ width: 20, height: 20 }} /> {t("rt_problem")}
+            <input type="checkbox" checked={problem} onChange={(e) => setProblem(e.target.checked)} style={{ width: 20, height: 20 }} /> {problemLabel || t("rt_problem")}
           </label>
-          {state === "err" && <div style={{ fontSize: 13.5, color: "#B91C1C", marginBottom: 6 }}>{t("e_save")}</div>}
+          {state === "err" && <div role="alert" style={{ fontSize: 13.5, color: "#B91C1C", marginBottom: 6 }}>{errText || t("e_save")}</div>}
           <Btn full onClick={send} disabled={state === "busy"}>{state === "busy" ? "\u2026" : t("rt_send")}</Btn>
         </>
       )}
@@ -622,13 +624,13 @@ export function LearnPanel({ kind }) {
 // After a delivery: the customer rates the rider, or the rider rates the customer.
 export function DeliveryRateBox({ api, orderId, who, onDone }) {
   const { t } = useI18n();
-  return <RateBox api={api} orderId={orderId} onDone={onDone} title={t(who === "rider" ? "rt_rate_rider" : "rt_rate_customer")}
+  return <RateBox api={api} orderId={orderId} onDone={onDone} title={t(who === "rider" ? "rt_rate_rider" : "rt_rate_customer")} problemLabel={t("rt_problem_staff")}
                   submit={({ stars, comment, complaint }) => api.deliveryRate(orderId, stars, comment, complaint)} />;
 }
 
 // After a ride: the passenger rates the driver, or the driver rates the passenger.
 export function RideRateBox({ api, rideId, who, onDone }) {
   const { t } = useI18n();
-  return <RateBox api={api} orderId={rideId} onDone={onDone} title={t(who === "driver" ? "rt_rate_driver" : "rt_rate_passenger")}
+  return <RateBox api={api} orderId={rideId} onDone={onDone} title={t(who === "driver" ? "rt_rate_driver" : "rt_rate_passenger")} problemLabel={t("rt_problem_staff")}
                   submit={({ stars, comment, complaint }) => api.rideRate(rideId, stars, comment, complaint)} />;
 }

@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  rt_problem_staff: "Report a problem (only Dhundo staff see it)",
+  rt_err_notdone: "You can rate once the order is delivered.",
   rt_rate_driver: "Rate your driver",
   rt_rate_passenger: "Rate the passenger",
   rt_received: "Ratings you received",
