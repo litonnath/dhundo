@@ -69,9 +69,8 @@ function Row({ label, hint, error, fid, children }) {
   );
 }
 
-// A section that saves on its own. `dirty` decides whether the button is
-// offered at all, so an untouched section shows nothing to press and the
-// screen stays quiet until there is something to do.
+// A section that saves on its own. The Save button is always there so nobody
+// has to hunt for it; it is filled in once something has changed.
 function Section({ title, children, onSave, saving, saved, dirty, note }) {
   const { t } = useI18n();
   return (
@@ -86,19 +85,18 @@ function Section({ title, children, onSave, saving, saved, dirty, note }) {
       {note}
       {onSave && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
-          {dirty ? (
-            <button onClick={onSave} disabled={saving} style={{
-              padding: "11px 20px", borderRadius: 10, minHeight: 46, border: "none",
-              background: T.brandDark, color: "#fff", fontSize: 14.5, fontWeight: 700,
-              fontFamily: "inherit", cursor: saving ? "default" : "pointer",
-              opacity: saving ? 0.6 : 1,
-            }}>{saving ? t("saving") : t("p_save_this")}</button>
-          ) : saved ? (
+          <button onClick={onSave} disabled={saving} style={{
+            padding: "11px 24px", borderRadius: 10, minHeight: 48, border: dirty ? "none" : `1.5px solid ${T.brandDark}`,
+            background: dirty ? T.brandDark : "#fff", color: dirty ? "#fff" : T.brandDark, fontSize: 15, fontWeight: 800,
+            fontFamily: "inherit", cursor: saving ? "default" : "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}>{saving ? t("saving") : t("p_save_this")}</button>
+          {saved && !dirty && (
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5,
               fontWeight: 700, color: T.green,
             }}><Icon name="check" size={17} /> {t("p_saved")}</span>
-          ) : null}
+          )}
         </div>
       )}
     </div>
