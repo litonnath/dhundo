@@ -337,6 +337,12 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           <span style={{ flex: 1, fontSize: 15.5, fontWeight: 800, color: "#B91C1C" }}>{t("dc_alert")}</span>
         </button>
       )}
+      {kind === "owner" && profile && profile.noPin && (
+        <div role="alert" style={{ padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: "#FEF2F2", border: "1.5px solid #FCA5A5" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#B91C1C" }}>{t("db_noloc")}</div>
+          <button onClick={onProfile} style={{ marginTop: 8, minHeight: 42, padding: "0 18px", borderRadius: 21, border: "none", background: "#B91C1C", color: "#fff", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("db_setloc")}</button>
+        </div>
+      )}
       {profile && profile.pct < 100 && (
         <button onClick={onProfile} style={{ display: "block", width: "100%", textAlign: "left", padding: "14px 14px 12px", marginBottom: 12, borderRadius: 18, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer", fontFamily: "inherit" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>

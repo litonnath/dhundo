@@ -106,7 +106,7 @@ export function RiderJobs({ api, online, where = null }) {
         <div key={j.id} style={card}>
           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
             <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: T.ink }}>{j.shop}</span>
-            <span style={{ fontSize: 12.5, color: T.inkFaint }}>{String(t("jb_km")).replace("{n}", j.km)}</span>
+            {j.km != null && <span style={{ fontSize: 12.5, color: T.inkFaint }}>{String(t("jb_km")).replace("{n}", j.km)}</span>}
           </div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0" }}>{j.note}</div>
           <div style={{ fontSize: 14, color: T.ink }}>{t("jb_to")} {j.drop_text}</div>

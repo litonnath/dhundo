@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "ಆ್ಯಪ್ ಮುಚ್ಚಿದಾಗ ಎಚ್ಚರಿಕೆ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  db_noloc: "Your place has no exact location on the map. Delivery riders may not see your orders until you pin it.",
+  db_setloc: "Set location",
   fr_items: "items",
   fr_misc: "Miscellaneous fee",
   fr_small: "Small items",
