@@ -21,7 +21,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   const [part, setPart] = useState(() => {
     let want = null;
     try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : showWork ? "work" : null;
+    return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : null;
   });
   const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
   const tiles = (showWork ? [["work", "bag", t(workKey), badge], ["items", "tag", t("mb_mine"), 0]] : [
