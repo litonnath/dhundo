@@ -78,6 +78,17 @@ export function RiderJobs({ api, online, where = null }) {
           <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}</div>
           <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{j.status === "picked_up" ? j.drop_text : j.other_name}</div>
           <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0 10px" }}>{j.note}</div>
+          {(j.customer_phone || typeof j.drop_lat === "number") && (
+            <div style={{ background: "#F3F6FA", borderRadius: 12, padding: "10px 12px", margin: "0 0 10px" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                {j.customer_phone && <a href={`tel:${j.customer_phone}`} style={linkBtn(T.green)}>{t("jb_call_cust")}</a>}
+                {typeof j.drop_lat === "number" && typeof j.drop_lng === "number" && (
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.drop_lat},${j.drop_lng}`} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("jb_dir_cust")}</a>
+                )}
+              </div>
+            </div>
+          )}
           {j.status !== "picked_up" ? (
             <>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
