@@ -37,10 +37,11 @@ const statusColor = { requested: "#B45309", accepted: "#0F8A3C", declined: "#B91
 // ------------------------------------------------------------------- inbox
 export function useInbox(api, signedIn) {
   const [items, setItems] = useState([]);
+  const [notices, setNotices] = useState([]);
   const [seen, setSeen] = useState(readSeen);
   const reload = useCallback(async () => {
-    if (!signedIn) { setItems([]); return; }
-    try { if (api.bookingsCompleteDue) { try { await api.bookingsCompleteDue(); } catch (_) {} } setItems(many(await api.chatInbox())); } catch (_) { /* next tick */ }
+    if (!signedIn) { setItems([]); setNotices([]); return; }
+    try { if (api.bookingsCompleteDue) { try { await api.bookingsCompleteDue(); } catch (_) {} } setItems(many(await api.chatInbox())); if (api.bookingNotices) { try { setNotices(many(await api.bookingNotices())); } catch (_) {} } } catch (_) { /* next tick */ }
   }, [api, signedIn]);
   useEffect(() => {
     reload();
@@ -50,14 +51,14 @@ export function useInbox(api, signedIn) {
   }, [reload, signedIn]);
   const unread = items.reduce((n, x) => n + (x.unread || 0), 0);
   const alerts = items.filter((x) => (x.role === "worker" && x.status === "requested")
-    || (x.role === "customer" && x.status !== "requested" && seen[x.id] !== x.status)).length;
+    || (x.role === "customer" && x.status !== "requested" && seen[x.id] !== x.status)).length + notices.length;
   const markSeen = () => {
     const next = { ...readSeen() };
     items.forEach((x) => { next[x.id] = x.status; });
     try { window.localStorage.setItem(SEEN_KEY, JSON.stringify(next)); } catch (_) {}
     setSeen(next);
   };
-  return { items, reload, unread, alerts, markSeen };
+  return { items, notices, reload, unread, alerts, markSeen };
 }
 
 // -------------------------------------------------------------- chats tab

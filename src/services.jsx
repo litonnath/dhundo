@@ -460,6 +460,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    bookingNotices: () => rpc("services_my_booking_notices", {}, true),
+    bookingNoticeDismiss: (id) => rpc("services_booking_notice_dismiss", { p_id: id }, true),
     bookingRemove: (id) => rpc("services_booking_remove", { p_id: id }, true),
     chatDelete: (id) => rpc("services_chat_delete", { p_booking: id }, true),
     rideDriverPos: (id) => rpc("services_ride_driver_position", { p_ride: id }, true),
@@ -3343,7 +3345,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage key={ordersKey} hasBiz={hasListing && !isAdmin} bookings={inbox.items} onChat={(x) => setChatItem(x)} onBookingsChanged={inbox.reload} badge={ordersBadge} bizMode={effMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} notices={inbox.notices} onNoticeDismiss={async (id) => { try { await api.bookingNoticeDismiss(id); } catch (_) {} inbox.reload(); }} hasBiz={hasListing && !isAdmin} bookings={inbox.items} onChat={(x) => setChatItem(x)} onBookingsChanged={inbox.reload} badge={ordersBadge} bizMode={effMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (

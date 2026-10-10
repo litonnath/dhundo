@@ -13,7 +13,7 @@ import { RideRequests, RideHistory } from "./ride.jsx";
 import { MyBookings } from "./mybookings.jsx";
 
 
-export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false, bookings = [], hasBiz = false, onChat = null, onBookingsChanged = null }) {
+export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false, bookings = [], notices = [], onNoticeDismiss = null, hasBiz = false, onChat = null, onBookingsChanged = null }) {
   const { t } = useI18n();
   const [view, setView] = useState("active");
   const isWorker = !role && hasBiz && bizMode; // a cook, plumber and so on
@@ -66,7 +66,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
               }}>{t(key)}</button>
             ))}
           </div>
-          {part === "work" && isWorker && <MyBookings asWorker api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
+          {part === "work" && isWorker && <MyBookings asWorker notices={notices} onNoticeDismiss={onNoticeDismiss} api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "work" && !isWorker && view === "active" && (
             <>
               {role === "owner" && <OwnerOrders api={api} onHire={onHire} />}
@@ -76,7 +76,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
           )}
           {part === "work" && !isWorker && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
           {part === "mine" && <MyOrdersList api={api} view={view} showEmpty />}
-          {part === "bookings" && <MyBookings api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
+          {part === "bookings" && <MyBookings notices={notices} onNoticeDismiss={onNoticeDismiss} api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "items" && <ItemOrdersList api={api} onHire={onHire} view={view} />}
         </>
       )}

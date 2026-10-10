@@ -42,7 +42,7 @@ function ReschedPanel({ api, x, resched, setResched, busy, rmsg, setRmsg, onSave
   );
 }
 
-export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false }) {
+export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false, notices = [], onNoticeDismiss = null }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(null);
   const [resched, setResched] = useState(null); // { id, value }
@@ -50,7 +50,17 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const [sure, setSure] = useState(null);
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
   const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
-  if (!list.length) return <div style={{ color: T.inkSoft, padding: "14px 2px" }}>{t("mbk_empty")}</div>;
+  const noteBox = notices.length > 0 && (
+    <div>
+      {notices.map((n) => (
+        <div key={n.id} role="status" style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 10px", padding: "11px 14px", borderRadius: 14, background: "#FFF4E0", border: "1px solid #F3D48A", color: "#7A4A00", fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}>
+          <span style={{ flex: 1 }}>{n.body}</span>
+          {onNoticeDismiss && <button onClick={() => onNoticeDismiss(n.id)} style={{ minHeight: 38, padding: "0 14px", borderRadius: 19, border: "none", background: "#7A4A00", color: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, cursor: "pointer" }}>{t("mbk_ok")}</button>}
+        </div>
+      ))}
+    </div>
+  );
+  if (!list.length) return <div>{noteBox}<div style={{ color: T.inkSoft, padding: "14px 2px" }}>{t("mbk_empty")}</div></div>;
   const label = { requested: t(asWorker ? "mbk_needs_you" : "mbk_waiting"), accepted: t("mbk_accepted"), declined: t("mbk_declined"), completed: t("mbk_completed"), cancelled: t("mbk_cancelled") };
   const answer = async (x, ok) => { setBusy(x.id); try { await api.bookingAnswer(x.id, ok); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   const saveResched = async () => {
@@ -83,6 +93,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   ) : null;
   return (
     <div>
+      {noteBox}
       {list.map((x) => {
         const [fg, bg] = TONE[x.status] || TONE.cancelled;
         const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;

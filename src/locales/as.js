@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  mbk_ok: "OK",
   mbk_delete: "Delete",
   mbk_del_live: "Delete this booking? It is removed at once for you and the other person, with its chat.",
   mbk_del_past: "Delete this booking from your list?",
