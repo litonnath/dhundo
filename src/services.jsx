@@ -478,6 +478,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingCancel: (id) => rpc("services_booking_cancel", { p_id: id }, true),
     myHireRequests: () => rpc("services_my_hire_requests", {}, true),
     bookingsCompleteDue: () => rpc("services_bookings_complete_due", {}, true),
+    bookingReschedule: (id, iso) => rpc("services_booking_reschedule", { p_id: id, p_start: iso }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),

@@ -155,6 +155,54 @@ export function EarningsPanel({ api, kind, bizName = "" }) {
 //   * "Waiting" and "In progress" open the orders; the refresh button reloads.
 // It also refreshes itself every 15 seconds.
 // ---------------------------------------------------------------------------
+// A worker's rate, typed straight on the home page. Customers see the rate
+// card worked out from it (an hour, half a day, a day).
+function RateQuick({ api }) {
+  const { t } = useI18n();
+  const [lo, setLo] = useState("");
+  const [hi, setHi] = useState("");
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.myListing()).then((r) => {
+      const x = Array.isArray(r) ? r[0] : r;
+      if (alive && x) { setLo(x.day_rate_min ? String(x.day_rate_min) : ""); setHi(x.day_rate_max ? String(x.day_rate_max) : ""); }
+    }).catch(() => {}).finally(() => alive && setReady(true));
+    return () => { alive = false; };
+  }, [api]);
+  const save = async () => {
+    const a = Number(lo) || 0, b = Number(hi) || 0;
+    if (!a && !b) { setMsg(t("rq_need")); return; }
+    setBusy(true); setMsg("");
+    try {
+      const r = await api.updateMyListing({ p_day_rate_min: Math.min(a || b, b || a), p_day_rate_max: Math.max(a, b) });
+      const x = Array.isArray(r) ? r[0] : r;
+      setMsg(x && x.ok === false ? t("e_save") : t("p_saved"));
+    } catch (_) { setMsg(t("e_save")); }
+    setBusy(false);
+  };
+  const a = Number(lo) || 0, b = Number(hi) || 0;
+  const hour = (r) => Math.max(10, Math.round(r / 8 / 10) * 10);
+  const box = { ...input, minHeight: 46, marginBottom: 0, flex: 1, minWidth: 0, fontSize: 16, padding: "8px 10px" };
+  return (
+    <div style={{ margin: "0 0 14px", padding: "14px", borderRadius: 18, background: "#fff", border: "1px solid #CFE0F7", boxShadow: "0 2px 10px rgba(11,58,120,0.08)", opacity: ready ? 1 : 0.6 }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#0B3A78" }}>{t("rq_title")}</div>
+      <div style={{ fontSize: 13, color: T.inkSoft, margin: "2px 0 10px" }}>{t("rq_sub")}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontWeight: 800 }}>{"\u20B9"}</span>
+        <input style={box} inputMode="numeric" maxLength={6} value={lo} placeholder={t("rq_min")} onChange={(e) => { setMsg(""); setLo(e.target.value.replace(/\D/g, "")); }} />
+        <span>{"\u2013"}</span>
+        <input style={box} inputMode="numeric" maxLength={6} value={hi} placeholder={t("rq_max")} onChange={(e) => { setMsg(""); setHi(e.target.value.replace(/\D/g, "")); }} />
+        <Btn onClick={save} disabled={busy || !ready}>{busy ? "\u2026" : t("p_save")}</Btn>
+      </div>
+      {(a || b) ? <div style={{ fontSize: 13, color: "#166534", fontWeight: 700, marginTop: 8 }}>{String(t("rq_hour")).replace("{n}", a && b && a !== b ? `\u20B9${hour(a)} \u2013 \u20B9${hour(b)}` : `\u20B9${hour(a || b)}`)}</div> : null}
+      {msg && <div role="status" style={{ fontSize: 13.5, fontWeight: 700, marginTop: 6, color: msg === t("p_saved") ? "#157A43" : "#B91C1C" }}>{msg}</div>}
+    </div>
+  );
+}
+
 export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
@@ -283,6 +331,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const waNum = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   return (
     <div style={{ margin: "0 0 20px" }}>
+      {kind === "other" && <RateQuick api={api} />}
       {kind === "owner" && taking !== null && (
         <div style={{ padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: taking ? "#F0FAF4" : "#FEF2F2", border: `1.5px solid ${taking ? "#1FA85A" : "#FCA5A5"}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
