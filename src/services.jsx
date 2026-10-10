@@ -416,6 +416,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     setFuel: (f) => rpc("services_set_fuel", { p_fuel: f || null }, true),
     myRider: () => rpc("services_my_rider", {}, true),
     setRider: (o) => rpc("services_set_rider", { p_per_km_min: o.perKmMin === "" || o.perKmMin == null ? null : Number(o.perKmMin), p_per_km_max: o.perKmMax === "" || o.perKmMax == null ? null : Number(o.perKmMax), p_rides: !!o.rides, p_delivery: !!o.delivery }, true),
+    rateSetMax: (key, max) => rpc("services_rate_set_max", { p_key: key, p_max: max }, true),
     rateSetBand: (key, pct) => rpc("services_rate_set_band", { p_key: key, p_pct: pct }, true),
     pushSubscribe: (endpoint, p256dh, auth, lang) => rpc("services_push_subscribe", {
       p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_lang: lang,

@@ -4,9 +4,9 @@
 -- max(minimum, base + per km x km), where km = the restaurant to the customer
 -- plus the rider's trip to the restaurant beyond the first 2 km (road distance =
 -- 1.3 x the straight line). The low end assumes a rider right at the restaurant;
--- the high end is the most the fee can be: 100 rupees (or more if the trip itself costs more). The exact fee is set when a rider accepts.
+-- the high end is the admin's maximum (rate card max_rupees). The exact fee is set when a rider accepts.
 -- Replaces services_delivery_quote / services_delivery_fee from 178.
--- Run after 178_delivery_fee_card.sql and 191_pricing_defaults.sql.
+-- Run after 178_delivery_fee_card.sql, 191_pricing_defaults.sql and 197_fee_bounds.sql.
 -- ===========================================================================
 create or replace function public.services_fee_for_km(p_worker uuid, p_km numeric)
 returns int
@@ -16,7 +16,7 @@ security definer
 set search_path to 'public'
 as $fn$
   select coalesce((
-    select ceil(greatest(c.min_rupees, c.base_rupees + c.per_km_rupees * greatest(coalesce(p_km, 0), 0)))::int * 100
+    select least(c.max_rupees, ceil(greatest(c.min_rupees, c.base_rupees + c.per_km_rupees * greatest(coalesce(p_km, 0), 0)))::int) * 100
       from public.services_rate_card c
       join public.services_workers s on s.id = p_worker
       left join public.services_trades t on t.slug = s.trade_slug
@@ -57,7 +57,7 @@ begin
   return query select v_pick, v_drop, v_drop + greatest(0, v_pick - 2),
     public.services_fee_for_km(p_worker, v_drop + greatest(0, v_pick - 2)), v_found,
     public.services_fee_for_km(p_worker, v_drop),
-    greatest(10000, public.services_fee_for_km(p_worker, v_drop + 13));
+    public.services_fee_cap(p_worker);
 end;
 $fn$;
 revoke all on function public.services_delivery_quote(uuid, double precision, double precision) from public;
