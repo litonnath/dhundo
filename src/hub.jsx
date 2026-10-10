@@ -16,7 +16,7 @@ import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const card = { background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 };
+const card = { background: T.white, border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 15px", marginBottom: 12, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" };
 const h2 = { fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" };
 
 // A short beep and a buzz when a new job arrives, so a rider with the phone
@@ -77,7 +77,7 @@ export function RiderJobs({ api, online, where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={cardStyle}>
-          {!(where && where.manual) && <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "0 0 8px" }}>{"\u{1F4F1}"} {t("jb_keep_open")}</div>}
+          {!(where && where.manual) && <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "0 0 8px" }}>{t("jb_keep_open")}</div>}
           <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name}
                        sub={j.status === "picked_up" ? j.drop_text : j.note} />
           {j.fee_paise != null && <div style={{ fontSize: 14, fontWeight: 800, color: "#0F6B33", marginTop: 8 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
@@ -94,7 +94,7 @@ export function RiderJobs({ api, online, where = null }) {
               )}
             </div>
           )}
-          <Banner tone={j.status === "picked_up" ? "go" : "wait"} icon={j.status === "picked_up" ? "\u{1F6F5}" : "\u{1F3EA}"}
+          <Banner tone={j.status === "picked_up" ? "go" : "wait"}
                   title={j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}>
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
           </Banner>
@@ -105,8 +105,8 @@ export function RiderJobs({ api, online, where = null }) {
             const hasMap = typeof j.drop_lat === "number" && typeof j.drop_lng === "number";
             const customer = (j.customer_phone || hasMap) ? (
               <div style={grid}>
-                {j.customer_phone && <a href={`tel:${j.customer_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call_cust")}</a>}
-                {hasMap && <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.drop_lat},${j.drop_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("jb_dir_cust")}</a>}
+                {j.customer_phone && <a href={`tel:${j.customer_phone}`} style={callStyle}>{t("jb_call_cust")}</a>}
+                {hasMap && <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.drop_lat},${j.drop_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{t("jb_dir_cust")}</a>}
               </div>
             ) : null;
             const label = { fontSize: 12.5, fontWeight: 800, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 6px" };
@@ -114,9 +114,9 @@ export function RiderJobs({ api, online, where = null }) {
               <>
                 <div style={label}>{t("jb_shop")}</div>
                 <div style={grid}>
-                  {j.other_phone && <a href={`tel:${j.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call")}</a>}
+                  {j.other_phone && <a href={`tel:${j.other_phone}`} style={callStyle}>{t("jb_call")}</a>}
                   {typeof j.pickup_lat === "number" && (
-                    <button onClick={() => setNavFor(j)} style={{ ...outlineStyle, cursor: "pointer", fontFamily: "inherit" }}>{"\u{1F4CD}"} {t("jb_dir")}</button>
+                    <button onClick={() => setNavFor(j)} style={{ ...outlineStyle, cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
                   )}
                 </div>
                 <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
@@ -198,10 +198,10 @@ export function RiderHistory({ api }) {
         return (
           <div key={j.id} style={cardStyle}>
             <OrderHeader name={j.other_name || j.drop_text} sub={`${dateTime(j.done_at || j.created_at)}`} />
-            <Banner tone={done ? "good" : "bad"} icon={done ? "\u2705" : "\u274C"} title={done ? t("jb_h_done") : t("jp_status_" + j.status)}>
+            <Banner tone={done ? "good" : "bad"} title={done ? t("jb_h_done") : t("jp_status_" + j.status)}>
               {done && j.fee_paise != null && <div style={{ fontSize: 22, fontWeight: 800, color: "#0F6B33", marginTop: 6 }}>{String(t("jb_h_earned")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
             </Banner>
-            <div style={{ fontSize: 13.5, color: T.inkSoft, margin: "6px 0" }}>{"\u{1F4CD}"} {j.drop_text}</div>
+            <div style={{ fontSize: 13.5, color: T.inkSoft, margin: "6px 0" }}>{j.drop_text}</div>
             {done && j.pay_method && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <PayBadge method={j.pay_method} paid={j.paid} t={t} />

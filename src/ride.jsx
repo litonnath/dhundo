@@ -22,7 +22,7 @@ import { alertNewJob } from "./hub.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const card = { background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 };
+const card = { background: T.white, border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 15px", marginBottom: 12, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" };
 const linkBtn = (bg) => ({
   display: "inline-flex", alignItems: "center", background: bg, color: "#fff", borderRadius: 10,
   padding: "10px 14px", minHeight: 44, fontWeight: 700, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box",
@@ -277,7 +277,6 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
         )}
         {!accepted && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 0", padding: "10px 12px", background: info && info.count ? "#ECFDF3" : "#FFF7E6", borderRadius: 12 }}>
-            <span style={{ fontSize: 22 }}>{"\u{1F3CD}\u{FE0F}"}</span>
             <span style={{ fontSize: 14, fontWeight: 800, color: T.ink, lineHeight: 1.35 }}>
               {info && info.count
                 ? String(t("rd_eta")).replace("{n}", info.min)

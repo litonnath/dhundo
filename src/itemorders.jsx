@@ -110,7 +110,7 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
       {(rows || []).map((o) => {
         const total = o.offer_rupees + Math.round((o.delivery_fee_paise || 0) / 100);
         return (
-          <div key={o.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${STATUS_COLOR[o.status] || T.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+          <div key={o.id} style={{ border: "1px solid #E5E7EB", borderLeft: `4px solid ${STATUS_COLOR[o.status] || T.line}`, borderRadius: 14, boxShadow: "0 1px 2px rgba(15,23,42,0.04)", padding: "14px 15px", marginBottom: 10 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <span style={{ width: 54, height: 54, borderRadius: 10, flexShrink: 0, background: o.photo ? `center/cover url(${o.photo}) ${T.line}` : T.brandSoft }} />
               <span style={{ flex: 1, minWidth: 0 }}>

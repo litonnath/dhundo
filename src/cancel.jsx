@@ -113,8 +113,8 @@ export function DueTimer({ due, style }) {
   const diff = Math.round((at - now) / 60000);
   const late = diff < 0;
   return (
-    <div role="timer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 800, padding: "5px 11px", borderRadius: 14, margin: "4px 0", background: late ? "#FEF2F2" : "#ECFDF3", color: late ? "#B91C1C" : "#0F6B33", ...style }}>
-      <span aria-hidden="true">{"\u23F1"}</span>
+    <div role="timer" style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, padding: "4px 11px", borderRadius: 999, margin: "4px 0", background: "#fff", border: `1px solid ${late ? "#EFC4C4" : "#BEE3CB"}`, color: late ? "#A32424" : "#166534", ...style }}>
+      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: late ? "#DC2626" : "#16A34A" }} />
       {t("tm_due")} {new Date(due).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} {"\u00B7"} {late ? String(t("tm_late")).replace("{n}", spanText(-diff, t)) : String(t("tm_left")).replace("{n}", spanText(Math.max(diff, 0), t))}
     </div>
   );

@@ -8,15 +8,15 @@ import { T } from "./ui.jsx";
 const rup = (p) => `₹${(Number(p || 0) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 export const cardStyle = {
-  background: "#fff", border: "1px solid #E7EAF0", borderRadius: 20, padding: 16, marginBottom: 14,
-  boxShadow: "0 2px 10px rgba(15,23,42,0.05)",
+  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, padding: "16px 16px 14px", marginBottom: 12,
+  boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
 };
 
 const TONES = {
-  wait: { bg: "#FFF7E6", fg: "#8A5A00", line: "#F5D58C" },
-  go: { bg: "#EAF2FF", fg: "#0A4FA3", line: "#B9D4FA" },
-  good: { bg: "#ECFDF3", fg: "#0F6B33", line: "#A7E3BE" },
-  bad: { bg: "#FEF2F2", fg: "#B91C1C", line: "#FCA5A5" },
+  wait: { bg: "#FFFBF0", fg: "#92600A", line: "#F1D9A0", dot: "#D99A1F" },
+  go: { bg: "#F3F7FD", fg: "#1E4E8C", line: "#CFDDF0", dot: "#2563EB" },
+  good: { bg: "#F2FAF5", fg: "#166534", line: "#BEE3CB", dot: "#16A34A" },
+  bad: { bg: "#FDF4F4", fg: "#A32424", line: "#EFC4C4", dot: "#DC2626" },
 };
 
 // Who and how much: a round initial, the name, a small line under it, and the
@@ -25,26 +25,23 @@ export function OrderHeader({ name, sub, amount }) {
   const ini = String(name || "?").trim().charAt(0).toUpperCase();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <span style={{ width: 44, height: 44, borderRadius: 14, background: "#EAF2FF", color: "#0A4FA3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800, flexShrink: 0 }}>{ini}</span>
+      <span style={{ width: 38, height: 38, borderRadius: 10, background: "#F1F3F6", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>{ini}</span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: T.ink, lineHeight: 1.25, overflowWrap: "anywhere" }}>{name}</span>
+        <span style={{ display: "block", fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.25, overflowWrap: "anywhere" }}>{name}</span>
         {sub && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{sub}</span>}
       </span>
-      {amount != null && <span style={{ fontSize: 18, fontWeight: 800, color: T.ink, flexShrink: 0 }}>{rup(amount)}</span>}
+      {amount != null && <span style={{ fontSize: 16, fontWeight: 700, color: T.ink, flexShrink: 0 }}>{rup(amount)}</span>}
     </div>
   );
 }
 
 // The one thing to know right now, large, with an icon and an optional timer.
-export function Banner({ tone = "go", icon, title, sub, children }) {
+export function Banner({ tone = "go", title, sub, children }) {
   const c = TONES[tone] || TONES.go;
   return (
-    <div style={{ background: c.bg, border: `1px solid ${c.line}`, borderRadius: 16, padding: "12px 14px", margin: "12px 0 6px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {icon && <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1 }}>{icon}</span>}
-        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: c.fg, lineHeight: 1.3 }}>{title}</span>
-      </div>
-      {sub && <div style={{ fontSize: 13.5, color: c.fg, opacity: 0.9, lineHeight: 1.45, marginTop: 4 }}>{sub}</div>}
+    <div style={{ background: c.bg, border: `1px solid ${c.line}`, borderLeft: `4px solid ${c.dot}`, borderRadius: 10, padding: "11px 14px", margin: "12px 0 6px" }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: c.fg, lineHeight: 1.3 }}>{title}</div>
+      {sub && <div style={{ fontSize: 13, color: c.fg, opacity: 0.88, lineHeight: 1.45, marginTop: 3 }}>{sub}</div>}
       {children}
     </div>
   );
@@ -59,11 +56,11 @@ export function Steps({ steps, at }) {
         const done = i < at, cur = i === at, on = i <= at;
         return (
           <div key={i} style={{ flex: 1, textAlign: "center", position: "relative", minWidth: 0 }}>
-            {i > 0 && <span style={{ position: "absolute", top: 11, right: "50%", width: "100%", height: 3, background: i <= at ? "#16A34A" : "#E1E5EA" }} />}
-            <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: cur ? 26 : 22, height: cur ? 26 : 22, marginTop: cur ? -2 : 0, borderRadius: "50%", background: on ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 13, fontWeight: 800, lineHeight: 1, boxShadow: cur ? "0 0 0 5px rgba(22,163,74,0.18)" : "none" }}>
+            {i > 0 && <span style={{ position: "absolute", top: 10, right: "50%", width: "100%", height: 2, background: i <= at ? "#166534" : "#E5E7EB" }} />}
+            <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: on ? "#166534" : "#fff", border: on ? "none" : "2px solid #D1D5DB", color: on ? "#fff" : "#9CA3AF", fontSize: 11, fontWeight: 700, lineHeight: 1, boxShadow: cur ? "0 0 0 4px rgba(22,101,52,0.15)" : "none", boxSizing: "border-box" }}>
               {done ? "✓" : i + 1}
             </span>
-            <div style={{ fontSize: 11.5, fontWeight: cur ? 800 : 600, color: on ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 5, padding: "0 2px", overflowWrap: "anywhere" }}>{label}</div>
+            <div style={{ fontSize: 11.5, fontWeight: cur ? 700 : 500, color: on ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 5, padding: "0 2px", overflowWrap: "anywhere" }}>{label}</div>
           </div>
         );
       })}
@@ -76,10 +73,10 @@ export function ItemsBox({ lines }) {
   const rows = Array.isArray(lines) ? lines : [];
   if (rows.length === 0) return null;
   return (
-    <div style={{ margin: "8px 0", padding: "10px 12px", background: "#F7F8FA", borderRadius: 12 }}>
+    <div style={{ margin: "8px 0", borderTop: "1px solid #EEF0F3" }}>
       {rows.map((l, i) => (
-        <div key={i} style={{ display: "flex", gap: 8, fontSize: 14.5, color: T.ink, padding: "2px 0" }}>
-          <span style={{ fontWeight: 800, minWidth: 28 }}>{l.qty} {"×"}</span>
+        <div key={i} style={{ display: "flex", gap: 10, fontSize: 14, color: T.ink, padding: "7px 0", borderBottom: "1px solid #EEF0F3" }}>
+          <span style={{ color: T.inkSoft, minWidth: 26, fontWeight: 600 }}>{l.qty}{"\u00D7"}</span>
           <span style={{ flex: 1, overflowWrap: "anywhere" }}>{l.name}</span>
         </div>
       ))}
@@ -93,7 +90,7 @@ export function Fold({ title, right, children }) {
   return (
     <div style={{ margin: "6px 0", borderTop: "1px solid #EEF0F4" }}>
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} style={{ display: "flex", alignItems: "center", width: "100%", minHeight: 44, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, textAlign: "left" }}>
-        <span style={{ flex: 1, fontSize: 14.5, fontWeight: 800, color: T.brandDark }}>{title}</span>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: T.ink }}>{title}</span>
         {right && <span style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, marginRight: 8 }}>{right}</span>}
         <span aria-hidden="true" style={{ color: T.inkSoft, fontSize: 13 }}>{open ? "▲" : "▼"}</span>
       </button>
@@ -107,18 +104,18 @@ export function Actions({ children, style }) {
   return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10, paddingTop: 12, borderTop: "1px solid #EEF0F4", ...style }}>{children}</div>;
 }
 
-export const callStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 16px", borderRadius: 14, background: "#16A34A", color: "#fff", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
-export const outlineStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 16px", borderRadius: 14, background: "#fff", color: "#0A4FA3", border: "1.5px solid #0A4FA3", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
+export const callStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 16px", borderRadius: 10, background: "#166534", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
+export const outlineStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 16px", borderRadius: 10, background: "#fff", color: "#1E4E8C", border: "1px solid #B8C9E0", fontWeight: 600, fontSize: 14, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
 
 // Paid or unpaid, and how: a clear pill. method is 'cod' or 'upi'.
 export function PayBadge({ method, paid, claimed, t, style }) {
   const how = method === "upi" ? "UPI" : t("pay_cod");
-  let c = TONES.wait, text = `${t("pay_unpaid")} \u00B7 ${how}`, icon = "\u{1F4B5}";
-  if (paid) { c = TONES.good; text = `${t("pay_paid")} \u00B7 ${how}`; icon = "\u2705"; }
-  else if (method === "upi" && claimed) { c = TONES.go; text = t("pay_claimed"); icon = "\u{1F4F2}"; }
+  let c = TONES.wait, text = `${t("pay_unpaid")} \u00B7 ${how}`;
+  if (paid) { c = TONES.good; text = `${t("pay_paid")} \u00B7 ${how}`; }
+  else if (method === "upi" && claimed) { c = TONES.go; text = t("pay_claimed"); }
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 800, padding: "5px 12px", borderRadius: 14, background: c.bg, color: c.fg, border: `1px solid ${c.line}`, ...style }}>
-      <span aria-hidden="true">{icon}</span>{text}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, padding: "4px 11px", borderRadius: 999, background: c.bg, color: c.fg, border: `1px solid ${c.line}`, ...style }}>
+      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: c.dot }} />{text}
     </span>
   );
 }

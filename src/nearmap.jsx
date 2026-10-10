@@ -354,11 +354,11 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
       // the restaurant is a shop icon, and the rider is smaller than both so
       // he never hides the door when he arrives.
       const big = (c, emoji, size, label) => L.divIcon({ className: "", iconSize: [size, size + (label ? 18 : 0)], iconAnchor: [size / 2, size / 2],
-        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size * 0.5)}px">${emoji}</div>${label ? `<div style="margin-top:2px;text-align:center;font:800 12px sans-serif;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap">${label}</div>` : ""}` });
+        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">${emoji}</div>${label ? `<div style="margin-top:2px;text-align:center;font:800 12px sans-serif;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap">${label}</div>` : ""}` });
       const pts = [];
-      if (pick && delivery) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: big("#16A34A", "\u{1F3EA}", 28), zIndexOffset: 200 }).addTo(layer); }
+      if (pick && delivery) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: big("#166534", `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M4 9l1.5-5h13L20 9M4 9v10h16V9M4 9h16M9 19v-5h6v5"/></svg>`, 28), zIndexOffset: 200 }).addTo(layer); }
       else if (pick) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer); }
-      if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: delivery ? big("#DC2626", "\u{1F3E0}", 34, "You") : dot("#DC2626", "B"), zIndexOffset: delivery ? 500 : 0 }).addTo(layer); pts.push([drop.lat, drop.lng]); }
+      if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: delivery ? big("#B91C1C", `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6"/></svg>`, 34, "You") : dot("#DC2626", "B"), zIndexOffset: delivery ? 500 : 0 }).addTo(layer); pts.push([drop.lat, drop.lng]); }
       if (driver) {
         const h = Math.round(driver.heading || 0);
         L.marker([driver.lat, driver.lng], {
@@ -416,7 +416,7 @@ export function PassengerLive({ api, ride }) {
     <div>
       <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={drv} />
       <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
-        {drv && km != null && km < 0.12 ? `\u2705 ${t("rd_live_arrived")}` : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
+        {drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
       </div>
     </div>
   );
@@ -525,7 +525,7 @@ export function DeliveryLive({ api, orderId, riderName }) {
     <div style={{ margin: "10px 0" }}>
       <LiveRideMap pick={shop} drop={door} driver={rider} route={route} delivery />
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink, marginTop: 8 }}>
-        {reached ? "\u2705 " : "\u{1F6F5} "}{riderName ? `${riderName}: ` : ""}{text}
+        {riderName ? `${riderName}: ` : ""}{text}
       </div>
       {stale != null && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 2 }}>{String(t("dl_stale")).replace("{n}", stale)}</div>}
       {eta != null && !reached && <div style={{ fontSize: 14, fontWeight: 700, color: T.brandDark, marginTop: 2 }}>{String(picked ? t("dl_eta_you") : t("dl_eta_shop")).replace("{n}", eta)}</div>}
@@ -627,7 +627,7 @@ export function RiderJobMap({ api, job, where = null, onChanged = null }) {
         </div>
       )}
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink }}>
-        {reached ? `\u2705 ${picked ? t("rm_at_customer") : t("rm_at_shop")}`
+        {reached ? (picked ? t("rm_at_customer") : t("rm_at_shop"))
           : !me ? t("rm_locating")
           : eta ? String(picked ? t("rm_to_customer") : t("rm_to_shop")).replace("{km}", eta.km < 10 ? eta.km.toFixed(1) : Math.round(eta.km)).replace("{n}", eta.min)
           : km != null ? String(picked ? t("rm_to_customer_km") : t("rm_to_shop_km")).replace("{km}", fmtKm(km)) : ""}

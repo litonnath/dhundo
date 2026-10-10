@@ -24,7 +24,7 @@ import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const rupees = (p) => { const v = Math.round(Number(p) || 0) / 100; return `\u20b9${Number.isInteger(v) ? v : v.toFixed(2)}`; };
-const card = { background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 };
+const card = { background: T.white, border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 15px", marginBottom: 12, boxShadow: "0 1px 2px rgba(15,23,42,0.04)" };
 const GREEN = "#0F8A3C", RED = "#B91C1C";
 
 // What a typed word most likely means, so the search can offer the right kind
@@ -818,8 +818,8 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
             {!["rejected", "cancelled", "delivered"].includes(o.status) && (
               <Actions>
-                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_shop")}</a>}
-                {o.rider_name && o.rider_phone && <a href={`tel:${o.rider_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_rider")}</a>}
+                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t("st_call_shop")}</a>}
+                {o.rider_name && o.rider_phone && <a href={`tel:${o.rider_phone}`} style={callStyle}>{t("st_call_rider")}</a>}
                 {o.mode === "delivery" && o.job_status === "expired" && !o.rider_name && (
                   <Btn onClick={async () => { try { await api.orderToPickup(o.id); } catch (_) {} load(); }}>{t("ob_to_pickup")}</Btn>
                 )}
@@ -867,20 +867,20 @@ function OwnerBanner({ o, t }) {
   const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
   const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
   const at = (d) => new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (o.status === "placed") return <Banner tone="wait" icon={"\u{1F514}"} title={t("ob_o_new")} sub={t("ob_o_new_sub")} />;
-  if (o.status === "confirmed") return <Banner tone="wait" icon={"\u{1F4B0}"} title={t("ob_o_fee")} />;
-  if (o.status === "quoted") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_o_wait_cust")} />;
-  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" icon={"\u{1F6D1}"} title={t("ob_o_norider")} />;
+  if (o.status === "placed") return <Banner tone="wait" title={t("ob_o_new")} sub={t("ob_o_new_sub")} />;
+  if (o.status === "confirmed") return <Banner tone="wait" title={t("ob_o_fee")} />;
+  if (o.status === "quoted") return <Banner tone="wait" title={t("ob_o_wait_cust")} />;
+  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_o_norider")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
-    if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_out")}>{timer}</Banner>;
-    if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_rider_coming")} sub={String(t("ow_rider_is")).replace("{name}", o.rider_name)}>{timer}</Banner>;
-    if (o.status === "ready") return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_o_ready_wait")}>{timer}</Banner>;
-    if (o.mode === "delivery" && !o.job_id && o.rider_after) return <Banner tone="go" icon={"\u{1F373}"} title={t("ob_o_prep")} sub={String(t("st_prep_owner")).replace("{t}", at(o.rider_after))}>{timer}</Banner>;
-    return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_finding")} sub={t("ow_rider_wait")}>{timer}</Banner>;
+    if (o.job_status === "picked_up") return <Banner tone="go" title={t("ob_o_out")}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" title={t("ob_o_rider_coming")} sub={String(t("ow_rider_is")).replace("{name}", o.rider_name)}>{timer}</Banner>;
+    if (o.status === "ready") return <Banner tone="wait" title={t("ob_o_ready_wait")}>{timer}</Banner>;
+    if (o.mode === "delivery" && !o.job_id && o.rider_after) return <Banner tone="go" title={t("ob_o_prep")} sub={String(t("st_prep_owner")).replace("{t}", at(o.rider_after))}>{timer}</Banner>;
+    return <Banner tone="wait" title={t("ob_finding")} sub={t("ow_rider_wait")}>{timer}</Banner>;
   }
   return o.status === "ready"
-    ? <Banner tone="good" icon={"\u{1F6CD}\uFE0F"} title={t("ob_o_ready_collect")} />
-    : <Banner tone="go" icon={"\u{1F373}"} title={t("ob_o_prep")} sub={t("ob_o_prep_sub")} />;
+    ? <Banner tone="good" title={t("ob_o_ready_collect")} />
+    : <Banner tone="go" title={t("ob_o_prep")} sub={t("ob_o_prep_sub")} />;
 }
 
 // An order placed without a pinned location: the customer pins it now, so the
@@ -912,21 +912,21 @@ function CustomerBanner({ o, t }) {
   const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
   const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
   const note = <CancelNote o={o} />;
-  if (o.status === "cancelled") return <Banner tone="bad" icon={"\u274C"} title={t("ob_cancelled")}>{note}</Banner>;
-  if (o.status === "rejected") return <Banner tone="bad" icon={"\u274C"} title={t("ob_rejected")}>{note}</Banner>;
-  if (o.status === "delivered") return <Banner tone="good" icon={"\u2705"} title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
-  if (o.status === "placed") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
-  if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" icon={"\u{1F4AC}"} title={t("ob_decide")} />;
-  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" icon={"\u{1F6D1}"} title={t("ob_norider")} sub={t("ob_norider_sub")} />;
+  if (o.status === "cancelled") return <Banner tone="bad" title={t("ob_cancelled")}>{note}</Banner>;
+  if (o.status === "rejected") return <Banner tone="bad" title={t("ob_rejected")}>{note}</Banner>;
+  if (o.status === "delivered") return <Banner tone="good" title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
+  if (o.status === "placed") return <Banner tone="wait" title={t("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
+  if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" title={t("ob_decide")} />;
+  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" title={t("ob_norider")} sub={t("ob_norider_sub")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
-    if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) : null}>{timer}</Banner>;
-    if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name)}>{timer}</Banner>;
-    if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_finding")} sub={t("st_finding_rider")}>{timer}</Banner>;
-    return <Banner tone="go" icon={"\u{1F373}"} title={t("ob_prep")} sub={String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}>{timer}</Banner>;
+    if (o.job_status === "picked_up") return <Banner tone="go" title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) : null}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name)}>{timer}</Banner>;
+    if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" title={t("ob_finding")} sub={t("st_finding_rider")}>{timer}</Banner>;
+    return <Banner tone="go" title={t("ob_prep")} sub={String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}>{timer}</Banner>;
   }
   return o.status === "ready"
-    ? <Banner tone="good" icon={"\u{1F6CD}\uFE0F"} title={t("ob_ready_pickup")} />
-    : <Banner tone="go" icon={"\u{1F373}"} title={t("ob_prep")} sub={t("ob_prep_pickup_sub")} />;
+    ? <Banner tone="good" title={t("ob_ready_pickup")} />
+    : <Banner tone="go" title={t("ob_prep")} sub={t("ob_prep_pickup_sub")} />;
 }
 
 function OrderTrack({ o }) {
@@ -1072,7 +1072,7 @@ export function OwnerHistory({ api }) {
         return (
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={o.total_paise + (o.gst_paise || 0)} sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
-            <Banner tone={done ? "good" : "bad"} icon={done ? "\u2705" : "\u274C"} title={t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
+            <Banner tone={done ? "good" : "bad"} title={t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
               <CancelNote o={o} />
             </Banner>
             <ItemsBox lines={o.lines} />
@@ -1109,7 +1109,7 @@ export function OwnerOrders({ api, onHire }) {
           <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>
           {(o.address_text || o.note) && (
             <div style={{ padding: "10px 12px", background: "#F7F8FA", borderRadius: 12, margin: "8px 0" }}>
-              {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{"\u{1F4CD}"} {o.address_text}</div>}
+              {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{o.address_text}</div>}
               {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic", marginTop: 4 }}>{o.note}</div>}
             </div>
           )}
@@ -1118,11 +1118,11 @@ export function OwnerOrders({ api, onHire }) {
             {!o.paid && <Btn kind="ghost" disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderPay(o.id, "mark_paid"); } catch (_) {} setBusy(null); load(); }}>{t("pay_mark_paid")}</Btn>}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
-            {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call_cust")}</a>}
+            {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t("jb_call_cust")}</a>}
             {o.mode !== "pickup" && (typeof o.cust_lat === "number" && typeof o.cust_lng === "number" ? (
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.cust_lat},${o.cust_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("ow_cust_map")}</a>
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.cust_lat},${o.cust_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{t("ow_cust_map")}</a>
             ) : o.address_text ? (
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address_text)}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("ow_cust_map")}</a>
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address_text)}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{t("ow_cust_map")}</a>
             ) : null)}
           </div>
           {["confirmed", "quoted", "accepted", "ready"].includes(o.status) && (
