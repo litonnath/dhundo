@@ -5,7 +5,7 @@
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
-import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
+import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -608,6 +608,9 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const [addr, setAddr] = useState(() => (place && typeof place.lat === "number" ? place : null));
   const [note, setNote] = useState("");
   const [needBy, setNeedBy] = useState("");
+  const [shopPay, setShopPay] = useState(null);
+  const [payHow, setPayHow] = useState("cod");
+  useEffect(() => { let alive = true; Promise.resolve(api.storePay ? api.storePay(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) { setShopPay(x); if (x.accepts_cash === false && x.accepts_upi) setPayHow("upi"); } }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const signedIn = !!(user && user.id);
@@ -628,7 +631,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
         mode !== "pickup" ? addrText : null, addr && addr.lat, addr && addr.lng,
         (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note));
-      if (r && r.ok) onDone();
+      if (r && r.ok) { if (r.order_id && payHow !== "cod" && api.orderPay) { try { await api.orderPay(r.order_id, payHow); } catch (_) {} } onDone(); }
       else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
@@ -712,6 +715,17 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("st_pay_note")}</p>
         {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
+        {shopPay && shopPay.accepts_upi && (shopPay.accepts_cash !== false) && (
+          <div style={{ margin: "0 0 12px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("pay_how")}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["cod", t("pay_cod")], ["upi", "UPI"]].map(([k, label]) => (
+                <button key={k} onClick={() => setPayHow(k)} aria-pressed={payHow === k} style={{ flex: 1, minHeight: 48, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 15, border: `2px solid ${payHow === k ? T.brandDark : T.line}`, background: payHow === k ? T.brandSoft : "#fff", color: T.ink }}>{label}</button>
+              ))}
+            </div>
+            {payHow === "upi" && shopPay.upi_id && <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>{t("pay_upi_hint")} <b>{shopPay.upi_id}</b></div>}
+          </div>
+        )}
         <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? `${t("st_place")} · ${rupees(total)}` : t("nav_signin")}</Btn>
       </div>
     </div>
@@ -749,6 +763,17 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ fontSize: 14, fontWeight: 800, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} />
             </Fold>
+            {!["rejected", "cancelled"].includes(o.status) && (
+              <div style={{ margin: "8px 0" }}>
+                <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
+                {o.pay_method === "upi" && !o.paid && !o.upi_claimed && o.status !== "delivered" && (
+                  <div style={{ marginTop: 8 }}><Btn kind="ghost" onClick={async () => { try { await api.orderPay(o.id, "upi_sent"); } catch (_) {} load(); }}>{t("pay_i_paid")}</Btn></div>
+                )}
+                {!o.paid && o.status !== "delivered" && (
+                  <button onClick={async () => { try { await api.orderPay(o.id, o.pay_method === "upi" ? "cod" : "upi"); } catch (_) {} load(); }} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", padding: "8px 0 0", minHeight: 36 }}>{o.pay_method === "upi" ? t("pay_switch_cod") : t("pay_switch_upi")}</button>
+                )}
+              </div>
+            )}
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", marginBottom: 6 }}>{t("st_confirmed_msg")}</div>
@@ -1034,6 +1059,10 @@ export function OwnerOrders({ api, onHire }) {
               {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic", marginTop: 4 }}>{o.note}</div>}
             </div>
           )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
+            <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
+            {!o.paid && <Btn kind="ghost" disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderPay(o.id, "mark_paid"); } catch (_) {} setBusy(null); load(); }}>{t("pay_mark_paid")}</Btn>}
+          </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
             {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call_cust")}</a>}
             {o.mode !== "pickup" && (typeof o.cust_lat === "number" && typeof o.cust_lng === "number" ? (

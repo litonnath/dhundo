@@ -12,7 +12,7 @@ returns table (id uuid, role text, status text, note text, drop_text text, fee_p
                pickup_lat double precision, pickup_lng double precision,
                customer_name text, customer_phone text,
                drop_lat double precision, drop_lng double precision,
-               due_at timestamptz)
+               due_at timestamptz, pay_method text, paid boolean, due_paise int, order_id uuid)
 language sql
 stable
 security definer
@@ -23,7 +23,8 @@ as $fn$
          case when j.rider_work is not null then r.full_name::text end,
          case when j.rider_work is not null then r.phone::text end,
          j.created_at, j.expires_at, null::double precision, null::double precision,
-         null::text, null::text, null::double precision, null::double precision, null::timestamptz
+         null::text, null::text, null::double precision, null::double precision, null::timestamptz,
+         null::text, null::boolean, null::int, null::uuid
     from public.services_jobs j
     left join public.services_workers r on r.id = j.rider_work
    where j.poster_id = public.services_account_id() and j.created_at > now() - interval '3 days'
@@ -37,7 +38,10 @@ as $fn$
          case when j.status in ('accepted', 'picked_up') then c.phone::text end,
          case when j.status in ('accepted', 'picked_up') then o.lat end,
          case when j.status in ('accepted', 'picked_up') then o.lng end,
-         case when o.id is not null then o.created_at + make_interval(mins => coalesce(p.delivery_mins, 60)) end
+         case when o.id is not null then o.created_at + make_interval(mins => coalesce(p.delivery_mins, 60)) end,
+         o.pay_method, o.paid,
+         case when o.id is not null then o.total_paise + o.gst_paise + o.delivery_fee_paise + o.delivery_gst_paise + o.misc_fee_paise + o.misc_gst_paise end,
+         o.id
     from public.services_jobs j
     join public.services_workers rw on rw.id = j.rider_work and rw.user_id = public.services_account_id()
     join public.services_workers p on p.id = j.poster_work

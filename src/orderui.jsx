@@ -60,7 +60,7 @@ export function Steps({ steps, at }) {
         return (
           <div key={i} style={{ flex: 1, textAlign: "center", position: "relative", minWidth: 0 }}>
             {i > 0 && <span style={{ position: "absolute", top: 11, right: "50%", width: "100%", height: 3, background: i <= at ? "#16A34A" : "#E1E5EA" }} />}
-            <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: cur ? 26 : 22, height: cur ? 26 : 22, marginTop: cur ? -2 : 0, borderRadius: "50%", background: on ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 12, fontWeight: 800, boxShadow: cur ? "0 0 0 5px rgba(22,163,74,0.18)" : "none" }}>
+            <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: cur ? 26 : 22, height: cur ? 26 : 22, marginTop: cur ? -2 : 0, borderRadius: "50%", background: on ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 13, fontWeight: 800, lineHeight: 1, boxShadow: cur ? "0 0 0 5px rgba(22,163,74,0.18)" : "none" }}>
               {done ? "✓" : i + 1}
             </span>
             <div style={{ fontSize: 11.5, fontWeight: cur ? 800 : 600, color: on ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 5, padding: "0 2px", overflowWrap: "anywhere" }}>{label}</div>
@@ -109,3 +109,16 @@ export function Actions({ children, style }) {
 
 export const callStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 16px", borderRadius: 14, background: "#16A34A", color: "#fff", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
 export const outlineStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 46, padding: "0 16px", borderRadius: 14, background: "#fff", color: "#0A4FA3", border: "1.5px solid #0A4FA3", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box", flex: "1 1 auto" };
+
+// Paid or unpaid, and how: a clear pill. method is 'cod' or 'upi'.
+export function PayBadge({ method, paid, claimed, t, style }) {
+  const how = method === "upi" ? "UPI" : t("pay_cod");
+  let c = TONES.wait, text = `${t("pay_unpaid")} \u00B7 ${how}`, icon = "\u{1F4B5}";
+  if (paid) { c = TONES.good; text = `${t("pay_paid")} \u00B7 ${how}`; icon = "\u2705"; }
+  else if (method === "upi" && claimed) { c = TONES.go; text = t("pay_claimed"); icon = "\u{1F4F2}"; }
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 800, padding: "5px 12px", borderRadius: 14, background: c.bg, color: c.fg, border: `1px solid ${c.line}`, ...style }}>
+      <span aria-hidden="true">{icon}</span>{text}
+    </span>
+  );
+}

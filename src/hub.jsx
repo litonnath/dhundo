@@ -4,7 +4,7 @@
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
-import { OrderHeader, Banner, Steps, cardStyle } from "./orderui.jsx";
+import { OrderHeader, Banner, Steps, Fold, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
@@ -76,42 +76,65 @@ export function RiderJobs({ api, online, where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={cardStyle}>
-          <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name} amount={j.fee_paise}
+          <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name}
                        sub={j.status === "picked_up" ? j.drop_text : j.note} />
+          {j.fee_paise != null && <div style={{ fontSize: 14, fontWeight: 800, color: "#0F6B33", marginTop: 8 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
+          {j.pay_method && (
+            <div style={{ margin: "10px 0 0", padding: "10px 12px", borderRadius: 14, background: j.paid ? "#ECFDF3" : "#FFF7E6", border: `1px solid ${j.paid ? "#A7E3BE" : "#F5D58C"}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <PayBadge method={j.pay_method} paid={j.paid} t={t} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: j.paid ? "#0F6B33" : "#8A5A00", marginTop: 6 }}>
+                {j.paid ? t("pay_dont_collect") : j.pay_method === "upi" ? t("pay_upi_check") : String(t("pay_collect")).replace("{n}", Math.round((j.due_paise || 0) / 100 * 100) / 100)}
+              </div>
+              {!j.paid && j.status === "picked_up" && (
+                <div style={{ marginTop: 8 }}><Btn full onClick={async () => { try { await api.orderPay(j.order_id || null, "mark_paid"); } catch (_) {} load(); }}>{t("pay_collected")}</Btn></div>
+              )}
+            </div>
+          )}
           <Banner tone={j.status === "picked_up" ? "go" : "wait"} icon={j.status === "picked_up" ? "\u{1F6F5}" : "\u{1F3EA}"}
                   title={j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}>
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
           </Banner>
           <Steps steps={[t("jb_s_accepted"), t("jb_s_shop"), t("jb_s_picked"), t("jb_s_done")]} at={j.status === "picked_up" ? 2 : 1} />
-          {(j.customer_phone || typeof j.drop_lat === "number") && (
-            <div style={{ background: "#F3F6FA", borderRadius: 12, padding: "10px 12px", margin: "0 0 10px" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-                {j.customer_phone && <a href={`tel:${j.customer_phone}`} style={linkBtn(T.green)}>{t("jb_call_cust")}</a>}
-                {typeof j.drop_lat === "number" && typeof j.drop_lng === "number" && (
-                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.drop_lat},${j.drop_lng}`} target="_blank" rel="noopener noreferrer" style={linkBtn(T.brandDark)}>{t("jb_dir_cust")}</a>
-                )}
+          {(() => {
+            const grid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
+            const hasMap = typeof j.drop_lat === "number" && typeof j.drop_lng === "number";
+            const customer = (j.customer_phone || hasMap) ? (
+              <div style={grid}>
+                {j.customer_phone && <a href={`tel:${j.customer_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call_cust")}</a>}
+                {hasMap && <a href={`https://www.google.com/maps/dir/?api=1&destination=${j.drop_lat},${j.drop_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("jb_dir_cust")}</a>}
               </div>
+            ) : null;
+            const label = { fontSize: 12.5, fontWeight: 800, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 6px" };
+            return j.status !== "picked_up" ? (
+              <>
+                <div style={label}>{t("jb_shop")}</div>
+                <div style={grid}>
+                  {j.other_phone && <a href={`tel:${j.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call")}</a>}
+                  {typeof j.pickup_lat === "number" && (
+                    <button onClick={() => setNavFor(j)} style={{ ...outlineStyle, cursor: "pointer", fontFamily: "inherit" }}>{"\u{1F4CD}"} {t("jb_dir")}</button>
+                  )}
+                </div>
+                <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
+                {customer && <Fold title={`${t("jb_customer")}${j.customer_name ? `: ${j.customer_name}` : ""}`}>{customer}</Fold>}
+              </>
+            ) : (
+              <>
+                <div style={label}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>
+                {customer}
+                <DeliveryHandover api={api} jobId={j.id} role="rider" ready onChanged={load} />
+              </>
+            );
+          })()}
+          <Fold title={t("jb_msgs")}>
+            <RideChat api={api} rideId={j.id} role="rider" kind="job" />
+          </Fold>
+          {j.status !== "picked_up" && (
+            <div style={{ textAlign: "center", marginTop: 4 }}>
+              <CancelButton role="rider" label={t("cn_rider_give_back")} onConfirm={async (reason) => { const r = await api.jobRiderCancel(j.id, reason); load(); return r; }} />
             </div>
           )}
-          {j.status !== "picked_up" ? (
-            <>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                {j.other_phone && <a href={`tel:${j.other_phone}`} style={linkBtn(T.green)}>{t("jb_call")}</a>}
-                {typeof j.pickup_lat === "number" && (
-                  <button onClick={() => setNavFor(j)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
-                )}
-              </div>
-              <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
-              <div style={{ marginTop: 6 }}><CancelButton role="rider" label={t("cn_rider_give_back")} onConfirm={async (reason) => { const r = await api.jobRiderCancel(j.id, reason); load(); return r; }} /></div>
-            </>
-          ) : (
-            <DeliveryHandover api={api} jobId={j.id} role="rider" ready onChanged={load} />
-          )}
-          <details style={{ marginTop: 10 }}>
-            <summary style={{ cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: T.brandDark, minHeight: 40, display: "flex", alignItems: "center" }}>{t("jb_msgs")}</summary>
-            <RideChat api={api} rideId={j.id} role="rider" kind="job" />
-          </details>
         </div>
       ))}
       <h2 style={h2}>{t("jb_title")}</h2>
