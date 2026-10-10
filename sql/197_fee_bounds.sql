@@ -3,6 +3,7 @@
 -- MAXIMUM. Minimum = the rate card's "minimum"; maximum = new max_rupees.
 -- Run this BEFORE re-running 182_delivery_quote.sql.
 -- ===========================================================================
+alter table public.services_rate_card add column if not exists band_pct int not null default 20;
 alter table public.services_rate_card add column if not exists max_rupees int not null default 100;
 
 drop function if exists public.services_rate_card();
