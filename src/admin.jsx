@@ -13,7 +13,7 @@ const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 
 const th = { padding: "7px 8px", fontWeight: 800, textAlign: "left", color: T.inkSoft, whiteSpace: "nowrap" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
-const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
+const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
 
 export function AdminConsole({ api, panels }) {
   const [tab, setTab] = useState("overview");
@@ -28,6 +28,7 @@ export function AdminConsole({ api, panels }) {
       {tab === "overview" && <Overview api={api} go={setTab} />}
       {tab === "partners" && panels.partners}
       {tab === "quality" && <Quality api={api} />}
+      {tab === "reports" && <Reports api={api} />}
       {tab === "orders" && <Orders api={api} />}
       {tab === "rides" && <Rides api={api} />}
       {tab === "people" && <People api={api} />}
@@ -155,6 +156,36 @@ const stars = (n) => `\u2605 ${Number(n).toFixed(1)}`;
 // Who is rated badly, and every rating and complaint. A partner with 3 or more
 // ratings averaging under 3.5, or 2 or more complaints, is flagged; the admin
 // can hide it until it has been looked at, and bring it back.
+function Reports({ api }) {
+  const [status, setStatus] = useState("open");
+  const [rows, err, load] = useList(() => api.adminBookingReports(status), [api, status]);
+  const [busy, setBusy] = useState(null);
+  const done = async (id) => { setBusy(id); try { await api.adminBookingReportResolve(id); } catch (_) {} setBusy(null); load(); };
+  const who = (name, phone) => (
+    <span><b>{name || "\u2014"}</b>{phone ? <> {"\u00B7 "}<a href={`tel:${phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{phone}</a></> : null}</span>
+  );
+  return (
+    <div>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Abuse reports on bookings</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 10 }}>Customers and workers can report each other. Call either number to follow up, then mark it resolved.</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {[["open", "Open"], ["resolved", "Resolved"], ["all", "All"]].map(([k, l]) => (
+          <button key={k} onClick={() => setStatus(k)} aria-pressed={status === k} style={{ minHeight: 40, padding: "0 16px", borderRadius: 20, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", border: `1.5px solid ${status === k ? T.brandDark : T.line}`, background: status === k ? T.brandDark : T.white, color: status === k ? "#fff" : T.ink }}>{l}</button>
+        ))}
+      </div>
+      {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
+      <Table head={["When", "Reported by", "Customer", "Worker", "Reason", ""]} empty="No reports."
+             rows={rows && rows.map((r) => [
+               new Date(r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }),
+               <b key="b">{r.reporter_role === "customer" ? "Customer" : "Worker"}</b>,
+               who(r.customer_name, r.customer_phone), who(r.worker_name, r.worker_phone),
+               <span key="r"><b>{r.reason}</b>{r.note ? <><br />{r.note}</> : null}</span>,
+               r.status === "open" ? <Btn key="d" kind="ghost" disabled={busy === r.id} onClick={() => done(r.id)}>Resolved</Btn> : "\u2713",
+             ])} />
+    </div>
+  );
+}
+
 function Quality({ api }) {
   const [rows, err, load] = useList(() => api.adminQuality(), [api]);
   const [only, setOnly] = useState(false);

@@ -49,6 +49,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const [resched, setResched] = useState(null); // { id, value }
   const [rmsg, setRmsg] = useState("");
   const [sure, setSure] = useState(null);
+  const [rep, setRep] = useState(null); // { id, reason, note, state }
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
   const doneIds = mine.filter((x) => x.status === "completed").map((x) => x.id).join(",");
   const [rated, setRated] = useState(null);
@@ -88,6 +89,15 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   };
   const remove = async (x) => { setBusy(x.id); try { await api.bookingRemove(x.id); } catch (_) {} setBusy(null); setSure(null); onChanged && onChanged(); };
   const complete = async (x) => { setBusy(x.id); try { await api.bookingComplete(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
+  const sendReport = async () => {
+    if (!rep || !rep.reason) return;
+    setRep({ ...rep, state: "busy" });
+    try {
+      const r = await api.bookingReport(rep.id, rep.reason, rep.note);
+      const x = Array.isArray(r) ? r[0] : r;
+      setRep({ ...rep, state: x && x.ok === false ? "err" : "done" });
+    } catch (_) { setRep({ ...rep, state: "err" }); }
+  };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   // A listed rate is per 8-hour day. The rate card scales it to hours.
   const scale = (r, m) => Math.max(10, Math.round((r * m) / 480 / 10) * 10);
@@ -205,7 +215,36 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setSure(x.id)} style={{ background: "none", border: "none", color: "#B91C1C", fontFamily: "inherit", fontWeight: 800, fontSize: 14, cursor: "pointer", padding: "6px 0" }}>{t("mbk_delete")}</button>
+                <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+                  <button onClick={() => setSure(x.id)} style={{ background: "none", border: "none", color: "#B91C1C", fontFamily: "inherit", fontWeight: 800, fontSize: 14, cursor: "pointer", padding: "6px 0" }}>{t("mbk_delete")}</button>
+                  <button onClick={() => setRep({ id: x.id, reason: "", note: "", state: null })} style={{ background: "none", border: "none", color: "#6B7280", fontFamily: "inherit", fontWeight: 800, fontSize: 14, cursor: "pointer", padding: "6px 0" }}>{t("mbk_report")}</button>
+                </div>
+              )}
+              {rep && rep.id === x.id && (
+                <div style={{ marginTop: 8, padding: "12px", borderRadius: 12, background: "#FFF7F0", border: "1px solid #F3C7A0" }}>
+                  {rep.state === "done" ? (
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#166534", lineHeight: 1.45 }}>{"\u2713 "}{t("mbk_report_done")}
+                      <div><button onClick={() => setRep(null)} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: "none", background: "#15803D", color: "#fff", fontFamily: "inherit", fontWeight: 800, cursor: "pointer" }}>{t("mbk_ok")}</button></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: "#9A3412", marginBottom: 6 }}>{t("mbk_report_title")}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                        {["rp_abuse", "rp_harass", "rp_money", "rp_noshow", "rp_unsafe", "rp_fake", "rp_other"].map((k) => (
+                          <button key={k} onClick={() => setRep({ ...rep, reason: t("mbk_" + k), state: null })} aria-pressed={rep.reason === t("mbk_" + k)}
+                                  style={{ minHeight: 38, padding: "0 12px", borderRadius: 19, fontFamily: "inherit", fontWeight: 700, fontSize: 13.5, cursor: "pointer", border: `1.5px solid ${rep.reason === t("mbk_" + k) ? "#9A3412" : "#E5C9B0"}`, background: rep.reason === t("mbk_" + k) ? "#FFE8D6" : "#fff", color: "#7C2D12" }}>{t("mbk_" + k)}</button>
+                        ))}
+                      </div>
+                      <textarea value={rep.note} maxLength={500} placeholder={t("mbk_report_ph")} onChange={(e) => setRep({ ...rep, note: e.target.value })}
+                                style={{ width: "100%", boxSizing: "border-box", minHeight: 70, fontSize: 15, padding: "8px 10px", borderRadius: 10, border: "1px solid #E5C9B0", fontFamily: "inherit", resize: "vertical" }} />
+                      {rep.state === "err" && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{t("e_save")}</div>}
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <button disabled={!rep.reason || rep.state === "busy"} onClick={sendReport} style={pill("#B45309", "#fff", { flex: 1, opacity: rep.reason ? 1 : 0.5 })}>{rep.state === "busy" ? "\u2026" : t("mbk_report_send")}</button>
+                        <button onClick={() => setRep(null)} style={pill("#fff", "#6B7280", { flex: 1, border: "1.5px solid #D1D5DB" })}>{t("cancel")}</button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
