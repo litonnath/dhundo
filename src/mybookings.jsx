@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
-import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
+import { BusyCalendar, TimeSlots, useBusy, clashWith } from "./busycal.jsx";
 import { RateBox } from "./bizpay.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
@@ -30,7 +30,14 @@ function ReschedPanel({ api, x, resched, setResched, busy, rmsg, setRmsg, onSave
   return (
     <div style={{ margin: "4px 14px 10px", padding: "10px 12px", background: "#F3F7FD", border: "1px solid #CFDDF0", borderRadius: 12 }}>
       <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0B3A78", marginBottom: 6 }}>{t("mbk_resched_title")}</div>
-      {x.worker_id && <BusyCalendar slots={slots} picked={ok ? a : null} />}
+      {x.worker_id && <BusyCalendar slots={slots} picked={ok ? a : null} onPick={(d) => {
+        const b = new Date(d);
+        b.setHours(ok ? a.getHours() : 9, ok ? a.getMinutes() : 0, 0, 0);
+        if (b.getTime() < Date.now()) { const n = new Date(Date.now() + 5 * 60000); b.setHours(n.getHours(), n.getMinutes(), 0, 0); }
+        setRmsg(""); setResched({ id: x.id, value: new Date(b.getTime() - b.getTimezoneOffset() * 60000).toISOString().slice(0, 16) });
+      }} />}
+      {x.worker_id && ok && <TimeSlots day={a} slots={slots} minutes={Number(x.duration_mins) || 60} value={a}
+        onPick={(t0) => { setRmsg(""); setResched({ id: x.id, value: new Date(t0.getTime() - t0.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }); }} />}
       <input type="datetime-local" value={resched.value} onChange={(e) => { setRmsg(""); setResched({ id: x.id, value: e.target.value }); }}
              style={{ width: "100%", boxSizing: "border-box", minHeight: 46, fontSize: 16, padding: "8px 10px", borderRadius: 10, border: "1px solid #B8C9E0", fontFamily: "inherit" }} />
       {ok && clashWith(slots, a, b) && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{t("mbk_busy_err")}</div>}
