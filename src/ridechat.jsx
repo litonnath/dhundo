@@ -129,7 +129,7 @@ export function RideCode({ api, rideId, role, onState }) {
 // The pickup code of a delivery job. Shop or restaurant: shows the four digits
 // to give the rider. Rider: asks for them and marks the order picked up when
 // they match.
-export function JobCode({ api, jobId, role, onChanged }) {
+export function JobCode({ api, jobId, role, onChanged, eat = true }) {
   const { t } = useI18n();
   const [st, setSt] = useState(null);
   const [val, setVal] = useState("");
@@ -159,14 +159,14 @@ export function JobCode({ api, jobId, role, onChanged }) {
     setBusy(true); setMsg("");
     try {
       const r = many(await api.jobVerify(jobId, val))[0];
-      if (r && r.ok) { setVal(""); await load(); onChanged && onChanged(); } else setMsg(r && r.reason === "not_ready" ? t("rv_not_ready") : t("rv_wrong"));
+      if (r && r.ok) { setVal(""); await load(); onChanged && onChanged(); } else setMsg(r && r.reason === "not_ready" ? t(eat ? "rv_not_ready" : "rv_not_ready_s") : t("rv_wrong"));
     } catch (_) { setMsg(t("rv_wrong")); }
     setBusy(false);
   };
   if (st.food_ready === false) {
     return (
       <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A", fontSize: 14.5, fontWeight: 800, color: "#7A4A00", lineHeight: 1.45 }}>
-        {t("jv_wait_ready")}
+        {t(eat ? "jv_wait_ready" : "jv_wait_ready_s")}
       </div>
     );
   }

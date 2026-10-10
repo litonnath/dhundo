@@ -45,6 +45,7 @@ export function RiderJobs({ api, online, where = null }) {
   const seen = useRef(new Set());
   const first = useRef(true);
   const [navFor, setNavFor] = useState(null);
+  const [eatJobs, setEatJobs] = useState({}); // job id -> restaurant (false = shop)
 
   const load = useCallback(async () => {
     try {
@@ -55,7 +56,12 @@ export function RiderJobs({ api, online, where = null }) {
       list.forEach((j) => seen.current.add(j.id));
       first.current = false;
       setJobs(list);
-      setMine(many(m).filter((j) => j.role === "rider" && ["accepted", "picked_up"].includes(j.status)));
+      const mineNow = many(m).filter((j) => j.role === "rider" && ["accepted", "picked_up"].includes(j.status));
+      setMine(mineNow);
+      try {
+        const ids = [...list, ...mineNow].map((j) => j.id).filter(Boolean);
+        if (ids.length && api.jobKinds) { const km = {}; many(await api.jobKinds(ids)).forEach((x) => { km[x.id] = !!x.is_eat; }); setEatJobs((p) => ({ ...p, ...km })); }
+      } catch (_) { /* wording stays as it was */ }
     } catch (_) { /* the next tick tries again */ }
   }, [api, online]);
 
@@ -101,7 +107,7 @@ export function RiderJobs({ api, online, where = null }) {
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
           </Banner>
           <Steps steps={[t("jb_s_accepted"), t("jb_s_shop"), t("jb_s_picked"), t("jb_s_done")]} at={j.status === "picked_up" ? 2 : 1} />
-          <RiderJobMap api={api} job={j} where={where} onChanged={load} />
+          <RiderJobMap api={api} job={j} where={where} onChanged={load} eat={eatJobs[j.id] !== false} />
           {(() => {
             const grid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
             const hasMap = typeof j.drop_lat === "number" && typeof j.drop_lng === "number";
@@ -114,14 +120,14 @@ export function RiderJobs({ api, online, where = null }) {
             const label = { fontSize: 12.5, fontWeight: 800, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 6px" };
             return j.status !== "picked_up" ? (
               <>
-                <div style={label}>{t("jb_shop")}</div>
+                <div style={label}>{t(eatJobs[j.id] === false ? "jb_shop_s" : "jb_shop")}</div>
                 <div style={grid}>
                   {j.other_phone && <a href={`tel:${j.other_phone}`} style={callStyle}>{t("jb_call")}</a>}
                   {typeof j.pickup_lat === "number" && (
                     <button onClick={() => setNavFor(j)} style={{ ...outlineStyle, cursor: "pointer", fontFamily: "inherit" }}>{t("jb_dir")}</button>
                   )}
                 </div>
-                <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
+                <JobCode api={api} jobId={j.id} role="rider" onChanged={load} eat={eatJobs[j.id] !== false} />
                 {customer && <Fold title={`${t("jb_customer")}${j.customer_name ? `: ${j.customer_name}` : ""}${Number(j.cust_n) > 0 ? ` \u2605 ${Number(j.cust_avg).toFixed(1)} (${j.cust_n})` : ""}`}>{customer}</Fold>}
               </>
             ) : (

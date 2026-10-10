@@ -464,8 +464,9 @@ export function DriverLive({ api, ride, where = null }) {
 
 // The customer's map for a food delivery: the restaurant, their own door and
 // the rider moving between them, with plain words for where the rider is.
-export function DeliveryLive({ api, orderId, riderName }) {
+export function DeliveryLive({ api, orderId, riderName, eat = true }) {
   const { t } = useI18n();
+  const ks = (key) => t(eat ? key : key + "_s");
   const [d, setD] = useState(null);
   const prev = useRef(null);
   const [heading, setHeading] = useState(0);
@@ -520,7 +521,7 @@ export function DeliveryLive({ api, orderId, riderName }) {
   const text = !rider ? t("dl_no_pos")
     : !target ? t("dl_on_way")
     : picked ? (reached ? t("dl_at_you") : String(t("dl_to_you")).replace("{n}", fmtKm(km)))
-    : (reached ? t("dl_at_shop") : String(t("dl_to_shop")).replace("{n}", fmtKm(km)));
+    : (reached ? ks("dl_at_shop") : String(ks("dl_to_shop")).replace("{n}", fmtKm(km)));
   return (
     <div style={{ margin: "10px 0" }}>
       <LiveRideMap pick={shop} drop={door} driver={rider} route={route} delivery />
@@ -528,8 +529,8 @@ export function DeliveryLive({ api, orderId, riderName }) {
         {riderName ? `${riderName}: ` : ""}{text}
       </div>
       {stale != null && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 2 }}>{String(t("dl_stale")).replace("{n}", stale)}</div>}
-      {eta != null && !reached && <div style={{ fontSize: 14, fontWeight: 700, color: T.brandDark, marginTop: 2 }}>{String(picked ? t("dl_eta_you") : t("dl_eta_shop")).replace("{n}", eta)}</div>}
-      <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{t("dl_legend")}</div>
+      {eta != null && !reached && <div style={{ fontSize: 14, fontWeight: 700, color: T.brandDark, marginTop: 2 }}>{String(picked ? t("dl_eta_you") : ks("dl_eta_shop")).replace("{n}", eta)}</div>}
+      <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{ks("dl_legend")}</div>
     </div>
   );
 }
@@ -581,8 +582,9 @@ export function JobPositionSender({ api, where = null }) {
 
 // The rider's map for a delivery: the restaurant, the customer's door, himself,
 // and the road to the next stop with the distance and time.
-export function RiderJobMap({ api, job, where = null, onChanged = null }) {
+export function RiderJobMap({ api, job, where = null, onChanged = null, eat = true }) {
   const { t } = useI18n();
+  const ks = (key) => t(eat ? key : key + "_s");
   const me = useJobPosition(api, where);
   const shop = typeof job.pickup_lat === "number" ? { lat: job.pickup_lat, lng: job.pickup_lng } : null;
   const door = typeof job.drop_lat === "number" ? { lat: job.drop_lat, lng: job.drop_lng } : null;
@@ -621,16 +623,16 @@ export function RiderJobMap({ api, job, where = null, onChanged = null }) {
       <LiveRideMap pick={shop} drop={door} driver={me} route={route} delivery />
       {missing && (
         <div style={{ background: "#FFF7E6", border: "1px solid #F5D58C", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: "#8A5A00", marginBottom: 8 }}>{t(missing === "shop" ? "rm_no_shop" : "rm_no_drop")}</div>
-          <button disabled={!me} onClick={() => save(missing)} style={{ minHeight: 46, padding: "0 16px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: me ? "pointer" : "default", fontFamily: "inherit", opacity: me ? 1 : 0.5 }}>{t(missing === "shop" ? "rm_save_shop" : "rm_save_drop")}</button>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: "#8A5A00", marginBottom: 8 }}>{(missing === "shop" ? ks("rm_no_shop") : t("rm_no_drop"))}</div>
+          <button disabled={!me} onClick={() => save(missing)} style={{ minHeight: 46, padding: "0 16px", borderRadius: 12, border: "none", background: "#0A5BB8", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: me ? "pointer" : "default", fontFamily: "inherit", opacity: me ? 1 : 0.5 }}>{(missing === "shop" ? ks("rm_save_shop") : t("rm_save_drop"))}</button>
           {pinMsg && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, fontSize: 13, marginTop: 6 }}>{pinMsg}</div>}
         </div>
       )}
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink }}>
-        {reached ? (picked ? t("rm_at_customer") : t("rm_at_shop"))
+        {reached ? (picked ? t("rm_at_customer") : ks("rm_at_shop"))
           : !me ? t("rm_locating")
-          : eta ? String(picked ? t("rm_to_customer") : t("rm_to_shop")).replace("{km}", eta.km < 10 ? eta.km.toFixed(1) : Math.round(eta.km)).replace("{n}", eta.min)
-          : km != null ? String(picked ? t("rm_to_customer_km") : t("rm_to_shop_km")).replace("{km}", fmtKm(km)) : ""}
+          : eta ? String(picked ? t("rm_to_customer") : ks("rm_to_shop")).replace("{km}", eta.km < 10 ? eta.km.toFixed(1) : Math.round(eta.km)).replace("{n}", eta.min)
+          : km != null ? String(picked ? t("rm_to_customer_km") : ks("rm_to_shop_km")).replace("{km}", fmtKm(km)) : ""}
       </div>
     </div>
   );

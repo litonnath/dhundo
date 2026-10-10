@@ -810,7 +810,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />
-            {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
+            {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {!["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />
@@ -829,7 +829,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
-              <SplitBox o={o} t={t} />
+              <SplitBox o={o} t={t} eat={eatIds[o.worker_id] !== false} />
             </Fold>
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
@@ -851,7 +851,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
             {o.status === "delivered" && (
-              <OrderRatings api={api} o={o} given={givenR[o.id] || {}} summary={shopSum[o.worker_id]}
+              <OrderRatings api={api} o={o} eat={eatIds[o.worker_id] !== false} given={givenR[o.id] || {}} summary={shopSum[o.worker_id]}
                             canRateShop={!rated.includes(o.id) && !(givenR[o.id] && givenR[o.id].shop)}
                             canRateRider={canRateDel.has(o.id) && !(givenR[o.id] && givenR[o.id].rider)}
                             onShopRated={(id) => { markRated(id); load(); }}
@@ -926,7 +926,7 @@ function OwnerBanner({ o, t }) {
 
 // The ratings on a delivered order: the restaurant's average and its recent
 // reviews, the rating I gave it, and the rating I gave the delivery rider.
-function OrderRatings({ api, o, given, summary, canRateShop, canRateRider, onShopRated, onRiderRated }) {
+function OrderRatings({ api, o, eat = true, given, summary, canRateShop, canRateRider, onShopRated, onRiderRated }) {
   const { t } = useI18n();
   const [reviews, setReviews] = useState(null);
   const star = (n) => "\u2605".repeat(n) + "\u2606".repeat(Math.max(0, 5 - n));
@@ -944,7 +944,7 @@ function OrderRatings({ api, o, given, summary, canRateShop, canRateRider, onSho
   return (
     <div style={{ margin: "10px 0 2px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{t("orr_shop")}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{t(eat ? "orr_shop" : "orr_shop_s")}</span>
         {summary && summary.n > 0
           ? <span style={{ fontSize: 14, fontWeight: 700, color: "#B7791F" }}>{"\u2605"} {Number(summary.avg_stars).toFixed(1)} <span style={{ color: T.inkSoft, fontWeight: 500 }}>({summary.n})</span></span>
           : <span style={{ fontSize: 13, color: T.inkSoft }}>{t("orr_none")}</span>}
@@ -962,7 +962,7 @@ function OrderRatings({ api, o, given, summary, canRateShop, canRateRider, onSho
           ))}
         </details>
       )}
-      {mine(given.shop, t("orr_you_shop"))}
+      {mine(given.shop, t(eat ? "orr_you_shop" : "orr_you_shop_s"))}
       {canRateShop && <RateBox api={api} orderId={o.id} onDone={onShopRated} />}
       {o.job_id && mine(given.rider, t("orr_you_rider"))}
       {canRateRider && <DeliveryRateBox api={api} orderId={o.id} who="rider" onDone={onRiderRated} />}

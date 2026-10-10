@@ -139,7 +139,7 @@ export function splitOf(o) {
   return { shop, rider, platform, gst, total: shop + platform + gst };
 }
 
-export function SplitBox({ o, t, who = "all" }) {
+export function SplitBox({ o, t, who = "all", eat = true }) {
   const sp = splitOf(o);
   const row = (key, label, v, strong) => (
     <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: strong ? 15 : 14, fontWeight: strong ? 800 : 600, color: strong ? T.ink : T.inkSoft, padding: "3px 0" }}>
@@ -148,7 +148,7 @@ export function SplitBox({ o, t, who = "all" }) {
   );
   return (
     <div>
-      {row("shop", t("sp_shop"), sp.shop)}
+      {row("shop", t(eat ? "sp_shop" : "sp_shop_s"), sp.shop)}
       {row("platform", t("sp_platform"), sp.platform)}
       {sp.gst > 0 && row("gst", t("sp_gst"), sp.gst)}
       <div style={{ borderTop: "1px solid #EEF0F4", marginTop: 4, paddingTop: 4 }}>{row("total", t("sp_total"), sp.total, true)}</div>
