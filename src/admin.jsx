@@ -59,7 +59,7 @@ function Overview({ api, go }) {
     ["Orders today", o.orders_today, "orders"], ["Orders in progress", o.orders_active, "orders"], ["Orders, 30 days", o.orders_30d, "orders"],
     ["Sales, 30 days", rs(o.sales_30d_paise), "orders"], ["Rides today", o.rides_today, "rides"], ["Rides, 30 days", o.rides_30d, "rides"],
     ["Delivery jobs open", o.jobs_open, "orders"], ["Withdrawals waiting", o.withdrawals_pending, "money"],
-    ["Misc. fees, 30 days", rs(o.misc_fee_30d_paise), "fares"], ["GST charged, 30 days", rs(o.gst_30d_paise), "fares"],
+    ["Delivery fees, 30 days", rs(o.misc_fee_30d_paise), "fares"], ["GST charged, 30 days", rs(o.gst_30d_paise), "fares"],
   ] : [];
   return (
     <div>
@@ -110,7 +110,7 @@ function Orders({ api }) {
         <Btn kind="ghost" onClick={load}>Refresh</Btn>
       </div>
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
-      <Table head={["When", "Shop", "Customer", "Type", "Status", "Paid", "Customer pays", "Shop gets", "Rider gets", "Dhundo gets", "GST"]} empty="No orders."
+      <Table head={["When", "Shop", "Customer", "Type", "Status", "Paid", "Customer pays", "Shop gets", "Rider gets", "Delivery fee", "GST"]} empty="No orders."
              rows={rows && rows.map((o) => [when(o.created_at), o.shop, <span key="c">{o.customer}<br /><span style={{ color: T.inkSoft }}>{o.customer_phone}</span></span>, o.mode, o.status, o.paid ? `Paid \u00B7 ${o.pay_method === "upi" ? "UPI" : "cash"}` : `Unpaid \u00B7 ${o.pay_method === "upi" ? "UPI" : "cash"}`, rs(Number(o.total_paise) + Number(o.charges_paise)), rs(o.shop_gets_paise), rs(o.rider_gets_paise), rs(o.platform_gets_paise), rs(o.gst_paise)])} />
     </div>
   );

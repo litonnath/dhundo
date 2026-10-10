@@ -1,7 +1,7 @@
 // FARES: the rate card, the admin's fare and payout calculator, and the
 // delivery-fee suggestion a shop sees when it sends a rider. A trip costs
 // max(minimum, base + per-km x km) and goes whole to the rider or driver. The
-// customer pays that plus Dhundo's flat miscellaneous fee and GST on that fee, so
+// customer pays that plus Dhundo's flat delivery fee and GST on that fee, so
 // Dhundo takes no commission from the partner.
 import React, { useState, useEffect, useMemo } from "react";
 import { T, Btn, input } from "./ui.jsx";
@@ -20,7 +20,7 @@ export function calcFare(card, km) {
   const platform = Math.round(num(card.platform_rupees));
   const gst = r2(platform * GST_PERCENT / 100);
   // rider: what the partner earns, whole. The customer also pays Dhundo's
-  // miscellaneous fee and the GST on it.
+  // delivery fee and the GST on it.
   return { rider, platform, gst, customer: r2(rider + platform + gst), fare: rider, payout: rider };
 }
 
@@ -153,7 +153,7 @@ function RateRow({ api, row, onSaved }) {
     <div style={{ padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
       <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{row.label}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8 }}>
-        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Miscellaneous fee \u20b9"]].concat(row.key.startsWith("ride_") ? [["band", "Driver can move rate \u00B1 %"]] : []).map(([k, l]) => (
+        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", "Rider minimum \u20b9"], ["platform", "Delivery fee \u20b9"]].concat(row.key.startsWith("ride_") ? [["band", "Driver can move rate \u00B1 %"]] : []).map(([k, l]) => (
           <div key={k}><div style={lbl}>{l}</div><input style={cell} inputMode="numeric" maxLength={4} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
         ))}
       </div>
@@ -185,7 +185,7 @@ export function FareCalculator({ api }) {
   return (
     <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 16, margin: "0 0 20px" }}>
       <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 4px" }}>Fare and payout calculator</h2>
-      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 12 }}>The rider or driver earns the larger of the minimum and (base + per km x distance), in full: no commission is taken from them. The customer pays that plus Dhundo's miscellaneous fee and 18% GST on that fee. Dhundo keeps the miscellaneous fee; the GST is collected for the government. Shops use these rates to suggest a delivery fee, and the rider only ever sees what he earns.</div>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 12 }}>The rider or driver earns the larger of the minimum and (base + per km x distance), in full: no commission is taken from them. The customer pays that plus Dhundo's delivery fee and 18% GST on that fee. Dhundo keeps the delivery fee; the GST is collected for the government. Shops use these rates to suggest a delivery fee, and the rider only ever sees what he earns.</div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={{ width: 200 }}>
           <div style={lbl}>Average distance per trip (km)</div>
@@ -199,7 +199,7 @@ export function FareCalculator({ api }) {
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 900 }}>
           <thead><tr style={{ textAlign: "left", color: T.inkSoft }}>
-            {["Service", "Trips / day", "Rider earns", "Misc. fee", "GST", "Customer pays", "Miscellaneous fees / day", "Rider payouts / day", "GST / day"].map((h) => <th key={h} style={{ padding: "6px 6px", fontWeight: 800 }}>{h}</th>)}
+            {["Service", "Trips / day", "Rider earns", "Delivery fee", "GST", "Customer pays", "Delivery fees / day", "Rider payouts / day", "GST / day"].map((h) => <th key={h} style={{ padding: "6px 6px", fontWeight: 800 }}>{h}</th>)}
           </tr></thead>
           <tbody>
             {rows.map(({ c, n, q, rev, pay, gst }) => (
@@ -283,7 +283,7 @@ function GstReport({ api }) {
   };
   const rup = (p) => Math.round(Number(p || 0)) / 100;
   const csv = () => {
-    const head = ["Month", "Orders", "Items", "GST on food", "GST on goods", "Delivery charge", "GST on delivery", "Miscellaneous fee", "GST on misc. fee"];
+    const head = ["Month", "Orders", "Items", "GST on food", "GST on goods", "Delivery partner fee", "GST on delivery partner fee", "Delivery fee", "GST on delivery fee"];
     const out = [head].concat((rows || []).map((r) => [r.month, r.orders, rup(r.items_paise), rup(r.items_gst_restaurant_paise), rup(r.items_gst_shop_paise), rup(r.delivery_paise), rup(r.delivery_gst_paise), rup(r.misc_fee_paise), rup(r.misc_gst_paise)]));
     const text = out.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const a = document.createElement("a");
@@ -305,7 +305,7 @@ function GstReport({ api }) {
       {rows && rows.length > 0 && (
         <div style={{ overflowX: "auto", marginTop: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 760 }}>
-            <thead><tr style={{ textAlign: "left", color: T.inkSoft }}>{["Month", "Orders", "Items", "GST food", "GST goods", "Delivery", "GST delivery", "Misc. fee", "GST misc."].map((h) => <th key={h} style={{ padding: "6px", fontWeight: 800 }}>{h}</th>)}</tr></thead>
+            <thead><tr style={{ textAlign: "left", color: T.inkSoft }}>{["Month", "Orders", "Items", "GST food", "GST goods", "Delivery", "GST delivery", "Delivery fee", "GST misc."].map((h) => <th key={h} style={{ padding: "6px", fontWeight: 800 }}>{h}</th>)}</tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.month} style={{ borderTop: `1px solid ${T.line}` }}>
                 <td style={{ padding: "7px 6px", fontWeight: 700 }}>{r.month}</td><td style={{ padding: "7px 6px" }}>{r.orders}</td>
