@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "యాప్ మూసి ఉన్నప్పుడు అలర్ట్",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  mbk_month: "Monthly",
   rq_hourly: "Hourly",
   rq_daily: "Daily",
   rq_monthly: "Monthly",

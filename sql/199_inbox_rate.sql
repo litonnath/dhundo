@@ -11,7 +11,8 @@ drop function if exists public.services_chat_inbox();
 create function public.services_chat_inbox()
 returns table (id uuid, role text, status text, other_name text, other_phone text, note text,
                start_at timestamptz, duration_mins int, created_at timestamptz,
-               closes_at timestamptz, last_body text, last_at timestamptz, last_mine boolean, unread int, trade_name text, rate_min int, rate_max int, other_avatar text, prev_start_at timestamptz, resched_by text, worker_id uuid)
+               closes_at timestamptz, last_body text, last_at timestamptz, last_mine boolean, unread int, trade_name text, rate_min int, rate_max int, other_avatar text, prev_start_at timestamptz, resched_by text, worker_id uuid,
+               hour_rupees int, day_rupees int, month_rupees int)
 language sql
 stable
 security definer
@@ -20,7 +21,10 @@ as $fn$
   with me as (select public.services_account_id() as id),
   mine as (
     select b.*, case when b.customer_id = (select id from me) then 'customer' else 'worker' end as role,
-           coalesce(nullif(w.business_name, ''), w.full_name) as wname, w.phone as wphone, w.avatar_url as wavatar, coalesce(c.avatar_url, (select w2.avatar_url from public.services_workers w2 where w2.user_id = b.customer_id and w2.avatar_url is not null limit 1)) as cavatar, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
+           coalesce(nullif(w.business_name, ''), w.full_name) as wname,
+           (select min(r.rupees) from public.services_rates r where r.worker_id = w.id and r.unit = 'hour') as rhour,
+           (select min(r.rupees) from public.services_rates r where r.worker_id = w.id and r.unit = 'day') as rday,
+           (select min(r.rupees) from public.services_rates r where r.worker_id = w.id and r.unit = 'month') as rmonth, w.phone as wphone, w.avatar_url as wavatar, coalesce(c.avatar_url, (select w2.avatar_url from public.services_workers w2 where w2.user_id = b.customer_id and w2.avatar_url is not null limit 1)) as cavatar, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
            coalesce((select h.hidden_at from public.services_chat_hidden h
                       where h.booking_id = b.id and h.account_id = (select id from me)), 'epoch') as hid_at
       from public.services_bookings b
@@ -44,7 +48,8 @@ as $fn$
                                            where r.booking_id = m.id and r.account_id = (select id from me)), 'epoch')),
          m.tname::text, m.rmin::int, m.rmax::int,
          (case when m.role = 'customer' then m.wavatar else m.cavatar end)::text,
-         m.prev_start_at, m.resched_by::text, m.worker_id
+         m.prev_start_at, m.resched_by::text, m.worker_id,
+         m.rhour::int, m.rday::int, m.rmonth::int
     from mine m
     left join lateral (select x.body, x.created_at, x.sender_id from public.services_chat_messages x
                         where x.booking_id = m.id and x.created_at > m.hid_at

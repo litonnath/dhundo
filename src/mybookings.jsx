@@ -97,6 +97,13 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
       {list.map((x) => {
         const [fg, bg] = TONE[x.status] || TONE.cancelled;
         const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;
+        // The worker's own rates win; what is missing is worked out from the others.
+        const hr = Number(x.hour_rupees) || 0, dy = Number(x.day_rupees) || 0, mo = Number(x.month_rupees) || 0;
+        const r10 = (n) => money(Math.max(10, Math.round(n / 10) * 10));
+        const hourTxt = hr ? money(hr) : dy ? r10(dy / 8) : span(lo, hi, 60);
+        const halfTxt = dy ? money(Math.round(dy / 2)) : hr ? money(hr * 4) : span(lo, hi, 240);
+        const fullTxt = dy ? money(dy) : hr ? money(hr * 8) : span(lo, hi, 480);
+        const estTxt = (hr && m) ? money(Math.round((hr * m) / 60)) : (dy && m) ? r10((dy * m) / 480) : span(lo, hi, m);
         const live = ["requested", "accepted"].includes(x.status);
         const place = x.note ? String(x.note).replace(/^At:\s*/i, "") : "";
         return (
@@ -128,10 +135,10 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
               {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
             </div>
-            {!asWorker && (lo || hi) && (
+            {!asWorker && (lo || hi || hr || dy || mo) && (
               <div style={{ margin: "6px 14px 10px", border: "1px solid #CFE0F7", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "8px 12px", background: "#E8F0FB", fontSize: 12.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#0B3A78" }}>{t(asWorker ? "mbk_card_you" : "mbk_card")}</div>
-                {[[t("mbk_1h"), span(lo, hi, 60)], [t("mbk_half"), span(lo, hi, 240)], [t("mbk_full"), span(lo, hi, 480)]].map(([k, v]) => (
+                {[[t("mbk_1h"), hourTxt], [t("mbk_half"), halfTxt], [t("mbk_full"), fullTxt]].concat(mo ? [[t("mbk_month"), money(mo)]] : []).map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", fontSize: 14.5, borderTop: "1px solid #E6EEF9" }}>
                     <span style={{ color: T.inkSoft, fontWeight: 600 }}>{k}</span><b style={{ color: T.ink }}>{v}</b>
                   </div>
@@ -139,7 +146,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 {m > 0 && (
                   <div style={{ padding: "10px 12px", background: "#F2FAF5", borderTop: "1px solid #BEE3CB" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#166534" }}>
-                      <span>{String(t("mbk_for_len")).replace("{len}", mins(m))}</span><span>{span(lo, hi, m)}</span>
+                      <span>{String(t("mbk_for_len")).replace("{len}", mins(m))}</span><span>{estTxt}</span>
                     </div>
                     <div style={{ fontSize: 12.5, color: "#166534", marginTop: 3, lineHeight: 1.45 }}>{t(asWorker ? "mbk_est_note_you" : "mbk_est_note")}</div>
                   </div>
