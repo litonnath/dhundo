@@ -7,7 +7,7 @@ import { useI18n } from "./i18n.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
-const TONE = { requested: ["#B45309", "#FFF4E0"], accepted: ["#15803D", "#E7F5EC"], declined: ["#B91C1C", "#FDECEC"], cancelled: ["#6B7280", "#F1F2F4"] };
+const TONE = { completed: ["#0A5BB8", "#E8F0FB"], requested: ["#B45309", "#FFF4E0"], accepted: ["#15803D", "#E7F5EC"], declined: ["#B91C1C", "#FDECEC"], cancelled: ["#6B7280", "#F1F2F4"] };
 const money = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 const COLORS = ["#1D4ED8", "#0F8A3C", "#B45309", "#7C3AED", "#BE185D", "#0E7490"];
 
@@ -24,9 +24,9 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const { t } = useI18n();
   const [busy, setBusy] = useState(null);
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
-  const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
+  const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
   if (!list.length) return <div style={{ color: T.inkSoft, padding: "14px 2px" }}>{t("mbk_empty")}</div>;
-  const label = { requested: t(asWorker ? "mbk_needs_you" : "mbk_waiting"), accepted: t("mbk_accepted"), declined: t("mbk_declined"), cancelled: t("mbk_cancelled") };
+  const label = { requested: t(asWorker ? "mbk_needs_you" : "mbk_waiting"), accepted: t("mbk_accepted"), declined: t("mbk_declined"), completed: t("mbk_completed"), cancelled: t("mbk_cancelled") };
   const answer = async (x, ok) => { setBusy(x.id); try { await api.bookingAnswer(x.id, ok); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   // A listed rate is per 8-hour day. The rate card scales it to hours.

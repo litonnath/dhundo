@@ -32,7 +32,7 @@ function Avatar({ name, size = 46 }) {
     </span>
   );
 }
-const statusColor = { requested: "#B45309", accepted: "#0F8A3C", declined: "#B91C1C", cancelled: "#6B7280" };
+const statusColor = { requested: "#B45309", accepted: "#0F8A3C", declined: "#B91C1C", cancelled: "#6B7280", completed: "#0A5BB8" };
 
 // ------------------------------------------------------------------- inbox
 export function useInbox(api, signedIn) {
@@ -40,7 +40,7 @@ export function useInbox(api, signedIn) {
   const [seen, setSeen] = useState(readSeen);
   const reload = useCallback(async () => {
     if (!signedIn) { setItems([]); return; }
-    try { setItems(many(await api.chatInbox())); } catch (_) { /* next tick */ }
+    try { if (api.bookingsCompleteDue) { try { await api.bookingsCompleteDue(); } catch (_) {} } setItems(many(await api.chatInbox())); } catch (_) { /* next tick */ }
   }, [api, signedIn]);
   useEffect(() => {
     reload();
@@ -245,6 +245,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
     if (x.role === "customer" && x.status === "requested") return String(t("nt_waiting")).replace("{name}", n);
     if (x.status === "accepted") return String(t(x.role === "customer" ? "nt_accepted" : "nt_you_acc")).replace("{name}", n);
     if (x.status === "declined") return String(t("nt_declined")).replace("{name}", n);
+    if (x.status === "completed") return String(t("nt_completed")).replace("{name}", n);
     return String(t("nt_cancelled")).replace("{name}", n);
   };
   const dot = (x) => statusColor[x.status] || T.inkSoft;
