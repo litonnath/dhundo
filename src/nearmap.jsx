@@ -63,6 +63,7 @@ export function UberMap({ markers, lines = [], height = "50vh", onSelect, fitKey
         L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
       }
+      if (!st.current.map) return;
       const { map, layer } = st.current;
       layer.clearLayers();
       const pill = (txt, bg, fg) => `<div style="margin-top:3px;background:${bg};color:${fg};font:800 12px/1 sans-serif;padding:4px 8px;border-radius:10px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35)">${esc(txt)}</div>`;
@@ -328,7 +329,7 @@ export function bearing(a, b) {
 }
 const fmtKm = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
 
-export function LiveRideMap({ pick, drop, driver, height = 230 }) {
+export function LiveRideMap({ pick, drop, driver, route = null, height = 230 }) {
   const box = useRef(null);
   const st = useRef({});
   useEffect(() => {
@@ -338,7 +339,9 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
       await import("leaflet/dist/leaflet.css");
       if (dead || !box.current) return;
       if (!st.current.map) {
-        st.current.map = L.map(box.current).setView([pick.lat, pick.lng], 14);
+        const base = pick || drop || driver;
+        if (!base) return;
+        st.current.map = L.map(box.current).setView([base.lat, base.lng], 14);
         st.current.map.attributionControl.setPrefix(false); ensureCss();
         L.tileLayer(TILES, { subdomains: SUBS, maxZoom: 19, attribution: CREDIT }).addTo(st.current.map);
         st.current.layer = L.layerGroup().addTo(st.current.map);
@@ -347,8 +350,8 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
       layer.clearLayers();
       const dot = (c, txt) => L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
         html: `<div style="width:26px;height:26px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);color:#fff;font:800 12px sans-serif;display:flex;align-items:center;justify-content:center">${txt}</div>` });
-      const pts = [[pick.lat, pick.lng]];
-      L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer);
+      const pts = [];
+      if (pick) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer); }
       if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: dot("#DC2626", "B") }).addTo(layer); pts.push([drop.lat, drop.lng]); }
       if (driver) {
         const h = Math.round(driver.heading || 0);
@@ -357,14 +360,16 @@ export function LiveRideMap({ pick, drop, driver, height = 230 }) {
           icon: L.divIcon({ className: "", iconSize: [44, 44], iconAnchor: [22, 22],
             html: `<div style="width:44px;height:44px;border-radius:50%;background:#1D4ED8;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
         }).addTo(layer);
-        L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
+        if (route && route.length > 1) L.polyline(route, { color: "#1D4ED8", weight: 5, opacity: 0.85 }).addTo(layer);
+        else if (pick) L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
         pts.push([driver.lat, driver.lng]);
       }
+      if (pts.length === 0) return;
       if (pts.length > 1) map.fitBounds(pts, { padding: [34, 34], maxZoom: 16 }); else map.setView(pts[0], 15);
       setTimeout(() => map.invalidateSize(), 50);
     })();
     return () => { dead = true; };
-  }, [pick.lat, pick.lng, drop && drop.lat, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10)]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
   return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4", margin: "10px 0" }} />;
 }
@@ -458,6 +463,7 @@ export function DeliveryLive({ api, orderId, riderName }) {
   const [d, setD] = useState(null);
   const prev = useRef(null);
   const [heading, setHeading] = useState(0);
+  const [route, setRoute] = useState(null);
   useEffect(() => {
     let live = true;
     const tick = async () => {
@@ -476,22 +482,42 @@ export function DeliveryLive({ api, orderId, riderName }) {
     const id = setInterval(() => { if (!document.hidden) tick(); }, 5000);
     return () => { live = false; clearInterval(id); };
   }, [api, orderId]);
-  if (!d || typeof d.shop_lat !== "number" || typeof d.drop_lat !== "number") return null;
-  const shop = { lat: d.shop_lat, lng: d.shop_lng }, door = { lat: d.drop_lat, lng: d.drop_lng };
-  const rider = typeof d.lat === "number" ? { lat: d.lat, lng: d.lng, heading } : null;
-  const picked = d.job_status === "picked_up";
+  const hasShop = d && typeof d.shop_lat === "number", hasDoor = d && typeof d.drop_lat === "number";
+  const shop = hasShop ? { lat: d.shop_lat, lng: d.shop_lng } : null;
+  const door = hasDoor ? { lat: d.drop_lat, lng: d.drop_lng } : null;
+  const rider = d && typeof d.lat === "number" ? { lat: d.lat, lng: d.lng, heading } : null;
+  const picked = !!d && d.job_status === "picked_up";
   const target = picked ? door : shop;
-  const km = rider ? kmBetween(rider, target) : null;
+  // The road the rider will take, from where he is now to the next stop,
+  // asked again every 20 seconds or so (the same free routing service the
+  // directions screen uses).
+  const rl = rider && Math.round(rider.lat * 500), rg = rider && Math.round(rider.lng * 500);
+  const [eta, setEta] = useState(null);
+  useEffect(() => {
+    if (!rider || !target) { setRoute(null); setEta(null); return undefined; }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    fetch(`${OSRM}${rider.lng},${rider.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+      .then((r) => r.json())
+      .then((j) => { const r0 = j && j.routes && j.routes[0]; if (r0) { setRoute(r0.geometry.coordinates.map(([lng, lat]) => [lat, lng])); setEta(Math.max(1, Math.round(r0.duration / 60))); } })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+    return () => { ctl.abort(); clearTimeout(timer); };
+  }, [rl, rg, picked, target && target.lat, target && target.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!shop && !door && !rider) return null;
+  const km = rider && target ? kmBetween(rider, target) : null;
   const reached = km != null && km < 0.12;
   const text = !rider ? t("dl_no_pos")
+    : !target ? t("dl_on_way")
     : picked ? (reached ? t("dl_at_you") : String(t("dl_to_you")).replace("{n}", fmtKm(km)))
     : (reached ? t("dl_at_shop") : String(t("dl_to_shop")).replace("{n}", fmtKm(km)));
   return (
     <div style={{ margin: "10px 0" }}>
-      <LiveRideMap pick={shop} drop={door} driver={rider} />
+      <LiveRideMap pick={shop} drop={door} driver={rider} route={route} />
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink, marginTop: 8 }}>
         {reached ? "\u2705 " : "\u{1F6F5} "}{riderName ? `${riderName}: ` : ""}{text}
       </div>
+      {eta != null && !reached && <div style={{ fontSize: 14, fontWeight: 700, color: T.brandDark, marginTop: 2 }}>{String(picked ? t("dl_eta_you") : t("dl_eta_shop")).replace("{n}", eta)}</div>}
       <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{t("dl_legend")}</div>
     </div>
   );

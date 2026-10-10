@@ -638,6 +638,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
     if (mode !== "pickup" && addrText.trim().length < 3) { setMsg(t("st_need_addr")); return; }
+    if (mode !== "pickup" && !(addr && typeof addr.lat === "number")) { setMsg(t("st_need_pin")); return; }
     setBusy(true); setMsg(null);
     try {
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
