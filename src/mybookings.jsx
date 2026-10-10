@@ -47,6 +47,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const [busy, setBusy] = useState(null);
   const [resched, setResched] = useState(null); // { id, value }
   const [rmsg, setRmsg] = useState("");
+  const [sure, setSure] = useState(null);
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
   const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
   if (!list.length) return <div style={{ color: T.inkSoft, padding: "14px 2px" }}>{t("mbk_empty")}</div>;
@@ -63,6 +64,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     } catch (e) { setRmsg(t(e && e.message === "worker_busy" ? "mbk_busy_err" : "mbk_resched_err")); }
     setBusy(null); onChanged && onChanged();
   };
+  const remove = async (x) => { setBusy(x.id); try { await api.bookingRemove(x.id); } catch (_) {} setBusy(null); setSure(null); onChanged && onChanged(); };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   // A listed rate is per 8-hour day. The rate card scales it to hours.
   const scale = (r, m) => Math.max(10, Math.round((r * m) / 480 / 10) * 10);
@@ -146,6 +148,19 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 {!asWorker && <button disabled={busy === x.id} onClick={() => cancel(x)} style={pill("#fff", "#6B7280", { flex: "1 1 90px", border: "1.5px solid #D1D5DB" })}>{t("bk_cancel")}</button>}
               </div>
             )}
+            <div style={{ padding: live ? "0 14px 14px" : "4px 14px 14px" }}>
+              {sure === x.id ? (
+                <div style={{ padding: "10px 12px", borderRadius: 12, background: "#FEF2F2", border: "1px solid #FCA5A5" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C", lineHeight: 1.45 }}>{t(live ? "mbk_del_live" : "mbk_del_past")}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button disabled={busy === x.id} onClick={() => remove(x)} style={pill("#B91C1C", "#fff", { flex: 1 })}>{t("mbk_delete")}</button>
+                    <button onClick={() => setSure(null)} style={pill("#fff", "#6B7280", { flex: 1, border: "1.5px solid #D1D5DB" })}>{t("cancel")}</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setSure(x.id)} style={{ background: "none", border: "none", color: "#B91C1C", fontFamily: "inherit", fontWeight: 800, fontSize: 14, cursor: "pointer", padding: "6px 0" }}>{t("mbk_delete")}</button>
+              )}
+            </div>
           </div>
         );
       })}

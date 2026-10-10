@@ -460,6 +460,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
+    bookingRemove: (id) => rpc("services_booking_remove", { p_id: id }, true),
     chatDelete: (id) => rpc("services_chat_delete", { p_booking: id }, true),
     rideDriverPos: (id) => rpc("services_ride_driver_position", { p_ride: id }, true),
     publicPositions: (ids) => rpc("services_public_positions", { p_ids: ids }),
