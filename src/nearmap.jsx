@@ -405,7 +405,7 @@ export function PassengerLive({ api, ride }) {
     <div>
       <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={drv} />
       <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
-        {drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
+        {drv && km != null && km < 0.12 ? `\u2705 ${t("rd_live_arrived")}` : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
       </div>
     </div>
   );
@@ -449,4 +449,69 @@ export function DriverLive({ api, ride, where = null }) {
       {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t("rd_pick_in")).replace("{n}", fmtKm(km))}</div>}
     </div>
   );
+}
+
+// The customer's map for a food delivery: the restaurant, their own door and
+// the rider moving between them, with plain words for where the rider is.
+export function DeliveryLive({ api, orderId, riderName }) {
+  const { t } = useI18n();
+  const [d, setD] = useState(null);
+  const prev = useRef(null);
+  const [heading, setHeading] = useState(0);
+  useEffect(() => {
+    let live = true;
+    const tick = async () => {
+      try {
+        const r = many(await api.orderRiderPos(orderId))[0];
+        if (!live) return;
+        setD(r || null);
+        if (r && typeof r.lat === "number") {
+          const cur = { lat: r.lat, lng: r.lng };
+          if (prev.current && kmBetween(prev.current, cur) > 0.01) { setHeading(bearing(prev.current, cur)); prev.current = cur; }
+          else if (!prev.current) prev.current = cur;
+        }
+      } catch (_) { /* next tick */ }
+    };
+    tick();
+    const id = setInterval(() => { if (!document.hidden) tick(); }, 5000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, orderId]);
+  if (!d || typeof d.shop_lat !== "number" || typeof d.drop_lat !== "number") return null;
+  const shop = { lat: d.shop_lat, lng: d.shop_lng }, door = { lat: d.drop_lat, lng: d.drop_lng };
+  const rider = typeof d.lat === "number" ? { lat: d.lat, lng: d.lng, heading } : null;
+  const picked = d.job_status === "picked_up";
+  const target = picked ? door : shop;
+  const km = rider ? kmBetween(rider, target) : null;
+  const reached = km != null && km < 0.12;
+  const text = !rider ? t("dl_no_pos")
+    : picked ? (reached ? t("dl_at_you") : String(t("dl_to_you")).replace("{n}", fmtKm(km)))
+    : (reached ? t("dl_at_shop") : String(t("dl_to_shop")).replace("{n}", fmtKm(km)));
+  return (
+    <div style={{ margin: "10px 0" }}>
+      <LiveRideMap pick={shop} drop={door} driver={rider} />
+      <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink, marginTop: 8 }}>
+        {reached ? "\u2705 " : "\u{1F6F5} "}{riderName ? `${riderName}: ` : ""}{text}
+      </div>
+      <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{t("dl_legend")}</div>
+    </div>
+  );
+}
+
+// On the rider's phone while a delivery is on: sends the position every few
+// seconds so the customer's map moves. Renders nothing.
+export function JobPositionSender({ api, where = null }) {
+  const sent = useRef(0);
+  const pinned = where && where.manual;
+  useEffect(() => {
+    if (pinned) return undefined;
+    const geo = typeof navigator !== "undefined" && navigator.geolocation;
+    if (!geo) return undefined;
+    const id = geo.watchPosition((g) => {
+      if (Date.now() - sent.current < 8000) return;
+      sent.current = Date.now();
+      api.setAvailability(true, { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy }, null).catch(() => {});
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    return () => geo.clearWatch(id);
+  }, [api, pinned]);
+  return null;
 }

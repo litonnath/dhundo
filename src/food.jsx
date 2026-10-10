@@ -4,6 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
+import { DeliveryLive } from "./nearmap.jsx";
 import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
 import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo, calcFare } from "./fares.jsx";
@@ -774,6 +775,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} />
+            {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
             <OrderTrack o={o} />
             <ItemsBox lines={o.lines} />
             <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>

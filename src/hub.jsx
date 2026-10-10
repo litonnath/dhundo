@@ -11,7 +11,7 @@ import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from 
 import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
-import { RouteNav } from "./nearmap.jsx";
+import { RouteNav, JobPositionSender } from "./nearmap.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -77,6 +77,7 @@ export function RiderJobs({ api, online, where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={cardStyle}>
+          <JobPositionSender api={api} where={where} />
           <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name}
                        sub={j.status === "picked_up" ? j.drop_text : j.note} />
           {j.fee_paise != null && <div style={{ fontSize: 14, fontWeight: 800, color: "#0F6B33", marginTop: 8 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}
