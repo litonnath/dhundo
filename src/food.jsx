@@ -757,9 +757,23 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const [orders, setOrders] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const [canRateDel, setCanRateDel] = useState(() => new Set());
+  const [givenR, setGivenR] = useState({});
+  const [shopSum, setShopSum] = useState({});
   const load = useCallback(async () => {
     try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); const list = many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)));
       setOrders(list);
+      const doneIds = list.filter((o) => o.status === "delivered").map((o) => o.id);
+      if (doneIds.length && api.myOrderRatings) {
+        try {
+          const g = {};
+          many(await api.myOrderRatings(doneIds)).forEach((x) => { (g[x.order_id] = g[x.order_id] || {})[x.target] = x; });
+          setGivenR(g);
+        } catch (_) { /* keep */ }
+        try {
+          const wids = [...new Set(list.filter((o) => o.status === "delivered" && o.worker_id).map((o) => o.worker_id))];
+          if (wids.length && api.ratingSummary) { const m = {}; many(await api.ratingSummary(wids)).forEach((x) => { m[x.worker_id] = x; }); setShopSum(m); }
+        } catch (_) { /* keep */ }
+      }
       const ids = list.filter((o) => o.status === "delivered" && o.job_id).map((o) => o.id);
       if (ids.length && api.deliveryRateable) { try { setCanRateDel(new Set(many(await api.deliveryRateable(ids)).map((x) => (typeof x === "string" ? x : x.order_id)))); } catch (_) { /* keep */ } }
     } catch (_) { setOrders((o) => o || []); }
@@ -821,8 +835,13 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
-            {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
-            {o.status === "delivered" && canRateDel.has(o.id) && <DeliveryRateBox api={api} orderId={o.id} who="rider" onDone={(id) => setCanRateDel((s) => { const n = new Set(s); n.delete(id); return n; })} />}
+            {o.status === "delivered" && (
+              <OrderRatings api={api} o={o} given={givenR[o.id] || {}} summary={shopSum[o.worker_id]}
+                            canRateShop={!rated.includes(o.id) && !(givenR[o.id] && givenR[o.id].shop)}
+                            canRateRider={canRateDel.has(o.id) && !(givenR[o.id] && givenR[o.id].rider)}
+                            onShopRated={(id) => { markRated(id); load(); }}
+                            onRiderRated={(id) => { setCanRateDel((s) => { const n = new Set(s); n.delete(id); return n; }); load(); }} />
+            )}
             {!["rejected", "cancelled", "delivered"].includes(o.status) && (
               <Actions>
                 {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t("st_call_shop")}</a>}
@@ -888,6 +907,52 @@ function OwnerBanner({ o, t }) {
   return o.status === "ready"
     ? <Banner tone="good" title={t("ob_o_ready_collect")} />
     : <Banner tone="go" title={t("ob_o_prep")} sub={t("ob_o_prep_sub")} />;
+}
+
+// The ratings on a delivered order: the restaurant's average and its recent
+// reviews, the rating I gave it, and the rating I gave the delivery rider.
+function OrderRatings({ api, o, given, summary, canRateShop, canRateRider, onShopRated, onRiderRated }) {
+  const { t } = useI18n();
+  const [reviews, setReviews] = useState(null);
+  const star = (n) => "\u2605".repeat(n) + "\u2606".repeat(Math.max(0, 5 - n));
+  const open = async (isOpen) => {
+    if (!isOpen || reviews !== null) return;
+    try { setReviews(many(await api.reviewsFor(o.worker_id, 5))); } catch (_) { setReviews([]); }
+  };
+  const mine = (g, label) => g && (
+    <div style={{ margin: "6px 0", padding: "9px 12px", background: "#F6F8FB", border: "1px solid #E5E7EB", borderRadius: 10 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: T.inkSoft, letterSpacing: 0.3, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: 16, color: "#B7791F", marginTop: 2, letterSpacing: 1 }}>{star(g.stars)}{g.complaint ? <span style={{ marginLeft: 8, fontSize: 12.5, fontWeight: 700, color: "#A32424", letterSpacing: 0 }}>{t("rt_complaint")}</span> : null}</div>
+      {g.comment && <div style={{ fontSize: 14, color: T.ink, marginTop: 3, overflowWrap: "anywhere" }}>{g.comment}</div>}
+    </div>
+  );
+  return (
+    <div style={{ margin: "10px 0 2px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{t("orr_shop")}</span>
+        {summary && summary.n > 0
+          ? <span style={{ fontSize: 14, fontWeight: 700, color: "#B7791F" }}>{"\u2605"} {Number(summary.avg_stars).toFixed(1)} <span style={{ color: T.inkSoft, fontWeight: 500 }}>({summary.n})</span></span>
+          : <span style={{ fontSize: 13, color: T.inkSoft }}>{t("orr_none")}</span>}
+      </div>
+      {summary && summary.n > 0 && (
+        <details onToggle={(e) => open(e.currentTarget.open)} style={{ margin: "2px 0 4px" }}>
+          <summary style={{ cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: T.brandDark, minHeight: 36, display: "flex", alignItems: "center" }}>{t("orr_reviews")}</summary>
+          {reviews === null && <div style={{ fontSize: 13, color: T.inkSoft }}>{"\u2026"}</div>}
+          {reviews && reviews.length === 0 && <div style={{ fontSize: 13, color: T.inkSoft }}>{t("orr_no_reviews")}</div>}
+          {(reviews || []).map((r, i) => (
+            <div key={i} style={{ padding: "7px 0", borderTop: "1px solid #EEF0F3" }}>
+              <span style={{ color: "#B7791F", letterSpacing: 1 }}>{star(r.stars)}</span>
+              <div style={{ fontSize: 14, color: T.ink, overflowWrap: "anywhere" }}>{r.comment}</div>
+            </div>
+          ))}
+        </details>
+      )}
+      {mine(given.shop, t("orr_you_shop"))}
+      {canRateShop && <RateBox api={api} orderId={o.id} onDone={onShopRated} />}
+      {o.job_id && mine(given.rider, t("orr_you_rider"))}
+      {canRateRider && <DeliveryRateBox api={api} orderId={o.id} who="rider" onDone={onRiderRated} />}
+    </div>
+  );
 }
 
 // An order placed without a pinned location: the customer pins it now, so the

@@ -187,12 +187,20 @@ export function RiderHistory({ api }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
   const [canRate, setCanRate] = useState(() => new Set());
+  const [both, setBoth] = useState({});
+  const [mineAvg, setMineAvg] = useState(null);
   useEffect(() => {
     let alive = true;
     Promise.resolve(api.myJobs()).then(async (r) => {
       const list = many(r).filter((j) => j.role === "rider" && ["delivered", "cancelled", "expired"].includes(j.status));
       if (alive) setRows(list);
       const ids = list.filter((j) => j.status === "delivered" && j.order_id).map((j) => j.order_id);
+      if (ids.length && api.orderDeliveryRatings) {
+        try { const m = {}; many(await api.orderDeliveryRatings(ids)).forEach((x) => { (m[x.order_id] = m[x.order_id] || {})[x.by_role] = x; }); if (alive) setBoth(m); } catch (_) { /* keep */ }
+      }
+      if (api.myDeliveryRatings) {
+        try { const rr = many(await api.myDeliveryRatings()).filter((x) => x.by_role === "customer" && !x.complaint); if (alive && rr.length) setMineAvg({ avg: rr.reduce((a, x) => a + x.stars, 0) / rr.length, n: rr.length }); } catch (_) { /* keep */ }
+      }
       if (ids.length && api.deliveryRateable) { try { const x = many(await api.deliveryRateable(ids)); if (alive) setCanRate(new Set(x.map((y) => (typeof y === "string" ? y : y.order_id)))); } catch (_) { /* keep */ } }
     }).catch(() => { if (alive) setRows([]); });
     return () => { alive = false; };
@@ -201,6 +209,12 @@ export function RiderHistory({ api }) {
   if (rows.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
   return (
     <div>
+      {mineAvg && (
+        <div style={{ ...cardStyle, display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 28, fontWeight: 700, color: T.ink }}>{mineAvg.avg.toFixed(1)}</span>
+          <span><span style={{ display: "block", color: "#B7791F", fontSize: 16, letterSpacing: 1 }}>{"\u2605".repeat(Math.round(mineAvg.avg))}{"\u2606".repeat(5 - Math.round(mineAvg.avg))}</span><span style={{ display: "block", fontSize: 13, color: T.inkSoft }}>{String(t("rt_count")).replace("{n}", mineAvg.n)}</span></span>
+        </div>
+      )}
       {rows.map((j) => {
         const done = j.status === "delivered";
         const cash = j.pay_method === "cod" && j.due_paise != null;
@@ -223,6 +237,23 @@ export function RiderHistory({ api }) {
             )}
             <div style={{ fontSize: 13, fontWeight: 600, color: T.inkSoft, letterSpacing: 0.3, textTransform: "uppercase", margin: "10px 0 2px" }}>{t("jb_to")}</div>
             <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.4 }}>{j.drop_text}</div>
+            {done && j.order_id && (() => {
+              const b = both[j.order_id] || {};
+              const star = (n) => "\u2605".repeat(n) + "\u2606".repeat(Math.max(0, 5 - n));
+              const line = (x, label, emptyKey) => (
+                <div style={{ margin: "6px 0", padding: "9px 12px", background: "#F6F8FB", border: "1px solid #E5E7EB", borderRadius: 10 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: T.inkSoft, letterSpacing: 0.3, textTransform: "uppercase" }}>{label}</div>
+                  {x ? (<>
+                    <div style={{ fontSize: 16, color: "#B7791F", marginTop: 2, letterSpacing: 1 }}>{star(x.stars)}{x.complaint ? <span style={{ marginLeft: 8, fontSize: 12.5, fontWeight: 700, color: "#A32424", letterSpacing: 0 }}>{t("rt_complaint")}</span> : null}</div>
+                    {x.comment && <div style={{ fontSize: 14, color: T.ink, marginTop: 3, overflowWrap: "anywhere" }}>{x.comment}</div>}
+                  </>) : <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>{t(emptyKey)}</div>}
+                </div>
+              );
+              return (<>
+                {line(b.customer, t("jb_r_from_cust"), "jb_r_wait")}
+                {line(b.rider, t("jb_r_to_cust"), "jb_r_notyet")}
+              </>);
+            })()}
             {done && j.order_id && canRate.has(j.order_id) && <DeliveryRateBox api={api} orderId={j.order_id} who="customer" onDone={(id) => setCanRate((s) => { const n = new Set(s); n.delete(id); return n; })} />}
           </div>
         );
