@@ -22,7 +22,7 @@ export function useBusy(api, workerId, exclude = null) {
 // Does the window [a, b) touch a busy slot?
 export const clashWith = (slots, a, b) => !!slots && slots.some((s) => s.a < b && s.b > a);
 
-export function BusyCalendar({ slots, picked = null }) {
+export function BusyCalendar({ slots, picked = null, onPick = null }) {
   const { t } = useI18n();
   if (slots === null) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -46,11 +46,13 @@ export function BusyCalendar({ slots, picked = null }) {
         {days.map((d) => {
           const busy = !!byDay[dayKey(d)];
           const sel = pk === dayKey(d);
+          const bg = sel ? "#15803D" : busy ? "#FDECEC" : "#E7F5EC";
           return (
-            <div key={dayKey(d)} style={{ textAlign: "center", padding: "6px 0", borderRadius: 10, background: busy ? "#FDECEC" : "#E7F5EC", border: sel ? "2px solid #0A5BB8" : "2px solid transparent" }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft }}>{d.toLocaleDateString([], { weekday: "short" }).slice(0, 3)}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: busy ? "#B91C1C" : "#15803D" }}>{d.getDate()}</div>
-            </div>
+            <button key={dayKey(d)} type="button" disabled={!onPick} onClick={() => onPick && onPick(d)} aria-pressed={sel}
+                    style={{ textAlign: "center", padding: "6px 0", borderRadius: 10, background: bg, border: sel ? "2px solid #0B5D2B" : "2px solid transparent", cursor: onPick ? "pointer" : "default", fontFamily: "inherit" }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: sel ? "#D9F2E3" : T.inkSoft }}>{d.toLocaleDateString([], { weekday: "short" }).slice(0, 3)}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: sel ? "#fff" : busy ? "#B91C1C" : "#15803D" }}>{d.getDate()}</div>
+            </button>
           );
         })}
       </div>
@@ -66,6 +68,39 @@ export function BusyCalendar({ slots, picked = null }) {
             {byDay[dayKey(d)].map(([a, b]) => `${hm(a)} – ${hm(b)}`).join(", ")}
           </div>
         ))}
+    </div>
+  );
+}
+
+// After a day is picked: the hours of that day, every half hour. Booked ones
+// and ones already gone are greyed out; tapping a free one sets the time.
+export function TimeSlots({ day, slots, minutes, value, onPick }) {
+  const { t } = useI18n();
+  if (!day) return null;
+  const len = Math.max(Number(minutes) || 60, 5) * 60000;
+  const now = Date.now();
+  const opts = [];
+  for (let h = 6; h <= 22; h++) for (const m of [0, 30]) { if (h === 22 && m === 30) continue; const a = new Date(day); a.setHours(h, m, 0, 0); opts.push(a); }
+  const label = (a) => a.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return (
+    <div style={{ margin: "0 0 12px" }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: "#0B3A78", margin: "0 0 8px" }}>{t("bc_pick_time")}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 6 }}>
+        {opts.map((a) => {
+          const gone = a.getTime() < now;
+          const taken = clashWith(slots, a, new Date(a.getTime() + len));
+          const sel = value && Math.abs(new Date(value).getTime() - a.getTime()) < 60000;
+          const off = gone || taken;
+          return (
+            <button key={a.getTime()} type="button" disabled={off} onClick={() => onPick(a)} aria-pressed={!!sel}
+                    style={{ minHeight: 40, borderRadius: 10, fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, cursor: off ? "not-allowed" : "pointer",
+                             border: sel ? "2px solid #0B5D2B" : "1.5px solid transparent",
+                             background: sel ? "#15803D" : taken ? "#FDECEC" : gone ? "#F1F2F4" : "#E7F5EC",
+                             color: sel ? "#fff" : taken ? "#B91C1C" : gone ? "#9CA3AF" : "#15803D",
+                             textDecoration: taken ? "line-through" : "none" }}>{label(a)}</button>
+          );
+        })}
+      </div>
     </div>
   );
 }

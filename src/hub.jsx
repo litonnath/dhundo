@@ -14,7 +14,7 @@ import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { RouteNav, RiderJobMap } from "./nearmap.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
-import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
+import { BusyCalendar, TimeSlots, useBusy, clashWith } from "./busycal.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -443,7 +443,14 @@ export function BookingSheet({ api, row, onClose, place }) {
                      onChange={(e) => setStart(e.target.value)} style={{ ...input, marginBottom: 4 }} />
             )}
 
-            <BusyCalendar slots={busySlots} picked={ok ? startDate : null} />
+            <BusyCalendar slots={busySlots} picked={ok ? startDate : null} onPick={(d) => {
+              const cur = new Date(start);
+              const b = new Date(d);
+              b.setHours(Number.isNaN(cur.getTime()) ? 9 : cur.getHours(), Number.isNaN(cur.getTime()) ? 0 : cur.getMinutes(), 0, 0);
+              if (b.getTime() < Date.now()) { const n = new Date(Date.now() + 5 * 60000); b.setHours(n.getHours(), n.getMinutes(), 0, 0); }
+              setWhenKey("pick"); setStart(localStamp(b));
+            }} />
+            {whenKey === "pick" && ok && <TimeSlots day={startDate} slots={busySlots} minutes={total} value={startDate} onPick={(a) => setStart(localStamp(a))} />}
             {ok && clashWith(busySlots, startDate, endDate) && <div role="alert" style={{ margin: "0 0 8px", padding: "9px 12px", borderRadius: 10, background: "#FEF2F2", border: "1px solid #FCA5A5", color: "#B91C1C", fontSize: 13.5, fontWeight: 700, lineHeight: 1.45 }}>{t("bc_clash")}</div>}
 
             <div style={head}><span style={num}>2</span>{t("bk_period")}</div>
