@@ -4,6 +4,7 @@
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
+import { OrderHeader, Banner, Steps, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
@@ -74,11 +75,14 @@ export function RiderJobs({ api, online, where = null }) {
     <div style={{ marginTop: 18 }}>
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
-        <div key={j.id} style={{ ...card, border: `2px solid ${T.green}` }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.green, marginBottom: 4 }}>{j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}</div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{j.status === "picked_up" ? j.drop_text : j.other_name}</div>
-          <div style={{ fontSize: 14, color: T.inkSoft, margin: "4px 0 10px" }}>{j.note}</div>
-          {j.due_at && <DueTimer due={j.due_at} style={{ margin: "0 0 10px" }} />}
+        <div key={j.id} style={cardStyle}>
+          <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name} amount={j.fee_paise}
+                       sub={j.status === "picked_up" ? j.drop_text : j.note} />
+          <Banner tone={j.status === "picked_up" ? "go" : "wait"} icon={j.status === "picked_up" ? "\u{1F6F5}" : "\u{1F3EA}"}
+                  title={j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}>
+            {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
+          </Banner>
+          <Steps steps={[t("jb_s_accepted"), t("jb_s_shop"), t("jb_s_picked"), t("jb_s_done")]} at={j.status === "picked_up" ? 2 : 1} />
           {(j.customer_phone || typeof j.drop_lat === "number") && (
             <div style={{ background: "#F3F6FA", borderRadius: 12, padding: "10px 12px", margin: "0 0 10px" }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("jb_customer")}{j.customer_name ? `: ${j.customer_name}` : ""}</div>

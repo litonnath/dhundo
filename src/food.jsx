@@ -4,7 +4,8 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
-import { CancelButton, CancelNote, OrderDates, DueTimer } from "./cancel.jsx";
+import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
+import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -738,19 +739,16 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
         {view && orders && orders.length > 0 && title}
         {!view && <AlertsCard api={api} compact />}
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (showAll || view !== "active" ? orders : latestPerShop(orders)).map((o) => (
-          <div key={o.id} style={card}>
-            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-              <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", background: statusColor[o.status], padding: "4px 12px", borderRadius: 14 }}>{t("st_status_" + o.status)}</span>
-              <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(o.total_paise + (o.delivery_fee_paise || 0))}`]} />
-            </div>
-            <OrderDates o={o} />
-            {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && o.delivery_mins && <DueTimer due={new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000)} />}
-            <Lines lines={o.lines} />
-            <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
-            <Bill o={o} t={t} api={api} />
-            <CancelNote o={o} />
+          <div key={o.id} style={cardStyle}>
+            <OrderHeader name={o.other_name} amount={orderBill(o).total}
+                         sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
+            <CustomerBanner o={o} t={t} />
             <OrderTrack o={o} />
+            <ItemsBox lines={o.lines} />
+            <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
+              <div style={{ fontSize: 14, fontWeight: 800, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
+              <Bill o={o} t={t} api={api} />
+            </Fold>
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", marginBottom: 6 }}>{t("st_confirmed_msg")}</div>
@@ -758,9 +756,9 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               </div>
             )}
             {o.status === "quoted" && (
-              <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                {o.mode !== "pickup" && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(o).total)}</div>}
+              <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 14, padding: "12px 14px", margin: "8px 0" }}>
+                <div style={{ fontSize: 14.5, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
+                {o.mode !== "pickup" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(o).total)}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
@@ -768,30 +766,18 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 </div>
               </div>
             )}
-            {!["rejected", "cancelled"].includes(o.status) && (o.other_phone || (o.rider_name && o.rider_phone)) && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0" }}>
-                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callBtn}>{t("st_call_shop")}</a>}
-                {o.rider_name && o.rider_phone && ["accepted", "ready", "picked_up"].includes(o.job_status || o.status) && <a href={`tel:${o.rider_phone}`} style={callBtn}>{t("st_call_rider")}</a>}
-              </div>
-            )}
-            {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
-              <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
-            )}
-            {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && !o.rider_name && (
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 4 }}>
-                {o.job_id || o.status === "ready" || !o.rider_after
-                  ? t("st_finding_rider")
-                  : String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}
-              </div>
-            )}
-            {o.rider_name && (
-              <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}</div>
-            )}
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
             {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
-            {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
-              <div><CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} /></div>
+            {!["rejected", "cancelled", "delivered"].includes(o.status) && (
+              <Actions>
+                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_shop")}</a>}
+                {o.rider_name && o.rider_phone && <a href={`tel:${o.rider_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_rider")}</a>}
+                {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
+                  <CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} />
+                )}
+                <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(orderBill(o).total)}`]} />
+              </Actions>
             )}
           </div>
         ))}
@@ -826,6 +812,47 @@ export function MyOrdersSheet({ api, onClose }) {
 // accepted, ready, collected.
 const callBtn = { display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 16px", borderRadius: 12, background: "#16A34A", color: "#fff", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box" };
 
+// What is happening to this order, said plainly, for the restaurant or shop.
+function OwnerBanner({ o, t }) {
+  const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
+  const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
+  const at = (d) => new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (o.status === "placed") return <Banner tone="wait" icon={"\u{1F514}"} title={t("ob_o_new")} sub={t("ob_o_new_sub")} />;
+  if (o.status === "confirmed") return <Banner tone="wait" icon={"\u{1F4B0}"} title={t("ob_o_fee")} />;
+  if (o.status === "quoted") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_o_wait_cust")} />;
+  if (o.mode === "delivery" || o.mode === "shop_delivery") {
+    if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_out")}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_rider_coming")} sub={String(t("ow_rider_is")).replace("{name}", o.rider_name)}>{timer}</Banner>;
+    if (o.status === "ready") return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_o_ready_wait")}>{timer}</Banner>;
+    if (o.mode === "delivery" && !o.job_id && o.rider_after) return <Banner tone="go" icon={"\u{1F373}"} title={t("ob_o_prep")} sub={String(t("st_prep_owner")).replace("{t}", at(o.rider_after))}>{timer}</Banner>;
+    return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_finding")} sub={t("ow_rider_wait")}>{timer}</Banner>;
+  }
+  return o.status === "ready"
+    ? <Banner tone="good" icon={"\u{1F6CD}\uFE0F"} title={t("ob_o_ready_collect")} />
+    : <Banner tone="go" icon={"\u{1F373}"} title={t("ob_o_prep")} sub={t("ob_o_prep_sub")} />;
+}
+
+// What is happening to this order, said plainly, for the customer.
+function CustomerBanner({ o, t }) {
+  const due = o.delivery_mins ? new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000) : null;
+  const timer = o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && due ? <DueTimer due={due} style={{ marginTop: 8 }} /> : null;
+  const note = <CancelNote o={o} />;
+  if (o.status === "cancelled") return <Banner tone="bad" icon={"\u274C"} title={t("ob_cancelled")}>{note}</Banner>;
+  if (o.status === "rejected") return <Banner tone="bad" icon={"\u274C"} title={t("ob_rejected")}>{note}</Banner>;
+  if (o.status === "delivered") return <Banner tone="good" icon={"\u2705"} title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
+  if (o.status === "placed") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
+  if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" icon={"\u{1F4AC}"} title={t("ob_decide")} />;
+  if (o.mode === "delivery" || o.mode === "shop_delivery") {
+    if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) : null}>{timer}</Banner>;
+    if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name)}>{timer}</Banner>;
+    if (o.job_id || o.status === "ready" || !o.rider_after) return <Banner tone="wait" icon={"\u{1F50E}"} title={t("ob_finding")} sub={t("st_finding_rider")}>{timer}</Banner>;
+    return <Banner tone="go" icon={"\u{1F373}"} title={t("ob_prep")} sub={String(t("st_prep_msg")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}>{timer}</Banner>;
+  }
+  return o.status === "ready"
+    ? <Banner tone="good" icon={"\u{1F6CD}\uFE0F"} title={t("ob_ready_pickup")} />
+    : <Banner tone="go" icon={"\u{1F373}"} title={t("ob_prep")} sub={t("ob_prep_pickup_sub")} />;
+}
+
 function OrderTrack({ o }) {
   const { t } = useI18n();
   if (["rejected", "cancelled"].includes(o.status)) return null;
@@ -833,17 +860,7 @@ function OrderTrack({ o }) {
   if (o.mode === "shop_delivery") {
     const sd = [t("st_status_placed"), t("st_status_confirmed"), t("st_status_quoted"), t("st_status_accepted"), t("st_status_delivered")];
     const a = o.status === "delivered" ? 4 : ["accepted", "ready"].includes(o.status) ? 3 : o.status === "quoted" ? 2 : o.status === "confirmed" ? 1 : 0;
-    return (
-      <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
-        {sd.map((label, i) => (
-          <div key={i} style={{ flex: 1, textAlign: "center", position: "relative" }}>
-            {i > 0 && <span style={{ position: "absolute", top: 9, right: "50%", width: "100%", height: 3, background: i <= a ? "#16A34A" : "#E1E5EA" }} />}
-            <span style={{ position: "relative", display: "inline-block", width: 20, height: 20, borderRadius: "50%", background: i <= a ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: "20px" }}>{i <= a ? "\u2713" : ""}</span>
-            <div style={{ fontSize: 11, fontWeight: i === a ? 800 : 600, color: i <= a ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 3 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-    );
+    return <Steps steps={sd} at={a} />;
   }
   const steps = delivery
     ? [t("st_status_placed"), t("st_status_accepted"), t("st_tl_prep"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
@@ -851,17 +868,7 @@ function OrderTrack({ o }) {
   const at = o.status === "delivered" ? (delivery ? 4 : 3)
     : delivery ? (o.rider_name || o.job_status === "picked_up" ? 3 : o.status === "placed" ? 0 : 2)
     : o.status === "ready" ? 2 : o.status === "accepted" ? 1 : 0;
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", margin: "10px 0 8px" }}>
-      {steps.map((label, i) => (
-        <div key={i} style={{ flex: 1, textAlign: "center", position: "relative" }}>
-          {i > 0 && <span style={{ position: "absolute", top: 9, right: "50%", width: "100%", height: 3, background: i <= at ? "#16A34A" : "#E1E5EA" }} />}
-          <span style={{ position: "relative", display: "inline-block", width: 20, height: 20, borderRadius: "50%", background: i <= at ? "#16A34A" : "#E1E5EA", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: "20px" }}>{i <= at ? "\u2713" : ""}</span>
-          <div style={{ fontSize: 11, fontWeight: i === at ? 800 : 600, color: i <= at ? T.ink : T.inkFaint, lineHeight: 1.25, marginTop: 3 }}>{label}</div>
-        </div>
-      ))}
-    </div>
-  );
+  return <Steps steps={steps} at={at} />;
 }
 
 function Lines({ lines }) {
@@ -1016,35 +1023,25 @@ export function OwnerOrders({ api, onHire }) {
     <div>
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}{active.length ? ` (${active.length})` : ""}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
-        <div key={o.id} style={{ ...card, border: `1.5px solid ${statusColor[o.status]}` }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-            <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
-          </div>
-          <Lines lines={o.lines} />
-          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)}{o.gst_paise > 0 ? ` + ${t("fr_gst")} ${rupees(o.gst_paise)}` : ""} · {modeLabel(o.mode, t)}</div>
-          {o.address_text && <div style={{ fontSize: 13.5, color: T.ink }}>{o.address_text}</div>}
-          {o.mode !== "pickup" && (typeof o.cust_lat === "number" && typeof o.cust_lng === "number" ? (
-            <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.cust_lat},${o.cust_lng}`} target="_blank" rel="noopener noreferrer"
-               style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "6px 0 2px", minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
-              <Icon name="pin" size={16} /> {t("ow_cust_map")}
-            </a>
-          ) : o.address_text ? (
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address_text)}`} target="_blank" rel="noopener noreferrer"
-               style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "6px 0 2px", minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
-              <Icon name="pin" size={16} /> {t("ow_cust_map")}
-            </a>
-          ) : null)}
-          {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
-          {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
-          <OrderDates o={o} />
-          {o.mode === "delivery" && ["accepted", "ready"].includes(o.status) && o.delivery_mins && <DueTimer due={new Date(new Date(o.created_at).getTime() + Number(o.delivery_mins) * 60000)} />}
-          <CancelNote o={o} />
-          {o.mode === "delivery" && o.status === "accepted" && !o.job_id && (
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "4px 0" }}>
-              {o.rider_after ? String(t("st_prep_owner")).replace("{t}", new Date(o.rider_after).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) : t("st_finding_rider")}
+        <div key={o.id} style={cardStyle}>
+          <OrderHeader name={o.other_name} amount={o.total_paise + (o.gst_paise || 0)}
+                       sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
+          <OwnerBanner o={o} t={t} />
+          <ItemsBox lines={o.lines} />
+          {(o.address_text || o.note) && (
+            <div style={{ padding: "10px 12px", background: "#F7F8FA", borderRadius: 12, margin: "8px 0" }}>
+              {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{"\u{1F4CD}"} {o.address_text}</div>}
+              {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic", marginTop: 4 }}>{o.note}</div>}
             </div>
           )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
+            {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("jb_call_cust")}</a>}
+            {o.mode !== "pickup" && (typeof o.cust_lat === "number" && typeof o.cust_lng === "number" ? (
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.cust_lat},${o.cust_lng}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("ow_cust_map")}</a>
+            ) : o.address_text ? (
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address_text)}`} target="_blank" rel="noopener noreferrer" style={outlineStyle}>{"\u{1F4CD}"} {t("ow_cust_map")}</a>
+            ) : null)}
+          </div>
           {["confirmed", "quoted", "accepted", "ready"].includes(o.status) && (
             <div><CancelButton role="shop" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} /></div>
           )}
