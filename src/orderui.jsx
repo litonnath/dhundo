@@ -132,7 +132,7 @@ export function splitOf(o) {
   const rider = o.mode === "delivery" ? n(o.delivery_fee_paise) : 0;
   const platform = n(o.misc_fee_paise);
   const gst = n(o.gst_paise) + n(o.delivery_gst_paise) + n(o.misc_gst_paise);
-  return { shop, rider, platform, gst, total: shop + rider + platform + gst };
+  return { shop, rider, platform, gst, total: shop + platform + gst };
 }
 
 export function SplitBox({ o, t, who = "all" }) {
@@ -145,10 +145,10 @@ export function SplitBox({ o, t, who = "all" }) {
   return (
     <div>
       {row("shop", t("sp_shop"), sp.shop)}
-      {sp.rider > 0 && row("rider", t("sp_rider"), sp.rider)}
       {row("platform", t("sp_platform"), sp.platform)}
       {sp.gst > 0 && row("gst", t("sp_gst"), sp.gst)}
       <div style={{ borderTop: "1px solid #EEF0F4", marginTop: 4, paddingTop: 4 }}>{row("total", t("sp_total"), sp.total, true)}</div>
+      {sp.rider > 0 && <div style={{ marginTop: 6 }}>{row("rider", t("sp_rider_direct"), sp.rider)}</div>}
     </div>
   );
 }

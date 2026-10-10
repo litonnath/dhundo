@@ -65,32 +65,29 @@ const fmtTime = (t) => {
 // The customer's bill: items, then each extra on its own line, then what to pay.
 function Bill({ o, t, api, range = null }) {
   const b = orderBill(o);
-  // Before a rider has taken the delivery the partner fee is a range; after, it is exact.
-  const spread = range && !range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) ? Number(range.fee_max_paise) - Number(range.fee_paise) : 0;
-  const refund = range && range.rider_taken && o.pay_method === "upi" && o.paid && Number(range.fee_max_paise) > Number(range.fee_paise) ? Number(range.fee_max_paise) - Number(range.fee_paise) : 0;
   const biz = useBusinessInfo(api);
   const line = (k, label, v) => v > 0 && (
     <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
   );
-  const gstAll = b.gst + b.mGst; // one GST line: on the items and the miscellaneous fee
+  const gstAll = b.gst + b.mGst; // one GST line: on the items and the app's delivery fee
   if (gstAll + b.delivery + b.misc <= 0) return null;
+  // The rider's fee is paid straight to the rider, never through the app.
+  const taken = !!(range && range.rider_taken);
+  const lo = range ? Number(range.fee_min_paise) || b.delivery : b.delivery, hi = range ? Number(range.fee_max_paise) || b.delivery : b.delivery;
   return (
     <div style={{ margin: "4px 0 2px" }}>
-      {spread > 0
-        ? <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{t("st_fee_rider")}</span><span>{rupees(b.delivery + spread)}</span></div>
-        : line("d", t("st_fee_rider"), b.delivery)}
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total + spread)}</span></div>
-      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("dq_refund")}</div>}
-      {range && range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) && (
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
+      {o.mode === "delivery" && (
         <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
-          {o.pay_method === "upi" && o.paid
-            ? String(t("fr_settle_upi")).replace("{held}", rupees(range.fee_max_paise)).replace("{rider}", rupees(range.fee_paise)).replace("{back}", rupees(refund))
-            : String(t("fr_settle_cod")).replace("{rider}", rupees(range.fee_paise))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>{t("st_fee_rider")}</span><span>{taken || hi <= lo ? rupees(b.delivery || lo) : `${rupees(lo)} \u2013 ${rupees(hi)}`}</span></div>
+          <div style={{ marginTop: 3 }}>
+            {taken ? String(t("fr_pay_rider")).replace("{fee}", rupees(b.delivery)) : String(t("fr_rider_range")).replace("{a}", rupees(lo)).replace("{b}", rupees(hi))}
+          </div>
         </div>
       )}
-      {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} · ` : ""}GSTIN {biz.gstin}</div>}
+      {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} \u00B7 ` : ""}GSTIN {biz.gstin}</div>}
     </div>
   );
 }
@@ -689,22 +686,6 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             </div>
           </>
         )}
-        {mode === "delivery" && (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{dq && feeMaxRs > feeMinRs ? feeMaxRs : feeRs}</span>
-            </div>
-            {dq && (
-              <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.55 }}>
-                {Number(dq.drop_km) > 0 && <div>{String(t("dq_dist2")).replace("{b}", dq.drop_km)}</div>}
-                {!dq.rider_found && <div>{t("dq_norider2")}</div>}
-                {feeMaxRs > feeMinRs && (
-                  <div style={{ marginTop: 4 }}>{t("dq_refund")}</div>
-                )}
-              </div>
-            )}
-          </>
-        )}
         {gstP + miscG > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
             <span>{t("fr_gst")}</span><span>{rupees(gstP + miscG)}</span>
@@ -712,7 +693,16 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + (feeMaxRs > feeMinRs && mode === "delivery" ? feeMaxRs : feeRs)) * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG) / 100 * 100) / 100}</span>
+          </div>
+        )}
+        {mode === "delivery" && (
+          <div style={{ margin: "0 0 12px", padding: "10px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 12, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14.5 }}>
+              <span>{t("st_fee_rider")}</span><span>{dq && feeMaxRs > feeMinRs ? `\u20B9${feeMinRs} \u2013 \u20B9${feeMaxRs}` : `~\u20B9${feeRs}`}</span>
+            </div>
+            <div style={{ marginTop: 3 }}>{t("dq_direct")}</div>
+            {dq && Number(dq.drop_km) > 0 && <div style={{ marginTop: 3 }}>{String(t("dq_dist2")).replace("{b}", dq.drop_km)}{!dq.rider_found ? ` \u00B7 ${t("dq_norider2")}` : ""}</div>}
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -805,12 +795,6 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   if (view && orders && orders.length === 0 && !showEmpty) return null;
   // In Active, one card per shop (the latest); older ones sit behind a button.
   const latestPerShop = (list) => { const seen = new Set(); return list.filter((o) => { if (seen.has(o.other_name)) return false; seen.add(o.other_name); return true; }); };
-  // Until a rider accepts, the customer is held for the highest delivery partner fee.
-  const held = (o) => {
-    const r = feeRange[o.id];
-    const up = r && !r.rider_taken ? Number(r.fee_max_paise) - Number(o.delivery_fee_paise) : 0;
-    return up > 0 ? { ...o, delivery_fee_paise: Number(r.fee_max_paise) } : o;
-  };
   const olderCount = view === "active" && orders ? orders.length - latestPerShop(orders).length : 0;
   return (
     <div>
@@ -818,7 +802,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
         {!view && <AlertsCard api={api} compact />}
         {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (showAll || view !== "active" ? orders : latestPerShop(orders)).map((o) => (
           <div key={o.id} style={cardStyle}>
-            <OrderHeader name={o.other_name} amount={orderBill(held(o)).total}
+            <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} />
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
@@ -836,11 +820,11 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 )}
               </div>
             )}
-            <Fold title={t("ob_bill")} right={rupees(orderBill(held(o)).total)}>
+            <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
-              <SplitBox o={held(o)} t={t} />
+              <SplitBox o={o} t={t} />
             </Fold>
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
@@ -851,7 +835,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.status === "quoted" && (
               <div style={{ background: "#FFF7E6", border: "1px solid #F3D48A", borderRadius: 14, padding: "12px 14px", margin: "8px 0" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: "#7A4A00" }}>{o.mode === "pickup" ? t("st_nodeliver_msg") : String(t("st_quote_msg")).replace("{n}", rupees(o.delivery_fee_paise))}</div>
-                {o.mode !== "pickup" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(held(o)).total)}</div>}
+                {o.mode !== "pickup" && <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, margin: "3px 0 8px" }}>{t("st_topay")}: {rupees(orderBill(o).total)}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
@@ -878,7 +862,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
                   <CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} />
                 )}
-                <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(orderBill(held(o)).total)}`]} />
+                <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(orderBill(o).total)}`]} />
               </Actions>
             )}
           </div>

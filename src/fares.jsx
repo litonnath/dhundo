@@ -42,7 +42,8 @@ export function orderBill(o) {
   const items = n(o.total_paise), gst = n(o.gst_paise);
   const delivery = n(o.delivery_fee_paise), dGst = n(o.delivery_gst_paise);
   const misc = n(o.misc_fee_paise), mGst = n(o.misc_gst_paise);
-  return { items, gst, delivery, dGst, misc, mGst, total: items + gst + delivery + dGst + misc + mGst };
+  // The delivery partner fee is paid straight to the rider, so it is not in total.
+  return { items, gst, delivery, dGst, misc, mGst, total: items + gst + dGst + misc + mGst };
 }
 
 // Dhundo's registered details, for the bill. Empty until the admin saves them.
