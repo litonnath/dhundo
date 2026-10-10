@@ -450,6 +450,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     adminRatings: (onlyComplaints) => rpc("services_admin_ratings", { p_complaints_only: !!onlyComplaints }, true),
     myOrderRatings: (ids) => rpc("services_my_order_ratings", { p_orders: ids }, true),
     orderDeliveryRatings: (ids) => rpc("services_order_delivery_ratings", { p_orders: ids }, true),
+    orderFeeRange: (ids) => rpc("services_order_fee_range", { p_orders: ids }, true),
     orderPay: (id, action) => rpc("services_order_pay", { p_order: id, p_action: action }, true),
     ordersReleaseDue: () => rpc("services_orders_release_due", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),

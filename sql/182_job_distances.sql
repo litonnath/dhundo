@@ -1,7 +1,7 @@
 -- ===========================================================================
 -- 182_job_distances.sql -- a job offered to a rider also says how far the
 -- customer is from the restaurant (drop_km), next to how far the rider is from
--- the restaurant (km). Replaces services_jobs_nearby from 179. Run after 179_widen_radius_1.sql and 187_delivery_ratings.sql.
+-- the restaurant (km). Replaces services_jobs_nearby from 179. Run after 179_widen_radius_1.sql, 182_delivery_quote.sql and 187_delivery_ratings.sql.
 -- ===========================================================================
 drop function if exists public.services_jobs_nearby();
 create function public.services_jobs_nearby()
@@ -32,9 +32,11 @@ begin
   if v_lat is null then return; end if;
   return query
     select j.id, coalesce(nullif(btrim(p.business_name), ''), p.full_name)::text, j.note, j.drop_text,
-           j.fee_paise + case when p.lat is not null and public.services_km(v_lat, v_lng, p.lat, p.lng) > 10
-             then ceil((public.services_km(v_lat, v_lng, p.lat, p.lng) - 10) * coalesce((select c.per_km_rupees from public.services_rate_card c where c.key = 'delivery_food'), 0))::int * 100
-             else 0 end,
+           case when o.id is not null and p.lat is not null
+                then public.services_fee_for_km(j.poster_work,
+                       ((case when o.lat is null then 3.0 else 1.3 * public.services_km(p.lat, p.lng, o.lat, o.lng) end)
+                       + greatest(0, 1.3 * public.services_km(v_lat, v_lng, p.lat, p.lng) - 2))::numeric)
+                else j.fee_paise end,
            case when p.lat is null then null
                 else round(public.services_km(v_lat, v_lng, p.lat, p.lng)::numeric, 1)::double precision end,
            j.created_at, j.expires_at,

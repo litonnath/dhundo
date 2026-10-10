@@ -63,8 +63,11 @@ const fmtTime = (t) => {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 };
 // The customer's bill: items, then each extra on its own line, then what to pay.
-function Bill({ o, t, api }) {
+function Bill({ o, t, api, range = null }) {
   const b = orderBill(o);
+  // Before a rider has taken the delivery the partner fee is a range; after, it is exact.
+  const spread = range && !range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) ? Number(range.fee_max_paise) - Number(range.fee_paise) : 0;
+  const refund = range && range.rider_taken && o.pay_method === "upi" && o.paid && Number(range.fee_max_paise) > Number(range.fee_paise) ? Number(range.fee_max_paise) - Number(range.fee_paise) : 0;
   const biz = useBusinessInfo(api);
   const line = (k, label, v) => v > 0 && (
     <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
@@ -73,10 +76,14 @@ function Bill({ o, t, api }) {
   if (gstAll + b.delivery + b.misc <= 0) return null;
   return (
     <div style={{ margin: "4px 0 2px" }}>
-      {line("d", t("st_fee_rider"), b.delivery)}
+      {spread > 0
+        ? <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{t("st_fee_rider")}</span><span>{rupees(b.delivery)} {"\u2013"} {rupees(b.delivery + spread)}</span></div>
+        : line("d", t("st_fee_rider"), b.delivery)}
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{spread > 0 ? `${rupees(b.total)} \u2013 ${rupees(b.total + spread)}` : rupees(b.total)}</span></div>
+      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("fr_range_note")}</div>}
+      {refund > 0 && <div style={{ fontSize: 13, fontWeight: 600, color: "#166534", marginTop: 4 }}>{String(t("fr_refund")).replace("{n}", rupees(refund))}</div>}
       {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} · ` : ""}GSTIN {biz.gstin}</div>}
     </div>
   );
@@ -634,6 +641,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
     return () => { alive = false; };
   }, [api, row.id, mode, addr && addr.lat, addr && addr.lng]); // eslint-disable-line react-hooks/exhaustive-deps
   const feeRs = mode === "delivery" ? (dq ? Math.round(dq.fee_paise / 100) : cardRow ? calcFare(cardRow, roadKm).rider : 30) : 0;
+  const feeMinRs = dq ? Math.round(dq.fee_min_paise / 100) : feeRs, feeMaxRs = dq ? Math.round(dq.fee_max_paise / 100) : feeRs;
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
@@ -678,12 +686,13 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{feeRs}</span>
+              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{dq && feeMaxRs > feeMinRs ? `${feeMinRs} \u2013 \u20B9${feeMaxRs}` : feeRs}</span>
             </div>
             {dq && (
               <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.5 }}>
                 {String(t("dq_line")).replace("{a}", dq.pickup_km).replace("{b}", dq.drop_km).replace("{c}", Math.round(Number(dq.total_km) * 10) / 10)}
                 {!dq.rider_found && ` ${t("dq_norider")}`}
+                {feeMaxRs > feeMinRs && <div style={{ marginTop: 3 }}>{t("fr_range_note")}</div>}
               </div>
             )}
           </>
@@ -695,7 +704,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + feeRs) * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>~{"\u20B9"}{feeMaxRs > feeMinRs && mode === "delivery" ? `${Math.round(((total + gstP + miscP + miscG) / 100 + feeMinRs) * 100) / 100} \u2013 \u20B9${Math.round(((total + gstP + miscP + miscG) / 100 + feeMaxRs) * 100) / 100}` : Math.round(((total + gstP + miscP + miscG) / 100 + feeRs) * 100) / 100}</span>
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -759,9 +768,12 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const [canRateDel, setCanRateDel] = useState(() => new Set());
   const [givenR, setGivenR] = useState({});
   const [shopSum, setShopSum] = useState({});
+  const [feeRange, setFeeRange] = useState({});
   const load = useCallback(async () => {
     try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); const list = many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)));
       setOrders(list);
+      const dIds = list.filter((o) => o.mode === "delivery").map((o) => o.id);
+      if (dIds.length && api.orderFeeRange) { try { const m = {}; many(await api.orderFeeRange(dIds)).forEach((x) => { m[x.order_id] = x; }); setFeeRange(m); } catch (_) { /* keep */ } }
       const doneIds = list.filter((o) => o.status === "delivered").map((o) => o.id);
       if (doneIds.length && api.myOrderRatings) {
         try {
@@ -812,7 +824,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
             <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
-              <Bill o={o} t={t} api={api} />
+              <Bill o={o} t={t} api={api} range={feeRange[o.id]} />
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
               <SplitBox o={o} t={t} />
             </Fold>

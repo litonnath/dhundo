@@ -1,14 +1,33 @@
 -- ===========================================================================
--- 182_delivery_quote.sql -- the delivery fee from three distances, as on food
--- apps: (1) the nearest online delivery rider to the restaurant, (2) the
--- restaurant to the customer, (3) the total trip. The fee is the rate card's
--- max(minimum, base + per km x total km), and the customer sees it before
--- ordering. The rider gets all of it. Road distance = 1.3 x the straight line.
--- The per-km price is the rate card's (set by the app, not by the rider). No online rider within 30 km counts as 2 km; a missing position as 3 km.
--- Replaces services_delivery_fee from 178. Run after 178_delivery_fee_card.sql.
+-- 182_delivery_quote.sql -- the delivery partner fee, worked out from distance,
+-- as a RANGE the customer sees before ordering. The fee is the rate card's
+-- max(minimum, base + per km x km), where km = the restaurant to the customer
+-- plus the rider's trip to the restaurant beyond the first 2 km (road distance =
+-- 1.3 x the straight line). The low end assumes a rider right at the restaurant;
+-- the high end a rider 15 km away. The exact fee is set when a rider accepts.
+-- Replaces services_delivery_quote / services_delivery_fee from 178.
+-- Run after 178_delivery_fee_card.sql and 191_pricing_defaults.sql.
 -- ===========================================================================
-create or replace function public.services_delivery_quote(p_worker uuid, p_lat double precision, p_lng double precision)
-returns table (pickup_km numeric, drop_km numeric, total_km numeric, fee_paise int, rider_found boolean)
+create or replace function public.services_fee_for_km(p_worker uuid, p_km numeric)
+returns int
+language sql
+stable
+security definer
+set search_path to 'public'
+as $fn$
+  select coalesce((
+    select ceil(greatest(c.min_rupees, c.base_rupees + c.per_km_rupees * greatest(coalesce(p_km, 0), 0)))::int * 100
+      from public.services_rate_card c
+      join public.services_workers s on s.id = p_worker
+      left join public.services_trades t on t.slug = s.trade_slug
+     where c.key = case when t.group_name = 'Eat & Stay' then 'delivery_food' else 'delivery_small' end), 3000);
+$fn$;
+revoke all on function public.services_fee_for_km(uuid, numeric) from public, anon, authenticated;
+
+drop function if exists public.services_delivery_quote(uuid, double precision, double precision);
+create function public.services_delivery_quote(p_worker uuid, p_lat double precision, p_lng double precision)
+returns table (pickup_km numeric, drop_km numeric, total_km numeric, fee_paise int, rider_found boolean,
+               fee_min_paise int, fee_max_paise int)
 language plpgsql
 stable
 security definer
@@ -16,42 +35,29 @@ set search_path to 'public'
 as $fn$
 declare
   s record;
-  v_group text;
   v_drop numeric;
-  v_pick numeric;
+  v_pick numeric := 2.0;
   v_found boolean := false;
-  c record;
-  v_total numeric;
-  v_rate int;
 begin
-  select w.lat, w.lng, w.trade_slug into s from public.services_workers w where w.id = p_worker;
-  select t.group_name into v_group from public.services_trades t where t.slug = s.trade_slug;
+  select w.lat, w.lng into s from public.services_workers w where w.id = p_worker;
   v_drop := case when s.lat is null or p_lat is null then 3.0
                  else round((1.3 * public.services_km(s.lat, s.lng, p_lat, p_lng))::numeric, 1) end;
-  v_pick := 2.0;
   if s.lat is not null then
-    select round((1.3 * public.services_km(pr.lat, pr.lng, s.lat, s.lng))::numeric, 1), rw.per_km_rupees into v_pick, v_rate
+    select round((1.3 * min(public.services_km(pr.lat, pr.lng, s.lat, s.lng)))::numeric, 1) into v_pick
       from public.services_presence pr
       join public.services_workers rw on rw.id = pr.worker_id
      where rw.status = 'approved' and rw.serves_delivery
        and public.services_is_delivery_trade(rw.trade_slug)
        and pr.online_until > now()
        and pr.seen_at > now() - make_interval(mins => public.services_presence_fresh_minutes())
-       and public.services_km(pr.lat, pr.lng, s.lat, s.lng) <= 30
-     order by public.services_km(pr.lat, pr.lng, s.lat, s.lng)
-     limit 1;
+       and public.services_km(pr.lat, pr.lng, s.lat, s.lng) <= 30;
     v_found := v_pick is not null;
     v_pick := coalesce(v_pick, 2.0);
   end if;
-  -- Charged by distance, like other food apps: the restaurant to the customer,
-  -- plus any part of the rider's trip to the restaurant beyond the first 2 km.
-  v_total := v_drop + greatest(0, v_pick - 2);
-  select r.min_rupees, r.base_rupees, r.per_km_rupees into c from public.services_rate_card r
-   where r.key = case when v_group = 'Eat & Stay' then 'delivery_food' else 'delivery_small' end;
-  return query select v_pick, v_drop, v_total,
-    case when c.base_rupees is null then 3000
-         else ceil(greatest(c.min_rupees, c.base_rupees + c.per_km_rupees * v_total))::int * 100 end,
-    v_found;
+  return query select v_pick, v_drop, v_drop + greatest(0, v_pick - 2),
+    public.services_fee_for_km(p_worker, v_drop + greatest(0, v_pick - 2)), v_found,
+    public.services_fee_for_km(p_worker, v_drop),
+    public.services_fee_for_km(p_worker, v_drop + 13);
 end;
 $fn$;
 revoke all on function public.services_delivery_quote(uuid, double precision, double precision) from public;

@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "अॅप बंद असताना अलर्ट",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  fr_range_note: "The delivery partner fee depends on how far the rider is when they accept. Cash on delivery: you pay only the final fee. UPI: you pay the highest amount and the difference is refunded.",
+  fr_refund: "Refund of the difference: {n}",
   jb_r_from_cust: "Customer\u2019s rating of you",
   jb_r_to_cust: "Your rating of the customer",
   jb_r_wait: "The customer has not rated yet",
