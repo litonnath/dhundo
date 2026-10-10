@@ -921,7 +921,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
     const renderEmpty = (row) => (
       <ListingCard
         row={row}
-        rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+        rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
         tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
         trade={trades.find((x) => x.slug === row.trade_slug)}
         canCall={!!(user && user.id)}
@@ -1006,7 +1006,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                     <ListingCard
                       key={row.id}
                       row={row}
-                      rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                      rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
                       tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
                       trade={trades.find((x) => x.slug === row.trade_slug)}
                       canCall={!!(user && user.id)}
@@ -1173,7 +1173,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                 <ListingCard
                   key={row.id}
                   row={row}
-                  rate={rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
+                  rate={pricedByKm(trades.find((x) => x.slug === row.trade_slug)) ? null : rateLabel(row.day_rate_min, row.day_rate_max, t("per_day"))}
                   tradeLabel={tradeName(trades.find((x) => x.slug === row.trade_slug), lang) || row.trade_name}
                   trade={trades.find((x) => x.slug === row.trade_slug)}
                   canCall={!!(user && user.id)}
