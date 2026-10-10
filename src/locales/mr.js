@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "अॅप बंद असताना अलर्ट",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  db_buysell: "Buy & sell requests",
   ob_collected: "Collected by you. Enjoy!",
   st_status_collected: "Collected by customer",
   ow_collected: "Customer collected it",

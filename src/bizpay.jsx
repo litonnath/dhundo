@@ -224,9 +224,10 @@ function RateQuick({ api }) {
   );
 }
 
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null, onItems = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
+  const [itemReqs, setItemReqs] = useState([]); // buy and sell requests for my items
   const [range, setRange] = useState(7);
   const [sel, setSel] = useState(null);
   const [busy, setBusy] = useState(null);
@@ -285,13 +286,15 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
       let rows = [];
       if (kind === "owner") {
         rows = many(await api.myOrders()).filter((o) => o.role === "owner").map((o) => ({ id: o.id, at: o.created_at, paise: o.total_paise, title: o.other_name, lines: Array.isArray(o.lines) ? o.lines : [], status: o.status, canAct: o.status === "placed", wait: ["placed", "quoted", "confirmed"].includes(o.status), active: ["accepted", "ready"].includes(o.status), done: o.status === "delivered" }));
-        const it = many(api.myItemOrders ? await api.myItemOrders() : []).filter((x) => x.role === "seller" && x.status === "requested");
-        it.forEach((x) => rows.push({ id: x.id, at: x.created_at, paise: 0, title: x.title || t("mb_mine"), status: "requested", wait: true, active: false, done: false, noMoney: true }));
       } else if (kind === "delivery") {
         rows = many(await api.myJobs()).filter((j) => j.role === "rider").map((j) => ({ id: j.id, at: j.created_at, paise: j.fee_paise || 0, title: j.other_name || j.drop_text, status: j.status, wait: false, active: ["accepted", "picked_up"].includes(j.status), done: j.status === "delivered" }));
       } else if (kind === "travel") {
         rows = many(await api.rideHistory()).filter((r) => r.role === "driver").map((r) => ({ id: r.id, at: r.done_at || r.created_at, paise: r.fare_paise || 0, title: r.drop_text || r.other_name, status: r.status, wait: false, active: ["accepted", "started", "arrived"].includes(r.status), done: r.status === "done" }));
       }
+      try {
+        const it = many(api.myItemOrders ? await api.myItemOrders() : []).filter((x) => x.role === "seller" && x.status === "requested");
+        setItemReqs(it);
+      } catch (_) { /* keep what was there */ }
       setD(rows); setStamp(Date.now());
     } catch (_) { setD((x) => x || []); }
   };
@@ -447,6 +450,21 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
             </div>
           ))}
           {waitRows.length > 4 && <button onClick={onOrders} style={{ display: "block", width: "100%", background: "none", border: "none", color: "#8A5A00", fontWeight: 800, fontSize: 14.5, minHeight: 44, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_activity")}</button>}
+        </div>
+      )}
+
+      {itemReqs.length > 0 && (
+        <div style={{ background: "#F3F0FF", border: "1.5px solid #8B5CF6", borderRadius: 18, padding: "10px 14px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0 8px" }}>
+            <span style={{ width: 32, height: 32, borderRadius: "50%", background: "#8B5CF6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>{itemReqs.length}</span>
+            <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: T.ink }}>{t("db_buysell")}</span>
+          </div>
+          {itemReqs.slice(0, 4).map((x) => (
+            <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: "1px solid rgba(139,92,246,0.3)" }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.title || t("mb_mine")}{x.other_name ? <span style={{ fontWeight: 600, color: T.inkSoft }}>{` \u00B7 ${x.other_name}`}</span> : null}</span>
+              <button onClick={onItems || onOrders} style={{ minHeight: 42, padding: "0 16px", borderRadius: 21, border: "1.5px solid #8B5CF6", background: "#fff", color: "#5B21B6", fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>{t("db_open")}</button>
+            </div>
+          ))}
         </div>
       )}
 
