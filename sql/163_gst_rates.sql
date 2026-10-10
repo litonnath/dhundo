@@ -9,7 +9,7 @@ create table if not exists public.services_gst_rates (
 );
 alter table public.services_gst_rates enable row level security;
 revoke all on public.services_gst_rates from public, anon, authenticated;
-insert into public.services_gst_rates (kind, percent) values ('restaurant', 5), ('shop', 18)
+insert into public.services_gst_rates (kind, percent) values ('restaurant', 18), ('shop', 18)
 on conflict (kind) do nothing;
 
 create or replace function public.services_gst_rates()

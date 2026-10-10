@@ -20,8 +20,8 @@ revoke all on public.services_rate_card from public, anon, authenticated;
 
 insert into public.services_rate_card (key, label, base_rupees, per_km_rupees, min_rupees, platform_rupees, sort) values
   ('ride',            'Bike taxi / passenger ride',        20, 8,  30, 2, 1),
-  ('delivery_food',   'Restaurant food delivery',          20, 7,  30, 2, 2),
-  ('delivery_small',  'Shop delivery: small items',        20, 7,  30, 2, 3),
+  ('delivery_food',   'Restaurant food delivery',          8, 3,  15, 2, 2),
+  ('delivery_small',  'Shop delivery: small items',        8, 3,  15, 2, 3),
   ('delivery_medium', 'Shop delivery: medium / bulky',     40, 10, 60, 3, 4),
   ('delivery_heavy',  'Goods delivery: heavy / large vehicle', 120, 18, 200, 5, 5)
 on conflict (key) do nothing;

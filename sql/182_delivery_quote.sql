@@ -4,8 +4,7 @@
 -- restaurant to the customer, (3) the total trip. The fee is the rate card's
 -- max(minimum, base + per km x total km), and the customer sees it before
 -- ordering. The rider gets all of it. Road distance = 1.3 x the straight line.
--- The per-km price is the nearest online rider's own rate (inside the admin's band),
--- else the rate card's. No online rider within 30 km counts as 2 km; a missing position as 3 km.
+-- The per-km price is the rate card's (set by the app, not by the rider). No online rider within 30 km counts as 2 km; a missing position as 3 km.
 -- Replaces services_delivery_fee from 178. Run after 178_delivery_fee_card.sql.
 -- ===========================================================================
 create or replace function public.services_delivery_quote(p_worker uuid, p_lat double precision, p_lng double precision)
@@ -44,12 +43,14 @@ begin
     v_found := v_pick is not null;
     v_pick := coalesce(v_pick, 2.0);
   end if;
-  v_total := v_pick + v_drop;
+  -- Charged by distance, like other food apps: the restaurant to the customer,
+  -- plus any part of the rider's trip to the restaurant beyond the first 2 km.
+  v_total := v_drop + greatest(0, v_pick - 2);
   select r.min_rupees, r.base_rupees, r.per_km_rupees into c from public.services_rate_card r
    where r.key = case when v_group = 'Eat & Stay' then 'delivery_food' else 'delivery_small' end;
   return query select v_pick, v_drop, v_total,
     case when c.base_rupees is null then 3000
-         else ceil(greatest(c.min_rupees, c.base_rupees + coalesce(nullif(v_rate, 0), c.per_km_rupees) * v_total))::int * 100 end,
+         else ceil(greatest(c.min_rupees, c.base_rupees + c.per_km_rupees * v_total))::int * 100 end,
     v_found;
 end;
 $fn$;
