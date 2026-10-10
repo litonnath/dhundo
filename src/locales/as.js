@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  ow_collected: "Customer collected it",
+  ow_wait_rider: "Ready. The delivery rider will pick it up and bring it to the customer.",
   jb_shop_s: "Shop",
   jv_wait_ready_s: "Go to the shop and wait. You can collect the order once the shop marks it ready.",
   rv_not_ready_s: "The order is not ready yet. Wait for the shop to mark it ready.",
