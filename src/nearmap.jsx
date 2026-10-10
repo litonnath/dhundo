@@ -329,7 +329,7 @@ export function bearing(a, b) {
 }
 const fmtKm = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
 
-export function LiveRideMap({ pick, drop, driver, route = null, height = 230 }) {
+export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230 }) {
   const box = useRef(null);
   const st = useRef({});
   useEffect(() => {
@@ -350,15 +350,21 @@ export function LiveRideMap({ pick, drop, driver, route = null, height = 230 }) 
       layer.clearLayers();
       const dot = (c, txt) => L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
         html: `<div style="width:26px;height:26px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);color:#fff;font:800 12px sans-serif;display:flex;align-items:center;justify-content:center">${txt}</div>` });
+      // In a delivery the customer's own door is the biggest thing on the map,
+      // the restaurant is a shop icon, and the rider is smaller than both so
+      // he never hides the door when he arrives.
+      const big = (c, emoji, size, label) => L.divIcon({ className: "", iconSize: [size, size + (label ? 18 : 0)], iconAnchor: [size / 2, size / 2],
+        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size * 0.5)}px">${emoji}</div>${label ? `<div style="margin-top:2px;text-align:center;font:800 12px sans-serif;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap">${label}</div>` : ""}` });
       const pts = [];
-      if (pick) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer); }
-      if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: dot("#DC2626", "B") }).addTo(layer); pts.push([drop.lat, drop.lng]); }
+      if (pick && delivery) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: big("#16A34A", "\u{1F3EA}", 28), zIndexOffset: 200 }).addTo(layer); }
+      else if (pick) { pts.push([pick.lat, pick.lng]); L.marker([pick.lat, pick.lng], { icon: dot("#16A34A", "A") }).addTo(layer); }
+      if (drop && typeof drop.lat === "number") { L.marker([drop.lat, drop.lng], { icon: delivery ? big("#DC2626", "\u{1F3E0}", 34, "You") : dot("#DC2626", "B"), zIndexOffset: delivery ? 500 : 0 }).addTo(layer); pts.push([drop.lat, drop.lng]); }
       if (driver) {
         const h = Math.round(driver.heading || 0);
         L.marker([driver.lat, driver.lng], {
           zIndexOffset: 1000,
-          icon: L.divIcon({ className: "", iconSize: [44, 44], iconAnchor: [22, 22],
-            html: `<div style="width:44px;height:44px;border-radius:50%;background:#1D4ED8;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
+          icon: L.divIcon({ className: "", iconSize: [delivery ? 24 : 44, delivery ? 24 : 44], iconAnchor: [delivery ? 12 : 22, delivery ? 12 : 22],
+            html: `<div style="width:${delivery ? 24 : 44}px;height:${delivery ? 24 : 44}px;border-radius:50%;background:#1D4ED8;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="${delivery ? 14 : 26}" height="${delivery ? 14 : 26}" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
         }).addTo(layer);
         if (route && route.length > 1) L.polyline(route, { color: "#1D4ED8", weight: 5, opacity: 0.85 }).addTo(layer);
         else if (pick) L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
@@ -517,7 +523,7 @@ export function DeliveryLive({ api, orderId, riderName }) {
     : (reached ? t("dl_at_shop") : String(t("dl_to_shop")).replace("{n}", fmtKm(km)));
   return (
     <div style={{ margin: "10px 0" }}>
-      <LiveRideMap pick={shop} drop={door} driver={rider} route={route} />
+      <LiveRideMap pick={shop} drop={door} driver={rider} route={route} delivery />
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink, marginTop: 8 }}>
         {reached ? "\u2705 " : "\u{1F6F5} "}{riderName ? `${riderName}: ` : ""}{text}
       </div>
