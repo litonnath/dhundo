@@ -836,7 +836,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 )}
               </div>
             )}
-            <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
+            <Fold title={t("ob_bill")} right={rupees(orderBill(held(o)).total)}>
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
