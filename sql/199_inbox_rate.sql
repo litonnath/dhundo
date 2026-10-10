@@ -11,7 +11,7 @@ drop function if exists public.services_chat_inbox();
 create function public.services_chat_inbox()
 returns table (id uuid, role text, status text, other_name text, other_phone text, note text,
                start_at timestamptz, duration_mins int, created_at timestamptz,
-               closes_at timestamptz, last_body text, last_at timestamptz, last_mine boolean, unread int, trade_name text, rate_min int, rate_max int, other_avatar text, prev_start_at timestamptz, resched_by text)
+               closes_at timestamptz, last_body text, last_at timestamptz, last_mine boolean, unread int, trade_name text, rate_min int, rate_max int, other_avatar text, prev_start_at timestamptz, resched_by text, worker_id uuid)
 language sql
 stable
 security definer
@@ -44,7 +44,7 @@ as $fn$
                                            where r.booking_id = m.id and r.account_id = (select id from me)), 'epoch')),
          m.tname::text, m.rmin::int, m.rmax::int,
          (case when m.role = 'customer' then m.wavatar else m.cavatar end)::text,
-         m.prev_start_at, m.resched_by::text
+         m.prev_start_at, m.resched_by::text, m.worker_id
     from mine m
     left join lateral (select x.body, x.created_at, x.sender_id from public.services_chat_messages x
                         where x.booking_id = m.id and x.created_at > m.hid_at

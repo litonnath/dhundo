@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
@@ -19,6 +20,27 @@ function Face({ name, url }) {
 }
 
 const pill = (bg, fg, extra) => ({ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 18px", borderRadius: 22, border: "none", background: bg, color: fg, fontFamily: "inherit", fontWeight: 800, fontSize: 15, cursor: "pointer", textDecoration: "none", ...extra });
+
+function ReschedPanel({ api, x, resched, setResched, busy, rmsg, setRmsg, onSave, t }) {
+  const slots = useBusy(api, x.worker_id, x.id);
+  const a = resched.value ? new Date(resched.value) : null;
+  const ok = a && !Number.isNaN(a.getTime());
+  const b = ok ? new Date(a.getTime() + (Number(x.duration_mins) || 60) * 60000) : null;
+  return (
+    <div style={{ margin: "4px 14px 10px", padding: "10px 12px", background: "#F3F7FD", border: "1px solid #CFDDF0", borderRadius: 12 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0B3A78", marginBottom: 6 }}>{t("mbk_resched_title")}</div>
+      {x.worker_id && <BusyCalendar slots={slots} picked={ok ? a : null} />}
+      <input type="datetime-local" value={resched.value} onChange={(e) => { setRmsg(""); setResched({ id: x.id, value: e.target.value }); }}
+             style={{ width: "100%", boxSizing: "border-box", minHeight: 46, fontSize: 16, padding: "8px 10px", borderRadius: 10, border: "1px solid #B8C9E0", fontFamily: "inherit" }} />
+      {ok && clashWith(slots, a, b) && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{t("mbk_busy_err")}</div>}
+      {rmsg && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{rmsg}</div>}
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button disabled={busy === x.id || !resched.value || (ok && clashWith(slots, a, b))} onClick={onSave} style={pill("#0A5BB8", "#fff", { flex: 1 })}>{t("mbk_resched_save")}</button>
+        <button onClick={() => { setResched(null); setRmsg(""); }} style={pill("#fff", "#6B7280", { flex: 1, border: "1.5px solid #D1D5DB" })}>{t("cancel")}</button>
+      </div>
+    </div>
+  );
+}
 
 export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false }) {
   const { t } = useI18n();
@@ -112,16 +134,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               </div>
             )}
             {live && resched && resched.id === x.id && (
-              <div style={{ margin: "4px 14px 10px", padding: "10px 12px", background: "#F3F7FD", border: "1px solid #CFDDF0", borderRadius: 12 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0B3A78", marginBottom: 6 }}>{t("mbk_resched_title")}</div>
-                <input type="datetime-local" value={resched.value} onChange={(e) => setResched({ id: x.id, value: e.target.value })}
-                       style={{ width: "100%", boxSizing: "border-box", minHeight: 46, fontSize: 16, padding: "8px 10px", borderRadius: 10, border: "1px solid #B8C9E0", fontFamily: "inherit" }} />
-                {rmsg && <div role="alert" style={{ color: "#B91C1C", fontSize: 13.5, fontWeight: 700, marginTop: 6 }}>{rmsg}</div>}
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button disabled={busy === x.id || !resched.value} onClick={saveResched} style={pill("#0A5BB8", "#fff", { flex: 1 })}>{t("mbk_resched_save")}</button>
-                  <button onClick={() => { setResched(null); setRmsg(""); }} style={pill("#fff", "#6B7280", { flex: 1, border: "1.5px solid #D1D5DB" })}>{t("cancel")}</button>
-                </div>
-              </div>
+              <ReschedPanel api={api} x={x} resched={resched} setResched={setResched} busy={busy} rmsg={rmsg} setRmsg={setRmsg} onSave={saveResched} t={t} />
             )}
             {live && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>

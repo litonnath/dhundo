@@ -7,15 +7,15 @@ import { useI18n } from "./i18n.jsx";
 const hm = (d) => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
-export function useBusy(api, workerId) {
+export function useBusy(api, workerId, exclude = null) {
   const [slots, setSlots] = useState(null);
   useEffect(() => {
     let alive = true;
-    Promise.resolve(api.workerBusy ? api.workerBusy(workerId) : []).then((r) => {
+    Promise.resolve(api.workerBusy ? api.workerBusy(workerId, exclude) : []).then((r) => {
       if (alive) setSlots((Array.isArray(r) ? r : []).map((x) => ({ a: new Date(x.start_at), b: new Date(x.end_at) })));
     }).catch(() => { if (alive) setSlots([]); });
     return () => { alive = false; };
-  }, [api, workerId]);
+  }, [api, workerId, exclude]);
   return slots;
 }
 
