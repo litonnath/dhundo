@@ -807,7 +807,7 @@ export default function MyListing({ api, trades, isAdmin, onGoAdd }) {
           {!isBizTrade && (
             <>
           {isKmTrade ? (
-            <Row label={t("rs_per_km_range")}>
+            <Row label={t("rs_set_by_us")}>
               <KmRateFields api={api} slug={f.trade_slug} min={kmMin} max={kmMax} onChange={(a, b) => { setKmMin(a); setKmMax(b); set("work", "km_dirty", true); }} />
             </Row>
           ) : (

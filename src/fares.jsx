@@ -60,25 +60,17 @@ export function useBusinessInfo(api) {
 // Which rate card row a driver's vehicle is priced from.
 export const rateKeyFor = (slug) => (/deliver/i.test(slug) ? "delivery_food" : /bike|moto|scooter/i.test(slug) ? "ride_bike" : /auto|rick|toto/i.test(slug) ? "ride_auto" : /taxi|cab|\bcar\b/i.test(slug) ? "ride_taxi" : null);
 
-// The only price a rider, cab, taxi, auto or delivery driver gives: a per-km
-// range, inside the band the admin allows around the standard rate.
-export function KmRateFields({ api, slug, min, max, onChange, style }) {
+// Drivers and riders no longer type a price. Dhundo sets every fare from the
+// rate card (Admin > Fares & tax), so this just shows them what applies.
+export function KmRateFields({ api, slug, style }) {
   const { t } = useI18n();
   const card = useRateCard(api);
   const row = card.find((c) => c.key === rateKeyFor(slug || ""));
   if (!row) return null;
-  const band = row.band_pct == null ? 20 : row.band_pct;
-  const lo = Math.ceil(row.per_km_rupees * (100 - band) / 100), hi = Math.floor(row.per_km_rupees * (100 + band) / 100);
-  const box = { ...input, flex: 1, marginBottom: 0, minHeight: 52, fontSize: 16 };
   return (
-    <div style={style}>
-      <div style={{ display: "flex", gap: 9 }}>
-        <input style={box} inputMode="numeric" maxLength={3} value={min} placeholder={`${t("w3_rate_from")} (${lo})`} aria-label={t("w3_rate_from")}
-               onChange={(e) => onChange(e.target.value.replace(/\D/g, ""), max)} />
-        <input style={box} inputMode="numeric" maxLength={3} value={max} placeholder={`${t("w3_rate_to")} (${hi})`} aria-label={t("w3_rate_to")}
-               onChange={(e) => onChange(min, e.target.value.replace(/\D/g, ""))} />
-      </div>
-      <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45, marginTop: 6 }}>{String(t("rs_km_allowed")).replace("{a}", lo).replace("{b}", hi).replace("{s}", row.per_km_rupees)}</div>
+    <div style={{ padding: "11px 13px", borderRadius: 12, background: "#EEF4FD", border: "1px solid #CFE0F7", fontSize: 13.5, color: "#0B3A78", lineHeight: 1.5, ...style }}>
+      <b>{t("rs_set_by_us")}</b>
+      <div style={{ marginTop: 3 }}>{String(t("rs_set_by_us_line")).replace("{base}", row.base_rupees).replace("{km}", row.per_km_rupees).replace("{min}", row.min_rupees)}</div>
     </div>
   );
 }
@@ -146,11 +138,6 @@ function RateRow({ api, row, onSaved }) {
         const y = Array.isArray(r2) ? r2[0] : r2;
         if (y && y.ok === false) throw new Error("no");
       }
-      if (row.key.startsWith("ride_") && api.rateSetBand) {
-        const r3 = await api.rateSetBand(row.key, num(f.band));
-        const z = Array.isArray(r3) ? r3[0] : r3;
-        if (z && z.ok === false) throw new Error("no");
-      }
       setMsg("Saved"); onSaved();
     } catch (_) { setMsg("Could not save"); }
     setBusy(false);
@@ -159,13 +146,48 @@ function RateRow({ api, row, onSaved }) {
     <div style={{ padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
       <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{row.label}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8 }}>
-        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", row.key.startsWith("delivery_") ? "Partner fee minimum \u20b9" : "Rider minimum \u20b9"], ["platform", "Delivery fee \u20b9"]].concat(row.key.startsWith("delivery_") ? [["max", "Partner fee maximum \u20b9"]] : []).concat(row.key.startsWith("ride_") ? [["band", "Driver can move rate \u00B1 %"]] : []).map(([k, l]) => (
+        {[["base", "Rider base \u20b9"], ["perKm", "Rider per km \u20b9"], ["min", row.key.startsWith("delivery_") ? "Partner fee minimum \u20b9" : "Rider minimum \u20b9"], ["platform", "Delivery fee \u20b9"]].concat(row.key.startsWith("delivery_") ? [["max", "Partner fee maximum \u20b9"]] : []).map(([k, l]) => (
           <div key={k}><div style={lbl}>{l}</div><input style={cell} inputMode="numeric" maxLength={4} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
         ))}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
         <Btn onClick={save} disabled={busy}>{busy ? "…" : "Save"}</Btn>
         {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg === "Saved" ? "#157A43" : "#B91C1C" }}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
+// Admin: what a bike taxi, auto and cab charge for a distance, worked out from
+// the card above. The fare is the same for every driver.
+function RideFareTable({ card }) {
+  const [km, setKm] = useState("2.3");
+  const rows = card.filter((c) => c.key.startsWith("ride_"));
+  if (!rows.length) return null;
+  const dists = [2, 5, 10, 15, 25];
+  return (
+    <div style={{ margin: "18px 0 0", padding: "12px 0", borderTop: `1px solid ${T.line}` }}>
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>Ride fares by distance</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Set here, not by drivers. Fare = the larger of the minimum and (base + per km x distance). Compare with other apps and adjust the rate card above.</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <span style={lbl}>Try a distance (km)</span>
+        <input style={{ ...cell, width: 90 }} inputMode="decimal" maxLength={5} value={km} onChange={(e) => setKm(e.target.value.replace(/[^\d.]/g, ""))} />
+        {rows.map((c) => <span key={c.key} style={{ fontSize: 14, fontWeight: 800 }}>{c.label}: {rs(calcFare(c, km).rider)}</span>)}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 420 }}>
+          <thead><tr style={{ textAlign: "left", color: T.inkSoft }}>
+            <th style={{ padding: "6px" }}>Vehicle</th>{dists.map((d) => <th key={d} style={{ padding: "6px" }}>{d} km</th>)}
+          </tr></thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.key} style={{ borderTop: `1px solid ${T.line}` }}>
+                <td style={{ padding: "6px", fontWeight: 700 }}>{c.label}</td>
+                {dists.map((d) => <td key={d} style={{ padding: "6px" }}>{rs(calcFare(c, d).rider)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -230,6 +252,7 @@ export function FareCalculator({ api }) {
           </tr></tfoot>
         </table>
       </div>
+      <RideFareTable card={card} />
       <BusinessEditor api={api} />
       <GstRatesEditor api={api} />
       <GstReport api={api} />

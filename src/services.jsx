@@ -1943,7 +1943,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
           {!isBiz && (
             <>
               {priced ? (
-                <BigField fid="kmrate" label={t("rs_per_km_range")}>
+                <BigField fid="kmrate" label={t("rs_set_by_us")}>
                   <KmRateFields api={api} slug={picked[0]} min={f.km_min} max={f.km_max} onChange={(a, b) => setF((p) => ({ ...p, km_min: a, km_max: b }))} />
                 </BigField>
               ) : (

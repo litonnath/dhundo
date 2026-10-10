@@ -183,15 +183,10 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     // own ranges when there are any (the server keeps them inside the band).
     const rrow = rateCard.find((c) => c.key === rateKeyFor(slug));
     if (rrow) {
-      const mid = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
-      const band = rrow.band_pct == null ? 20 : rrow.band_pct;
-      // A driver's own per-km rate only moves the price inside the admin's band
-      // around the rate card, so one high rate cannot push a fare up.
-      const floorKm = Math.ceil(rrow.per_km_rupees * (100 - band) / 100), capKm = Math.floor(rrow.per_km_rupees * (100 + band) / 100);
-      const perKm = mid != null ? Math.min(Math.max(mid, floorKm), Math.max(capKm, floorKm)) : rrow.per_km_rupees;
-      const at = (r) => Math.max(rrow.min_rupees, Math.round(rrow.base_rupees + r * trip.km));
-      const lo = at(Math.ceil(rrow.per_km_rupees * (100 - band) / 100)), hi = at(Math.floor(rrow.per_km_rupees * (100 + band) / 100));
-      const fare = at(perKm);
+      // Set by Dhundo: every driver of a vehicle charges the same per-km rate.
+      const perKm = rrow.per_km_rupees;
+      const fare = Math.max(rrow.min_rupees, Math.round(rrow.base_rupees + perKm * trip.km));
+      const lo = fare, hi = fare;
       const tl0 = /car|taxi|cab/.test(slug) ? (toll || 0) : 0;
       return { perKm, basis: "metric", fuel: null, fare, toll: tl0, total: fare + tl0, lo, hi, base: rrow.base_rupees, min: rrow.min_rupees };
     }
@@ -535,7 +530,7 @@ function RiderSettings({ api, onSaved }) {
   const save = async () => {
     setErr("");
     try {
-      const r = one(await api.setRider(f));
+      const r = one(await api.setRider({ ...f, perKmMin: "", perKmMax: "" }));
       if (r && r.ok === false) throw new Error("no");
       if (api.setFuel) await api.setFuel(f.fuel);
       setSaved(true); onSaved && onSaved(); setOpen(false);
@@ -548,14 +543,13 @@ function RiderSettings({ api, onSaved }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800 }}>{t("rs_title")}</div>
           <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 2 }}>
-            {f.perKmMin && f.perKmMax ? String(t("rs_km_range_show")).replace("{a}", f.perKmMin).replace("{b}", f.perKmMax) : t("rs_per_km_range")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
+            {t("rs_set_by_us")} {"\u00B7"} {on(f.rides)} {t("rs_rides")} {"\u00B7"} {on(f.delivery)} {t("rs_delivery")}
           </div>
         </div>
         <Btn kind="ghost" onClick={() => { setSaved(false); setErr(""); setOpen(true); }}>{t("av_change")}</Btn>
       </div>
       {open && (
         <FormSheet title={t("rs_title")} onClose={() => setOpen(false)}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_per_km_range")}</div>
           <KmRateFields api={api} slug={f.slug} min={f.perKmMin} max={f.perKmMax} style={{ marginBottom: 10 }}
                         onChange={(a, b2) => { setSaved(false); setF((x) => ({ ...x, perKmMin: a, perKmMax: b2 })); }} />
           <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, marginBottom: 4 }}>{t("rs_fuel")}</div>
