@@ -41,7 +41,7 @@ import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
 import { useInbox, ChatsPage, ChatScreen, NotificationsSheet } from "./chats.jsx";
-import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind, pricedByKm } from "./start.jsx";
+import { OfferTypeGate, CustomerLauncher, SubCategories, HomeButton, SignInGate, driverKind, pricedByKm, vehicleLabel } from "./start.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { AdminConsole } from "./admin.jsx";
 import { KmRateFields } from "./fares.jsx";
@@ -1419,6 +1419,9 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
   const chosen = trades.find((x) => x.slug === picked[0]);
   const isSupplier = chosen && chosen.kind === "supplier";
   // Each kind of business gets its own wording and its own next step.
+  // Vehicles and rides read as the vehicle ("Ambulance", "Truck / Lorry"), not
+  // the person ("Ambulance driver"), so the form matches what was tapped.
+  const tradeLabelFor = (tr) => (!tr ? "" : tr.group_name === "Drivers" && ["hire", "travel"].includes(driverKind(tr)) ? vehicleLabel(tr, lang) : tradeName(tr, lang));
   const formKind = (chosen && chosen.group_name === "Eat & Stay") ? "eat"
     : ((chosen && chosen.group_name === "Drivers") || group === "Drivers") ? "ride" : isSupplier ? "shop" : "worker";
   // Asked only of the trades that actually drive. The flag comes from the
@@ -1674,7 +1677,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                 {picked.map((slug) => (
                   <Chip key={slug} active onClick={() => togglePick(slug)}>
-                    {tradeName(trades.find((x) => x.slug === slug), lang) || slug}
+                    {tradeLabelFor(trades.find((x) => x.slug === slug)) || slug}
                     <span style={{ opacity: 0.7, marginLeft: 5 }}>×</span>
                   </Chip>
                 ))}
@@ -1753,7 +1756,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
                       <span style={{ color: on ? T.brandDark : "transparent", flexShrink: 0 }}>
                         <Icon name="check" size={19} />
                       </span>
-                      <span style={{ flex: 1 }}>{tradeName(tr, lang)}</span>
+                      <span style={{ flex: 1 }}>{tradeLabelFor(tr)}</span>
                       {/* Which one is the headline. It is the first thing
                           picked, and saying so stops it looking arbitrary
                           when the card shows one trade and not the others. */}
