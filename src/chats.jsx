@@ -236,6 +236,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
   const { t } = useI18n();
   useDismissable(true, onClose);
   const [busy, setBusy] = useState(null);
+  const [askDel, setAskDel] = useState(null);
   const act = async (fn) => { setBusy(true); try { await fn(); } catch (_) { /* the list reloads */ } setBusy(null); onChanged && onChanged(); };
   const line = (x) => {
     const n = x.other_name || "";
@@ -294,7 +295,17 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
               )}
               {x.other_phone && <a href={`tel:${x.other_phone}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 44, padding: "0 16px", borderRadius: 12, background: "#0F8A3C", color: "#fff", fontWeight: 800, fontSize: 14.5, textDecoration: "none" }}><Icon name="phone" size={16} /> {t("fk_call")}</a>}
               <Btn kind="ghost" onClick={() => onChat(x)}>{t("ch_btn")}</Btn>
+              {!(x.role === "worker" && x.status === "requested") && (
+                <Btn kind="ghost" onClick={() => setAskDel(askDel === x.id ? null : x.id)} aria-label={t("ch_delete")}><Icon name="trash" size={17} /> {t("ch_delete")}</Btn>
+              )}
             </div>
+            {askDel === x.id && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 9 }}>
+                <span style={{ flex: 1, minWidth: 160, fontSize: 13.5, color: T.ink, fontWeight: 700 }}>{t(["declined", "cancelled"].includes(x.status) ? "ch_del_q_closed" : "ch_del_q_open")}</span>
+                <Btn kind="ghost" onClick={() => setAskDel(null)}>{t("ch_keep")}</Btn>
+                <button disabled={!!busy} onClick={() => { setAskDel(null); act(() => api.chatDelete(x.id)); }} style={{ minHeight: 44, padding: "0 18px", borderRadius: 12, border: "none", background: "#B91C1C", color: "#fff", fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>{t("ch_delete")}</button>
+              </div>
+            )}
           </div>
         ))}
         {jobs.length > 0 && <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, margin: "14px 2px 6px" }}>{t("jb_title")}</div>}
