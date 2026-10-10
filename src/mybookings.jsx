@@ -1,10 +1,11 @@
 // Bookings: a worker asked to come (cook, plumber and so on). Used by the
 // customer ("My bookings") and by the worker ("Requests from customers").
 // One card per request: who, what for, when, where, the rate card, the answer.
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
+import { RateBox } from "./bizpay.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
@@ -49,7 +50,18 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const [rmsg, setRmsg] = useState("");
   const [sure, setSure] = useState(null);
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
-  const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
+  const doneIds = mine.filter((x) => x.status === "completed").map((x) => x.id).join(",");
+  const [rated, setRated] = useState(null);
+  const loadRated = () => {
+    if (!doneIds || !api.bookingRated) { setRated({}); return; }
+    Promise.resolve(api.bookingRated(doneIds.split(","))).then((r) => {
+      const m = {}; (Array.isArray(r) ? r : []).forEach((x) => { m[x.booking_id] = x; }); setRated(m);
+    }).catch(() => setRated({}));
+  };
+  useEffect(loadRated, [doneIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A finished booking stays in Active until it has been rated.
+  const unrated = (x) => x.status === "completed" && rated && !rated[x.id];
+  const list = mine.filter((x) => (view === "past" ? (["declined", "cancelled"].includes(x.status) || (x.status === "completed" && !unrated(x))) : (["requested", "accepted"].includes(x.status) || unrated(x))));
   const noteBox = notices.length > 0 && (
     <div>
       {notices.map((n) => (
@@ -75,6 +87,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     setBusy(null); onChanged && onChanged();
   };
   const remove = async (x) => { setBusy(x.id); try { await api.bookingRemove(x.id); } catch (_) {} setBusy(null); setSure(null); onChanged && onChanged(); };
+  const complete = async (x) => { setBusy(x.id); try { await api.bookingComplete(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   // A listed rate is per 8-hour day. The rate card scales it to hours.
   const scale = (r, m) => Math.max(10, Math.round((r * m) / 480 / 10) * 10);
@@ -158,12 +171,28 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
             )}
             {live && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
+                {asWorker && x.status === "accepted" && <button disabled={busy === x.id} onClick={() => complete(x)} style={pill("#15803D", "#fff", { flex: "1 1 150px" })}>{t("mbk_mark_done")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
                 {!(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}
                 {x.other_phone && <a href={`tel:${x.other_phone}`} style={pill("#15803D", "#fff", { flex: "1 1 100px" })}><Icon name="phone" size={17} /> {t("mbk_call")}</a>}
                 {onChat && <button onClick={() => onChat(x)} style={pill("#EEF4FD", "#0A5BB8", { flex: "1 1 90px" })}>{t("mbk_chat")}</button>}
                 {!asWorker && <button disabled={busy === x.id} onClick={() => cancel(x)} style={pill("#fff", "#6B7280", { flex: "1 1 90px", border: "1.5px solid #D1D5DB" })}>{t("bk_cancel")}</button>}
+              </div>
+            )}
+            {x.status === "completed" && rated && (
+              <div style={{ padding: "0 14px 6px" }}>
+                {rated[x.id] ? (
+                  <div style={{ padding: "10px 12px", borderRadius: 12, background: "#F6F8FB", border: "1px solid #E5E7EB" }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.4 }}>{t(asWorker ? "mbk_you_rated_c" : "mbk_you_rated_w")}</div>
+                    <div style={{ fontSize: 17, color: "#B7791F", letterSpacing: 1, marginTop: 2 }}>{"\u2605".repeat(rated[x.id].stars)}{"\u2606".repeat(5 - rated[x.id].stars)}</div>
+                    {rated[x.id].comment && <div style={{ fontSize: 14, color: T.ink, marginTop: 2, overflowWrap: "anywhere" }}>{rated[x.id].comment}</div>}
+                  </div>
+                ) : (
+                  <RateBox api={api} orderId={x.id} title={t(asWorker ? "mbk_rate_customer" : "mbk_rate_worker")} problemLabel={asWorker ? null : null}
+                           submit={(o) => (asWorker ? api.bookingRate(x.id, o.stars, o.comment) : api.reviewAdd({ worker: x.worker_id, kind: "hire", ref: x.id, stars: o.stars, comment: o.comment, complaint: o.complaint }))}
+                           onDone={loadRated} />
+                )}
               </div>
             )}
             <div style={{ padding: live ? "0 14px 14px" : "4px 14px 14px" }}>
