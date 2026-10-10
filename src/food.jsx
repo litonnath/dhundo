@@ -1067,18 +1067,20 @@ export function OwnerHistory({ api }) {
   if (orders.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
   return (
     <div>
-      {orders.map((o) => (
-        <div key={o.id} style={card}>
-          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-            <span style={{ flex: 1, fontSize: 16, fontWeight: 800 }}>{o.other_name}</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: statusColor[o.status] }}>{t("st_status_" + o.status)}</span>
+      {orders.map((o) => {
+        const done = o.status === "delivered";
+        return (
+          <div key={o.id} style={cardStyle}>
+            <OrderHeader name={o.other_name} amount={o.total_paise + (o.gst_paise || 0)} sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
+            <Banner tone={done ? "good" : "bad"} icon={done ? "\u2705" : "\u274C"} title={t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
+              <CancelNote o={o} />
+            </Banner>
+            <ItemsBox lines={o.lines} />
+            {done && <div style={{ margin: "6px 0" }}><PayBadge method={o.pay_method} paid={o.paid} t={t} /></div>}
+            {done && <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>}
           </div>
-          <OrderDates o={o} />
-          <Lines lines={o.lines} />
-          <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
-          <CancelNote o={o} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
