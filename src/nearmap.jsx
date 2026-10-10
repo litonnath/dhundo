@@ -536,10 +536,14 @@ export function DeliveryLive({ api, orderId, riderName }) {
 
 // On the rider's phone while a delivery is on: sends the position every few
 // seconds so the customer's map moves. Renders nothing.
-export function JobPositionSender({ api, where = null }) {
+// The rider's own position while a delivery is on: read from the phone, sent to
+// the server every few seconds so the customer's map moves, and returned for
+// the rider's own map. A pinned spot (where.manual) is used as it is.
+export function useJobPosition(api, where = null) {
   const sent = useRef(0);
+  const last = useRef(null);
+  const [me, setMe] = useState(null);
   const pinned = where && where.manual;
-  const lastPos = useRef(null);
   useEffect(() => {
     if (pinned) return undefined;
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
@@ -550,18 +554,66 @@ export function JobPositionSender({ api, where = null }) {
       api.setAvailability(true, { lat: g.lat, lng: g.lng, accuracy: g.accuracy }, null).catch(() => {});
     };
     const id = geo.watchPosition((g) => {
-      lastPos.current = { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy };
-      push(lastPos.current, false);
+      const cur = { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy };
+      let heading = typeof g.coords.heading === "number" && !Number.isNaN(g.coords.heading) ? g.coords.heading : null;
+      if (heading === null && last.current && kmBetween(last.current, cur) > 0.01) heading = bearing(last.current, cur);
+      if (!last.current || kmBetween(last.current, cur) > 0.01) last.current = cur;
+      setMe((m) => ({ ...cur, heading: heading === null ? (m && m.heading) || 0 : heading }));
+      push(cur, false);
     }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
     // Keep the screen awake while a delivery is on, and send the position the
-    // moment the rider comes back to the app (a phone that was locked or
-    // switched away stops sending until then).
+    // moment the rider comes back to the app.
     let lock = null;
     const hold = async () => { try { if (navigator.wakeLock && !document.hidden) lock = await navigator.wakeLock.request("screen"); } catch (_) { /* not allowed: fine */ } };
-    const onVis = () => { if (!document.hidden) { hold(); if (lastPos.current) push(lastPos.current, true); } };
+    const onVis = () => { if (!document.hidden) { hold(); if (last.current) push(last.current, true); } };
     hold();
     document.addEventListener("visibilitychange", onVis);
     return () => { geo.clearWatch(id); document.removeEventListener("visibilitychange", onVis); try { if (lock) lock.release(); } catch (_) { /* ignore */ } };
   }, [api, pinned]);
+  return pinned ? { lat: where.lat, lng: where.lng, heading: 0 } : me;
+}
+
+// Sends the position only; draws nothing.
+export function JobPositionSender({ api, where = null }) {
+  useJobPosition(api, where);
   return null;
+}
+
+// The rider's map for a delivery: the restaurant, the customer's door, himself,
+// and the road to the next stop with the distance and time.
+export function RiderJobMap({ api, job, where = null }) {
+  const { t } = useI18n();
+  const me = useJobPosition(api, where);
+  const shop = typeof job.pickup_lat === "number" ? { lat: job.pickup_lat, lng: job.pickup_lng } : null;
+  const door = typeof job.drop_lat === "number" ? { lat: job.drop_lat, lng: job.drop_lng } : null;
+  const picked = job.status === "picked_up";
+  const target = picked ? door : shop;
+  const [route, setRoute] = useState(null);
+  const [eta, setEta] = useState(null);
+  const rl = me && Math.round(me.lat * 500), rg = me && Math.round(me.lng * 500);
+  useEffect(() => {
+    if (!me || !target) { setRoute(null); setEta(null); return undefined; }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    fetch(`${OSRM}${me.lng},${me.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+      .then((r) => r.json())
+      .then((j) => { const r0 = j && j.routes && j.routes[0]; if (r0) { setRoute(r0.geometry.coordinates.map(([lng, lat]) => [lat, lng])); setEta({ min: Math.max(1, Math.round(r0.duration / 60)), km: r0.distance / 1000 }); } })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+    return () => { ctl.abort(); clearTimeout(timer); };
+  }, [rl, rg, picked, target && target.lat, target && target.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!shop && !door && !me) return null;
+  const km = me && target ? kmBetween(me, target) : null;
+  const reached = km != null && km < 0.12;
+  return (
+    <div style={{ margin: "10px 0" }}>
+      <LiveRideMap pick={shop} drop={door} driver={me} route={route} delivery />
+      <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink }}>
+        {reached ? `\u2705 ${picked ? t("rm_at_customer") : t("rm_at_shop")}`
+          : !me ? t("rm_locating")
+          : eta ? String(picked ? t("rm_to_customer") : t("rm_to_shop")).replace("{km}", eta.km < 10 ? eta.km.toFixed(1) : Math.round(eta.km)).replace("{n}", eta.min)
+          : km != null ? String(picked ? t("rm_to_customer_km") : t("rm_to_shop_km")).replace("{km}", fmtKm(km)) : ""}
+      </div>
+    </div>
+  );
 }

@@ -11,7 +11,7 @@ import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from 
 import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
-import { RouteNav, JobPositionSender } from "./nearmap.jsx";
+import { RouteNav, RiderJobMap } from "./nearmap.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -77,7 +77,6 @@ export function RiderJobs({ api, online, where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pickup_lat, lng: navFor.pickup_lng }} title={t("jb_dir")} onClose={() => setNavFor(null)} />}
       {mine.map((j) => (
         <div key={j.id} style={cardStyle}>
-          <JobPositionSender api={api} where={where} />
           {!(where && where.manual) && <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "0 0 8px" }}>{"\u{1F4F1}"} {t("jb_keep_open")}</div>}
           <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name}
                        sub={j.status === "picked_up" ? j.drop_text : j.note} />
@@ -100,6 +99,7 @@ export function RiderJobs({ api, online, where = null }) {
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}
           </Banner>
           <Steps steps={[t("jb_s_accepted"), t("jb_s_shop"), t("jb_s_picked"), t("jb_s_done")]} at={j.status === "picked_up" ? 2 : 1} />
+          <RiderJobMap api={api} job={j} where={where} />
           {(() => {
             const grid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
             const hasMap = typeof j.drop_lat === "number" && typeof j.drop_lng === "number";
