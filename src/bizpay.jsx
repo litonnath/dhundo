@@ -537,8 +537,17 @@ export function RateBox({ api, orderId, onDone, title = null, submit = null, pro
     try {
       const r = one(submit ? await submit({ stars, comment: text, complaint: problem }) : await api.reviewAdd({ kind: "order", ref: orderId, stars, comment: text, complaint: problem }));
       if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); }
-      else { setErrText(r && r.reason === "not_delivered" ? t("rt_err_notdone") : r && r.reason === "not_allowed" ? t("cn_err_not_yours") : ""); setState("err"); }
-    } catch (e) { setErrText(/could not find the function|schema cache|does not exist|404/i.test((e && e.message) || "") ? t("cn_err_update") : ""); setState("err"); }
+      else {
+        const why = r && r.reason;
+        setErrText(why === "not_delivered" ? t("rt_err_notdone") : why === "not_allowed" ? t("cn_err_not_yours")
+          : why === "no_rider" ? t("rt_err_norider") : `${t("e_save")}${why ? ` (${why})` : ""}`);
+        setState("err");
+      }
+    } catch (e) {
+      const m = (e && e.message) || "";
+      setErrText(/could not find the function|schema cache|does not exist|404/i.test(m) ? t("cn_err_update") : `${t("e_save")}${m ? ` (${m.slice(0, 120)})` : ""}`);
+      setState("err");
+    }
   };
   if (state === "done") return <div style={{ margin: "8px 0", fontSize: 15, fontWeight: 800, color: "#157A43" }}>{"\u2713 "}{t("rt_thanks")}</div>;
   return (

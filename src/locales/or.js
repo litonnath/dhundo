@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "ଆପ୍ ବନ୍ଦ ଥିଲେ ଆଲର୍ଟ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  rt_err_norider: "No rider took this order, so there is nobody to rate.",
   rt_problem_staff: "Report a problem (only Dhundo staff see it)",
   rt_err_notdone: "You can rate once the order is delivered.",
   rt_rate_driver: "Rate your driver",
