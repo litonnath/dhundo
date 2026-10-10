@@ -24,6 +24,14 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     if (!lo && !hi) return "";
     return `${lo && hi && lo !== hi ? `${money(lo)} \u2013 ${money(hi)}` : money(lo || hi)} ${t("mbk_per_day")}`;
   };
+  // A listed rate is per 8-hour day; the estimate is that rate for the hours asked.
+  const estimate = (x) => {
+    const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;
+    if ((!lo && !hi) || !m) return "";
+    const f = (r) => Math.max(1, Math.round((r * m) / 480 / 10) * 10 || 10);
+    const a = f(lo || hi), b = f(hi || lo);
+    return `${a !== b ? `${money(a)} \u2013 ${money(b)}` : money(a)}`;
+  };
   const row = (k, v) => v ? <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 3 }}><b style={{ color: T.ink }}>{k}</b> {v}</div> : null;
   return (
     <div>
@@ -37,6 +45,12 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
             </div>
             {row(t("mbk_for"), x.trade_name)}
             {row(t(asWorker ? "mbk_rate_you" : "mbk_rate"), rate(x))}
+            {estimate(x) && (
+              <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#EEF4FD", border: "1px solid #CFE0F7", borderRadius: 10, fontSize: 13.5, color: "#0B3A78", lineHeight: 1.5 }}>
+                <b>{String(t(asWorker ? "mbk_est_you" : "mbk_est")).replace("{len}", mins(x.duration_mins)).replace("{amt}", estimate(x))}</b>
+                <div style={{ marginTop: 2 }}>{t(asWorker ? "mbk_est_note_you" : "mbk_est_note")}</div>
+              </div>
+            )}
             {row(t("mbk_when"), x.start_at ? `${stamp(x.start_at)}${x.duration_mins ? ` · ${mins(x.duration_mins)}` : ""}` : "")}
             {row(t("mbk_where"), x.note)}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
