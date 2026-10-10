@@ -241,7 +241,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const inRange = done.filter((r) => r.at && new Date(r.at).getTime() >= fromTime);
   const sum = (a) => a.reduce((acc, r) => acc + (Number(r.paise) || 0), 0);
   const bk = Array.isArray(bookings) ? bookings : [];
-  const bkWait = kind === "other" ? bk.filter((x) => x.role === "worker" && x.status === "requested").map((x) => ({ id: x.id, title: x.other_name, at: x.start_at, status: "requested", noMoney: true, canAct: true, wait: true, bk: true })) : [];
+  const bkWait = kind === "other" ? bk.filter((x) => x.role === "worker" && x.status === "requested").map((x) => ({ id: x.id, title: x.other_name, sub: [x.trade_name, x.duration_mins ? (x.duration_mins >= 60 ? `${Math.floor(x.duration_mins / 60)} hr${x.duration_mins % 60 ? ` ${x.duration_mins % 60} min` : ""}` : `${x.duration_mins} min`) : "", x.note].filter(Boolean).join(" \u00B7 "), at: x.start_at, status: "requested", noMoney: true, canAct: true, wait: true, bk: true })) : [];
   const bkUp = kind === "other" ? bk.filter((x) => x.role === "worker" && x.status === "accepted") : [];
   const waitRows = kind === "other" ? bkWait : d.filter((r) => r.wait);
   const waiting = waitRows.length + (kind === "travel" ? requests : 0);
@@ -363,7 +363,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           </div>
           {waitRows.slice(0, 4).map((r) => (
             <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: "1px solid rgba(245,158,11,0.35)", flexWrap: "wrap" }}>
-              <span style={{ flex: "1 1 120px", minWidth: 0, fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
+              <span style={{ flex: "1 1 120px", minWidth: 0, fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}{r.sub && <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: T.inkSoft, whiteSpace: "normal" }}>{r.sub}</span>}</span>
               {r.bk && r.at && <span style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>{new Date(r.at).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span>}
               {!r.noMoney && <span style={{ fontSize: 14, fontWeight: 800 }}>{rupees(r.paise)}</span>}
               {r.canAct ? (

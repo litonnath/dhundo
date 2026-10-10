@@ -10,24 +10,26 @@ import { OwnerOrders, OwnerHistory, MyOrdersList } from "./food.jsx";
 import { ItemOrdersList } from "./itemorders.jsx";
 import { RiderJobs, RiderHistory } from "./hub.jsx";
 import { RideRequests, RideHistory } from "./ride.jsx";
+import { MyBookings } from "./mybookings.jsx";
 
 
-export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false }) {
+export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false, bookings = [], onChat = null, onBookingsChanged = null }) {
   const { t } = useI18n();
   const [view, setView] = useState("active");
   const showWork = !!role && bizMode;
   const [part, setPart] = useState(() => {
     let want = null;
     try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "work" && role ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : showWork ? "work" : null;
+    return want === "work" && role ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : showWork ? "work" : null;
   });
   const workKey = role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
   const tiles = (showWork ? [["work", "bag", t(workKey), badge]] : [
     ["mine", "bag", t("or_mine"), 0],
+    ["bookings", "user", t("mbk_title"), 0],
     ["items", "tag", t("mb_mine"), 0],
     ["rides", "drivers", t("rh_title"), 0],
   ]);
-  const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "rides" ? t("rh_title") : t("nav_activity");
+  const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
     <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 120px" }}>
@@ -72,6 +74,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
           )}
           {part === "work" && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
           {part === "mine" && <MyOrdersList api={api} view={view} showEmpty />}
+          {part === "bookings" && <MyBookings api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "items" && <ItemOrdersList api={api} onHire={onHire} view={view} />}
         </>
       )}
