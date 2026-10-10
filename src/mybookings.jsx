@@ -40,7 +40,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
         return (
           <div key={x.id} style={cardStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: T.ink }}>{x.other_name}</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: T.ink }}>{x.other_name || x.trade_name}</span>
               <span style={{ fontSize: 12.5, fontWeight: 800, padding: "4px 10px", borderRadius: 12, color: fg, background: bg }}>{label[x.status] || x.status}</span>
             </div>
             {row(t("mbk_for"), x.trade_name)}
@@ -54,7 +54,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
             {row(t("mbk_when"), x.start_at ? `${stamp(x.start_at)}${x.duration_mins ? ` · ${mins(x.duration_mins)}` : ""}` : "")}
             {row(t("mbk_where"), x.note)}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              {x.status === "accepted" && x.other_phone && <a href={`tel:${x.other_phone}`} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 18px", borderRadius: 22, background: "#15803D", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none" }}>{t("mbk_call")}</a>}
+              {["requested", "accepted"].includes(x.status) && x.other_phone && <a href={`tel:${x.other_phone}`} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 18px", borderRadius: 22, background: "#15803D", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none" }}>{t("mbk_call")}</a>}
               {["requested", "accepted"].includes(x.status) && onChat && <Btn kind="ghost" onClick={() => onChat(x)}>{t("mbk_chat")}</Btn>}
               {asWorker && x.status === "requested" && <Btn disabled={busy === x.id} onClick={() => answer(x, true)}>{t("bk_accept")}</Btn>}
               {asWorker && x.status === "requested" && <Btn kind="ghost" disabled={busy === x.id} onClick={() => answer(x, false)}>{t("bk_decline")}</Btn>}

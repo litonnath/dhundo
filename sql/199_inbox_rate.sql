@@ -1,6 +1,7 @@
 -- ===========================================================================
 -- 199: the chat inbox also carries the worker's listed rate (per day, rupees)
--- so a booking can show what the worker charges. Replaces the 141 function.
+-- so a booking can show what the worker charges. Both sides also get each
+-- other's phone while a request is waiting or accepted, so either can call. Replaces the 141 function.
 -- ===========================================================================
 drop function if exists public.services_chat_inbox();
 create function public.services_chat_inbox()
@@ -15,7 +16,7 @@ as $fn$
   with me as (select public.services_account_id() as id),
   mine as (
     select b.*, case when b.customer_id = (select id from me) then 'customer' else 'worker' end as role,
-           w.full_name as wname, w.phone as wphone, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
+           coalesce(nullif(w.business_name, ''), w.full_name) as wname, w.phone as wphone, w.day_rate_min as rmin, w.day_rate_max as rmax, t.name_en as tname, c.full_name as cname, c.phone as cphone,
            coalesce((select h.hidden_at from public.services_chat_hidden h
                       where h.booking_id = b.id and h.account_id = (select id from me)), 'epoch') as hid_at
       from public.services_bookings b
@@ -29,7 +30,7 @@ as $fn$
   )
   select m.id, m.role, m.status,
          (case when m.role = 'customer' then m.wname else m.cname end)::text,
-         (case when m.status = 'accepted' then (case when m.role = 'customer' then m.wphone else m.cphone end) end)::text,
+         (case when m.status in ('requested', 'accepted') then (case when m.role = 'customer' then m.wphone else m.cphone end) end)::text,
          m.note, m.start_at, m.duration_mins, m.created_at,
          m.closed_at + interval '24 hours',
          l.body::text, l.created_at, (l.sender_id = (select id from me)),
