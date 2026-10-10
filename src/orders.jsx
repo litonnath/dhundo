@@ -26,10 +26,10 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
   const custTiles = [["mine", "bag", t("or_mine"), 0], ["bookings", "user", t("mbk_title"), 0], ["rides", "drivers", t("rh_title"), 0]];
   const itemTile = ["items", "tag", t("mb_mine"), 0];
-  // On a business account the screen is split in two: the work that comes in,
-  // and what the person bought or booked as a customer.
+  // A business account sees only its own work (and its buy and sell requests):
+  // what a customer orders or books lives in the customer view.
   const groups = showWork
-    ? [{ title: t("or_grp_work"), tiles: [["work", "bag", t(workKey), badge], itemTile] }, { title: t("or_grp_cust"), tiles: custTiles }]
+    ? [{ title: null, tiles: [["work", "bag", t(workKey), badge], itemTile] }]
     : [{ title: null, tiles: [custTiles[0], custTiles[1], itemTile, custTiles[2]] }];
   const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
