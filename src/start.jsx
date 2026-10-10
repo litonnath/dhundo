@@ -172,7 +172,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
   }, []);
   const bizBlock = biz ? (
           <div style={{ background: T.white, border: `1px solid ${biz.online ? "#1FA85A" : T.line}`, borderRadius: 20, overflow: "hidden", margin: "0 0 20px", boxShadow: "0 4px 16px rgba(15,20,25,0.06)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 16px", background: biz.online ? "#F0FAF4" : "#F7F8FA" }}>
+            {!biz.owner && <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 16px", background: biz.online ? "#F0FAF4" : "#F7F8FA" }}>
               <span style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", background: biz.online ? "#1FA85A" : "#9CA3AF", boxShadow: biz.online ? "0 0 0 6px rgba(31,168,90,0.18)" : "none" }}>
                 <Icon name={biz.online ? "check" : "user"} size={22} />
               </span>
@@ -183,7 +183,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
                 minHeight: 52, padding: "0 24px", borderRadius: 26, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 16.5, color: "#fff",
                 background: biz.online ? "#6B7280" : "#1FA85A", opacity: biz.busy ? 0.6 : 1, whiteSpace: "nowrap",
               }}>{biz.busy ? "…" : biz.online ? t("av_stop") : t("hm_goon")}</button>
-            </div>
+            </div>}
             {biz.status && biz.status !== "approved" && (
               <div style={{ padding: "10px 16px", background: biz.status === "hidden" ? "#F3F4F6" : "#FFF7E0", borderTop: `1px solid ${T.line}`, fontSize: 14, fontWeight: 800, color: biz.status === "hidden" ? T.inkSoft : "#8A5A00" }}>
                 {biz.status === "hidden" ? t("m_hidden") : t("m_pending")}

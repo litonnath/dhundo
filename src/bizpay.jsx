@@ -297,7 +297,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
           {taking && closedBy && (
             <div role="alert" style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "#FFF7E0", color: "#8A5A00", fontSize: 14, fontWeight: 700 }}>
               {String(t("pn_hours_closed")).replace("{t}", closedBy)}
-              {onHours && <div><button onClick={onHours} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: "none", background: "#8A5A00", color: "#fff", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("av_change")}</button></div>}
+              {onHours && <div><button onClick={onHours} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: "none", background: "#8A5A00", color: "#fff", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("ow_change_hours")}</button></div>}
             </div>
           )}
           {taking && (
