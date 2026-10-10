@@ -1290,7 +1290,7 @@ export function OwnerOrders({ api, onHire }) {
             )}
             {o.status === "accepted" && <Btn disabled={busy === o.id} onClick={() => act(o, "ready")}>{t("ow_ready")}</Btn>}
             {/* A delivery rider confirms a delivery with the customer's code; the shop only marks it ready. */}
-            {o.mode === "pickup" && ["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_collected")}</Btn>}
+            {o.mode === "pickup" && ["accepted", "ready"].includes(o.status) && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "delivered")}>{t("ow_delivered")}</Btn>}
             {o.mode !== "pickup" && o.status === "ready" && <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: T.inkSoft }}>{t("ow_wait_rider")}</div>}
           </div>
         </div>
