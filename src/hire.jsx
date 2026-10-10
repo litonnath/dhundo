@@ -26,7 +26,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   const [busy, setBusy] = useState(null);
   const [mine, setMine] = useState([]);
   const [histOpen, setHistOpen] = useState(false);
-  const loadMine = async () => { if (!signedIn || !api.myHireRequests) return; try { setMine(many(await api.myHireRequests())); } catch (_) {} };
+  const loadMine = async () => { if (!signedIn || !api.myHireRequests) return; try { setMine(many(await api.myHireRequests()).filter((m) => !/^Enquiry:/i.test(m.note || "") && (!m.trade_name || (vehicles || []).some((v) => v.name_en === m.trade_name)))); } catch (_) {} };
   useEffect(() => { loadMine(); }, [api, signedIn, book]); // eslint-disable-line react-hooks/exhaustive-deps
   const stamp = (iso) => new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
   const slugs = vehicles.map((v) => v.slug);
