@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  dq_refund: "This is the highest the delivery partner fee can be. It depends on where the rider is when they accept. Once a rider accepts, we keep only the actual fee and refund the rest to you.",
   dq_dist2: "Restaurant to you: {b} km",
   dq_norider2: "No rider is online right now, so this fee is an estimate.",
   dq_head: "The delivery partner fee depends on how far the rider is when they accept your order.",

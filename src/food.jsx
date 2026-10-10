@@ -77,12 +77,12 @@ function Bill({ o, t, api, range = null }) {
   return (
     <div style={{ margin: "4px 0 2px" }}>
       {spread > 0
-        ? <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{t("st_fee_rider")}</span><span>{rupees(b.delivery)} {"\u2013"} {rupees(b.delivery + spread)}</span></div>
+        ? <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{t("st_fee_rider")}</span><span>{rupees(b.delivery + spread)}</span></div>
         : line("d", t("st_fee_rider"), b.delivery)}
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{spread > 0 ? `${rupees(b.total)} \u2013 ${rupees(b.total + spread)}` : rupees(b.total)}</span></div>
-      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("dq_head")} {t("dq_cash")} {t("dq_upi")}</div>}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total + spread)}</span></div>
+      {spread > 0 && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.45 }}>{t("dq_refund")}</div>}
       {range && range.rider_taken && Number(range.fee_max_paise) > Number(range.fee_paise) && (
         <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
           {o.pay_method === "upi" && o.paid
@@ -692,18 +692,14 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{dq && feeMaxRs > feeMinRs ? `${feeMinRs} \u2013 \u20B9${feeMaxRs}` : feeRs}</span>
+              <span>{t("st_fee_rider")}</span><span>{dq ? "" : "~"}{"\u20B9"}{dq && feeMaxRs > feeMinRs ? feeMaxRs : feeRs}</span>
             </div>
             {dq && (
               <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "-2px 0 8px", lineHeight: 1.55 }}>
                 {Number(dq.drop_km) > 0 && <div>{String(t("dq_dist2")).replace("{b}", dq.drop_km)}</div>}
                 {!dq.rider_found && <div>{t("dq_norider2")}</div>}
                 {feeMaxRs > feeMinRs && (
-                  <>
-                    <div style={{ marginTop: 4 }}>{t("dq_head")}</div>
-                    <div>{"\u2022 "}{t("dq_cash")}</div>
-                    <div>{"\u2022 "}{t("dq_upi")}</div>
-                  </>
+                  <div style={{ marginTop: 4 }}>{t("dq_refund")}</div>
                 )}
               </div>
             )}
@@ -716,7 +712,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>~{"\u20B9"}{feeMaxRs > feeMinRs && mode === "delivery" ? `${Math.round(((total + gstP + miscP + miscG) / 100 + feeMinRs) * 100) / 100} \u2013 \u20B9${Math.round(((total + gstP + miscP + miscG) / 100 + feeMaxRs) * 100) / 100}` : Math.round(((total + gstP + miscP + miscG) / 100 + feeRs) * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + (feeMaxRs > feeMinRs && mode === "delivery" ? feeMaxRs : feeRs)) * 100) / 100}</span>
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
