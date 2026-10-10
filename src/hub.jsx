@@ -46,6 +46,7 @@ export function RiderJobs({ api, online, where = null }) {
 
   const load = useCallback(async () => {
     try {
+      if (online && api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {});
       const [n, m] = await Promise.all([api.jobsNearby(), api.myJobs()]);
       const list = many(n);
       if (!first.current && list.some((j) => !seen.current.has(j.id))) alertNewJob();
@@ -54,7 +55,7 @@ export function RiderJobs({ api, online, where = null }) {
       setJobs(list);
       setMine(many(m).filter((j) => j.role === "rider" && ["accepted", "picked_up"].includes(j.status)));
     } catch (_) { /* the next tick tries again */ }
-  }, [api]);
+  }, [api, online]);
 
   useEffect(() => {
     load();

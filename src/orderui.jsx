@@ -129,7 +129,9 @@ export function PayBadge({ method, paid, claimed, t, style }) {
 export function splitOf(o) {
   const n = (v) => Number(v) || 0;
   const items = n(o.total_paise), delivery = n(o.delivery_fee_paise);
-  const rider = o.job_id || o.rider_fee_paise != null ? n(o.rider_fee_paise) : 0;
+  // The delivery fee goes to the rider: the job fee once there is a job, the fee
+  // the customer pays until then.
+  const rider = o.rider_fee_paise != null ? n(o.rider_fee_paise) : o.mode === "delivery" ? delivery : 0;
   const platform = n(o.misc_fee_paise);
   const gst = n(o.gst_paise) + n(o.delivery_gst_paise) + n(o.misc_gst_paise);
   const shop = items + delivery - rider;

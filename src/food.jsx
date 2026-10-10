@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
 import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
-import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
+import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo, calcFare } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -22,7 +22,7 @@ import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
-const rupees = (p) => `₹${Math.round(p / 100)}`;
+const rupees = (p) => { const v = Math.round(Number(p) || 0) / 100; return `\u20b9${Number.isInteger(v) ? v : v.toFixed(2)}`; };
 const card = { background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "13px 14px", marginBottom: 10 };
 const GREEN = "#0F8A3C", RED = "#B91C1C";
 
@@ -72,7 +72,7 @@ function Bill({ o, t, api }) {
   if (gstAll + b.delivery + b.misc <= 0) return null;
   return (
     <div style={{ margin: "4px 0 2px" }}>
-      {line("d", t("st_fee"), b.delivery)}
+      {line("d", t("st_fee_rider"), b.delivery)}
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
@@ -452,6 +452,7 @@ function StorePage({ api, row, eat, info: infoProp, place, user, onSignIn, rende
             <span style={{ fontSize: 14, fontWeight: 800, background: "#F59E0B", color: "#fff", borderRadius: 12, padding: "4px 10px" }}>{"\u2605"} {Number(rating.avg_stars).toFixed(1)}</span>
             <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 700 }}>{String(t("rt_count")).replace("{n}", rating.n)}</span>
           </div>}
+          <MenuPhotosView api={api} workerId={row.id} />
           {pay && (pay.accepts_cash || pay.accepts_upi) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "0 0 12px" }}>
             {pay.accepts_cash && <span style={{ fontSize: 13, fontWeight: 800, background: "#ECFDF3", color: "#0F6B33", borderRadius: 14, padding: "5px 11px" }}>{t("bp_cash_chip")}</span>}
             {pay.accepts_upi && <span style={{ fontSize: 13, fontWeight: 800, background: "#E8F0FE", color: "#1D4ED8", borderRadius: 14, padding: "5px 11px" }}>UPI{pay.upi_id ? ` \u00B7 ${pay.upi_id}` : ""}</span>}
@@ -621,7 +622,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const cardRow = card.find((c) => c.key === (eat ? "delivery_food" : "delivery_small"));
   const miscP = mode !== "pickup" && cardRow ? Math.round(Number(cardRow.platform_rupees) * 100) : 0;
   const miscG = Math.round(miscP * 0.18);
-  const feeRs = mode === "delivery" ? Math.max(20, Math.round((row.distance_km != null ? Number(row.distance_km) : 2.3) * 1.3 * 10)) : 0;
+  const roadKm = row.distance_km != null ? Number(row.distance_km) * 1.3 : 3;
+  const feeRs = mode === "delivery" ? (cardRow ? calcFare(cardRow, roadKm).rider : 30) : 0;
 
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
@@ -665,7 +667,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         {mode === "delivery" && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("st_fee")}</span><span>~{"\u20B9"}{feeRs}</span>
+              <span>{t("st_fee_rider")}</span><span>~{"\u20B9"}{feeRs}</span>
             </div>
           </>
         )}
@@ -1170,6 +1172,83 @@ export function OwnerOrders({ api, onHire }) {
   );
 }
 
+// The owner's photos of the printed menu or price list, so customers can check
+// the prices. Up to 8.
+function MenuPhotosEditor({ api, shop }) {
+  const { t } = useI18n();
+  const [urls, setUrls] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.myMenuPhotos ? api.myMenuPhotos() : []).then((r) => { if (alive) setUrls(many(r).map((x) => (typeof x === "string" ? x : x.url))); }).catch(() => { if (alive) setUrls([]); });
+    return () => { alive = false; };
+  }, [api]);
+  if (urls === null) return null;
+  const save = async (next) => {
+    setErr("");
+    try {
+      const r = one(await api.setMenuPhotos(next));
+      if (r && r.ok === false) throw new Error("no");
+      setUrls(next);
+    } catch (_) { setErr(t("e_save")); }
+  };
+  const add = async (file) => {
+    if (!file || urls.length >= 8) return;
+    setBusy(true); setErr("");
+    try { const url = await api.uploadPublic("services-photos", await shrink(file)); await save([...urls, url]); }
+    catch (_) { setErr(t("p_upload_failed")); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ ...card, marginTop: 12 }}>
+      <div style={{ fontSize: 15, fontWeight: 800 }}>{t(shop ? "mp_title_shop" : "mp_title")}</div>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5, margin: "4px 0 10px" }}>{t("mp_hint")}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {urls.map((u, i) => (
+          <span key={u} style={{ position: "relative", width: 84, height: 84, borderRadius: 12, overflow: "hidden", border: `1px solid ${T.line}` }}>
+            <img src={u} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <button onClick={() => save(urls.filter((_, j) => j !== i))} aria-label={t("ch_delete")} style={{ position: "absolute", top: 3, right: 3, width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.65)", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 800 }}>{"\u00D7"}</button>
+          </span>
+        ))}
+        {urls.length < 8 && (
+          <label style={{ width: 84, height: 84, borderRadius: 12, border: `2px dashed ${T.brandDark}`, color: T.brandDark, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", fontSize: 12.5, fontWeight: 800, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+            {busy ? "\u2026" : `+ ${t("mp_add")}`}
+            <input type="file" accept="image/*" hidden disabled={busy} onChange={(e) => { add(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+          </label>
+        )}
+      </div>
+      {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, fontSize: 13.5, marginTop: 8 }}>{err}</div>}
+    </div>
+  );
+}
+
+// What customers see: the menu photos, and the promise that prices are the same
+// as at the restaurant, with no commission.
+function MenuPhotosView({ api, workerId }) {
+  const { t } = useI18n();
+  const [urls, setUrls] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(api.storeMenuPhotos ? api.storeMenuPhotos(workerId) : []).then((r) => { if (alive) setUrls(many(r).map((x) => (typeof x === "string" ? x : x.url))); }).catch(() => {});
+    return () => { alive = false; };
+  }, [api, workerId]);
+  if (urls.length === 0) return null;
+  return (
+    <div style={{ margin: "0 0 14px" }}>
+      <div style={{ fontSize: 14.5, fontWeight: 800, color: T.ink, marginBottom: 2 }}>{t("mp_view_title")}</div>
+      <div style={{ fontSize: 13, color: "#0F6B33", fontWeight: 700, marginBottom: 8 }}>{"\u2705"} {t("mp_same_price")}</div>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+        {urls.map((u) => (
+          <a key={u} href={u} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
+            <img src={u} alt={t("mp_view_title")} style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: `1px solid ${T.line}` }} />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
   const { t } = useI18n();
   const [pending, setPending] = useState(0);
@@ -1199,6 +1278,8 @@ export function OwnerFood({ api, shop, onHire, onOpenOrders }) {
           background: accepting ? GREEN : "#C5CBD3",
         }}><span style={{ position: "absolute", top: 3, left: accepting ? 25 : 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "left .15s" }} /></button>
       </div>
+
+      <MenuPhotosEditor api={api} shop={shop} />
 
       <SetupCard steps={store ? [
         { done: menu.length > 0, label: t(shop ? "su_prod" : "su_menu") },
