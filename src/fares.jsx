@@ -219,10 +219,6 @@ export function FareCalculator({ api }) {
           <div style={lbl}>Average distance per trip (km)</div>
           <input style={cell} inputMode="decimal" maxLength={4} value={km} onChange={(e) => setKm(e.target.value.replace(/[^\d.]/g, ""))} />
         </div>
-        <div style={{ width: 200 }}>
-          <div style={lbl}>Average order value (₹)</div>
-          <input style={cell} inputMode="numeric" maxLength={6} value={ov} onChange={(e) => setOv(e.target.value.replace(/\D/g, ""))} />
-        </div>
       </div>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 900 }}>
