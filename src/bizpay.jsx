@@ -609,7 +609,7 @@ export function RateBox({ api, orderId, onDone, title = null, submit = null, pro
       if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); }
       else {
         const why = r && r.reason;
-        setErrText(why === "not_delivered" ? t("rt_err_notdone") : why === "not_allowed" ? t("cn_err_not_yours")
+        setErrText(why === "bad_kind" ? t("rt_err_kind") : why === "not_completed" ? t("rt_err_notcompleted") : why === "not_delivered" ? t("rt_err_notdone") : why === "not_allowed" ? t("cn_err_not_yours")
           : why === "no_rider" ? t("rt_err_norider") : `${t("e_save")}${why ? ` (${why})` : ""}`);
         setState("err");
       }
