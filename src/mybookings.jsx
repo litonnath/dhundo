@@ -1,13 +1,24 @@
-// My bookings: the workers I asked to come to me (cooks, plumbers and so on).
-// One card per request with who, for what, when, where and the answer so far.
+// Bookings: a worker asked to come (cook, plumber and so on). Used by the
+// customer ("My bookings") and by the worker ("Requests from customers").
+// One card per request: who, what for, when, where, the rate card, the answer.
 import React, { useState } from "react";
-import { T, Btn } from "./ui.jsx";
+import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
-import { cardStyle } from "./orderui.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
-const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
+const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
 const TONE = { requested: ["#B45309", "#FFF4E0"], accepted: ["#15803D", "#E7F5EC"], declined: ["#B91C1C", "#FDECEC"], cancelled: ["#6B7280", "#F1F2F4"] };
+const money = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
+const COLORS = ["#1D4ED8", "#0F8A3C", "#B45309", "#7C3AED", "#BE185D", "#0E7490"];
+
+function Face({ name, url }) {
+  const c = COLORS[[...String(name || "?")].reduce((n, ch) => n + ch.charCodeAt(0), 0) % COLORS.length];
+  const base = { width: 56, height: 56, borderRadius: "50%", flexShrink: 0, border: "2px solid #fff", boxShadow: "0 1px 4px rgba(11,58,120,0.25)" };
+  if (url) return <img src={url} alt="" style={{ ...base, objectFit: "cover" }} />;
+  return <span style={{ ...base, background: c, color: "#fff", fontWeight: 800, fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>{String(name || "?").trim().charAt(0).toUpperCase()}</span>;
+}
+
+const pill = (bg, fg, extra) => ({ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, padding: "0 18px", borderRadius: 22, border: "none", background: bg, color: fg, fontFamily: "inherit", fontWeight: 800, fontSize: 15, cursor: "pointer", textDecoration: "none", ...extra });
 
 export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false }) {
   const { t } = useI18n();
@@ -18,48 +29,69 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const label = { requested: t(asWorker ? "mbk_needs_you" : "mbk_waiting"), accepted: t("mbk_accepted"), declined: t("mbk_declined"), cancelled: t("mbk_cancelled") };
   const answer = async (x, ok) => { setBusy(x.id); try { await api.bookingAnswer(x.id, ok); } catch (_) {} setBusy(null); onChanged && onChanged(); };
   const cancel = async (x) => { setBusy(x.id); try { await api.bookingCancel(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
-  const money = (n) => `\u20B9${Number(n).toLocaleString("en-IN")}`;
-  const rate = (x) => {
-    const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0;
-    if (!lo && !hi) return "";
-    return `${lo && hi && lo !== hi ? `${money(lo)} \u2013 ${money(hi)}` : money(lo || hi)} ${t("mbk_per_day")}`;
+  // A listed rate is per 8-hour day. The rate card scales it to hours.
+  const scale = (r, m) => Math.max(10, Math.round((r * m) / 480 / 10) * 10);
+  const span = (lo, hi, m) => {
+    const a = lo ? scale(lo, m) : scale(hi, m), b = hi ? scale(hi, m) : a;
+    return a !== b ? `${money(a)} – ${money(b)}` : money(a);
   };
-  // A listed rate is per 8-hour day; the estimate is that rate for the hours asked.
-  const estimate = (x) => {
-    const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;
-    if ((!lo && !hi) || !m) return "";
-    const f = (r) => Math.max(1, Math.round((r * m) / 480 / 10) * 10 || 10);
-    const a = f(lo || hi), b = f(hi || lo);
-    return `${a !== b ? `${money(a)} \u2013 ${money(b)}` : money(a)}`;
-  };
-  const row = (k, v) => v ? <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 3 }}><b style={{ color: T.ink }}>{k}</b> {v}</div> : null;
+  const field = (icon, k, v) => v ? (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 0" }}>
+      <span style={{ width: 30, height: 30, borderRadius: 9, background: "#E8F0FB", color: "#0A5BB8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={icon} size={16} /></span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 11.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: T.inkFaint }}>{k}</span>
+        <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.35, overflowWrap: "anywhere" }}>{v}</span>
+      </span>
+    </div>
+  ) : null;
   return (
     <div>
       {list.map((x) => {
         const [fg, bg] = TONE[x.status] || TONE.cancelled;
+        const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;
+        const live = ["requested", "accepted"].includes(x.status);
+        const place = x.note ? String(x.note).replace(/^At:\s*/i, "") : "";
         return (
-          <div key={x.id} style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: T.ink }}>{x.other_name || x.trade_name}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 800, padding: "4px 10px", borderRadius: 12, color: fg, background: bg }}>{label[x.status] || x.status}</span>
+          <div key={x.id} style={{ background: "#fff", border: "1px solid #D6E3F5", borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(11,58,120,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 14px 12px", background: "linear-gradient(135deg,#EEF4FD,#F8FAFE)" }}>
+              <Face name={x.other_name || x.trade_name} url={x.other_avatar} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 18, fontWeight: 800, color: "#0B3A78", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name || x.trade_name}</span>
+                {x.trade_name && <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{x.trade_name}</span>}
+              </span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, padding: "5px 11px", borderRadius: 14, color: fg, background: bg, whiteSpace: "nowrap" }}>{label[x.status] || x.status}</span>
             </div>
-            {row(t("mbk_for"), x.trade_name)}
-            {row(t(asWorker ? "mbk_rate_you" : "mbk_rate"), rate(x))}
-            {estimate(x) && (
-              <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#EEF4FD", border: "1px solid #CFE0F7", borderRadius: 10, fontSize: 13.5, color: "#0B3A78", lineHeight: 1.5 }}>
-                <b>{String(t(asWorker ? "mbk_est_you" : "mbk_est")).replace("{len}", mins(x.duration_mins)).replace("{amt}", estimate(x))}</b>
-                <div style={{ marginTop: 2 }}>{t(asWorker ? "mbk_est_note_you" : "mbk_est_note")}</div>
+            <div style={{ padding: "6px 14px 4px" }}>
+              {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
+              {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
+            </div>
+            {(lo || hi) && (
+              <div style={{ margin: "6px 14px 10px", border: "1px solid #CFE0F7", borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ padding: "8px 12px", background: "#E8F0FB", fontSize: 12.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#0B3A78" }}>{t(asWorker ? "mbk_card_you" : "mbk_card")}</div>
+                {[[t("mbk_1h"), span(lo, hi, 60)], [t("mbk_half"), span(lo, hi, 240)], [t("mbk_full"), span(lo, hi, 480)]].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", fontSize: 14.5, borderTop: "1px solid #E6EEF9" }}>
+                    <span style={{ color: T.inkSoft, fontWeight: 600 }}>{k}</span><b style={{ color: T.ink }}>{v}</b>
+                  </div>
+                ))}
+                {m > 0 && (
+                  <div style={{ padding: "10px 12px", background: "#F2FAF5", borderTop: "1px solid #BEE3CB" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: "#166534" }}>
+                      <span>{String(t("mbk_for_len")).replace("{len}", mins(m))}</span><span>{span(lo, hi, m)}</span>
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "#166534", marginTop: 3, lineHeight: 1.45 }}>{t(asWorker ? "mbk_est_note_you" : "mbk_est_note")}</div>
+                  </div>
+                )}
               </div>
             )}
-            {row(t("mbk_when"), x.start_at ? `${stamp(x.start_at)}${x.duration_mins ? ` · ${mins(x.duration_mins)}` : ""}` : "")}
-            {row(t("mbk_where"), x.note)}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              {["requested", "accepted"].includes(x.status) && x.other_phone && <a href={`tel:${x.other_phone}`} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 18px", borderRadius: 22, background: "#15803D", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none" }}>{t("mbk_call")}</a>}
-              {["requested", "accepted"].includes(x.status) && onChat && <Btn kind="ghost" onClick={() => onChat(x)}>{t("mbk_chat")}</Btn>}
-              {asWorker && x.status === "requested" && <Btn disabled={busy === x.id} onClick={() => answer(x, true)}>{t("bk_accept")}</Btn>}
-              {asWorker && x.status === "requested" && <Btn kind="ghost" disabled={busy === x.id} onClick={() => answer(x, false)}>{t("bk_decline")}</Btn>}
-              {!asWorker && ["requested", "accepted"].includes(x.status) && <Btn kind="ghost" disabled={busy === x.id} onClick={() => cancel(x)}>{t("bk_cancel")}</Btn>}
-            </div>
+            {live && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
+                {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
+                {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
+                {x.other_phone && <a href={`tel:${x.other_phone}`} style={pill("#15803D", "#fff", { flex: "1 1 100px" })}><Icon name="phone" size={17} /> {t("mbk_call")}</a>}
+                {onChat && <button onClick={() => onChat(x)} style={pill("#EEF4FD", "#0A5BB8", { flex: "1 1 90px" })}>{t("mbk_chat")}</button>}
+                {!asWorker && <button disabled={busy === x.id} onClick={() => cancel(x)} style={pill("#fff", "#6B7280", { flex: "1 1 90px", border: "1.5px solid #D1D5DB" })}>{t("bk_cancel")}</button>}
+              </div>
+            )}
           </div>
         );
       })}
