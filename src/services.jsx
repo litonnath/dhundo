@@ -433,6 +433,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     setMenuPhotos: (urls) => rpc("services_set_menu_photos", { p_urls: urls }, true),
     myMenuPhotos: () => rpc("services_my_menu_photos", {}, true),
     storeMenuPhotos: (workerId) => rpc("services_store_menu_photos", { p_worker: workerId }),
+    orderToPickup: (id) => rpc("services_order_to_pickup", { p_order: id }, true),
     orderPay: (id, action) => rpc("services_order_pay", { p_order: id, p_action: action }, true),
     ordersReleaseDue: () => rpc("services_orders_release_due", {}, true),
     orderUpdate: (id, action) => rpc("services_order_update", { p_order: id, p_action: action }, true),

@@ -801,6 +801,9 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <Actions>
                 {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_shop")}</a>}
                 {o.rider_name && o.rider_phone && <a href={`tel:${o.rider_phone}`} style={callStyle}>{"\u{1F4DE}"} {t("st_call_rider")}</a>}
+                {o.mode === "delivery" && o.job_status === "expired" && !o.rider_name && (
+                  <Btn onClick={async () => { try { await api.orderToPickup(o.id); } catch (_) {} load(); }}>{t("ob_to_pickup")}</Btn>
+                )}
                 {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
                   <CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} />
                 )}
@@ -848,6 +851,7 @@ function OwnerBanner({ o, t }) {
   if (o.status === "placed") return <Banner tone="wait" icon={"\u{1F514}"} title={t("ob_o_new")} sub={t("ob_o_new_sub")} />;
   if (o.status === "confirmed") return <Banner tone="wait" icon={"\u{1F4B0}"} title={t("ob_o_fee")} />;
   if (o.status === "quoted") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_o_wait_cust")} />;
+  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" icon={"\u{1F6D1}"} title={t("ob_o_norider")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
     if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_out")}>{timer}</Banner>;
     if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_o_rider_coming")} sub={String(t("ow_rider_is")).replace("{name}", o.rider_name)}>{timer}</Banner>;
@@ -870,6 +874,7 @@ function CustomerBanner({ o, t }) {
   if (o.status === "delivered") return <Banner tone="good" icon={"\u2705"} title={t("ob_delivered")} sub={o.updated_at ? dateTime(o.updated_at) : null} />;
   if (o.status === "placed") return <Banner tone="wait" icon={"\u23F3"} title={t("ob_wait_shop")} sub={t("ob_wait_shop_sub")} />;
   if (o.status === "confirmed" || o.status === "quoted") return <Banner tone="wait" icon={"\u{1F4AC}"} title={t("ob_decide")} />;
+  if (o.mode === "delivery" && o.job_status === "expired" && !o.rider_name) return <Banner tone="bad" icon={"\u{1F6D1}"} title={t("ob_norider")} sub={t("ob_norider_sub")} />;
   if (o.mode === "delivery" || o.mode === "shop_delivery") {
     if (o.job_status === "picked_up") return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_out")} sub={o.rider_name ? String(t("st_rider")).replace("{name}", o.rider_name) : null}>{timer}</Banner>;
     if (o.rider_name) return <Banner tone="go" icon={"\u{1F6F5}"} title={t("ob_rider_coming")} sub={String(t("st_rider")).replace("{name}", o.rider_name)}>{timer}</Banner>;
@@ -1115,7 +1120,12 @@ export function OwnerOrders({ api, onHire }) {
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", margin: "2px 0 6px" }}>{t("ow_rider_wait")}</div>
                 ) : (!o.job_status || o.job_status === "expired") ? (
                   <div style={{ margin: "4px 0 8px" }}>
-                    {o.job_status === "expired" && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>{t("ow_rider_none")}</div>}
+                    {o.job_status === "expired" && (
+                      <div style={{ marginBottom: 6 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>{t("ow_rider_none")}</div>
+                        {o.mode === "delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={async () => { setBusy(o.id); try { await api.orderToPickup(o.id); } catch (_) {} setBusy(null); load(); }}>{t("ob_o_to_pickup")}</Btn>}
+                      </div>
+                    )}
                     <FeeHelper api={api} food={o.mode === "delivery"} onPick={(n) => setQuote((q) => ({ ...q, ["r" + o.id]: String(n) }))} />
                     <div style={{ display: "flex", gap: 8 }}>
                     <input style={{ ...input, flex: 1, marginBottom: 0 }} inputMode="numeric" maxLength={4}
