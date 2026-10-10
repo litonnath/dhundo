@@ -4,6 +4,7 @@
 // and the owner side manages the menu and the orders. Nobody pays in the app:
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
+import { CancelButton, CancelNote, OrderDates } from "./cancel.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -714,7 +715,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
     try { setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
   }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
-  const cancel = async (o) => { try { await api.orderUpdate(o.id, "cancel"); } catch (_) {} load(); };
+  const cancel = async (o, reason) => { try { await api.orderCancel(o.id, reason); } catch (_) {} load(); };
   const [rated, setRated] = useState(() => { try { return JSON.parse(window.localStorage.getItem("dhundo_rated") || "[]"); } catch (_) { return []; } });
   const markRated = (id) => { const n = [...rated, id]; setRated(n); try { window.localStorage.setItem("dhundo_rated", JSON.stringify(n.slice(-200))); } catch (_) {} };
   if (view && orders && orders.length === 0 && !showEmpty) return null;
@@ -729,9 +730,11 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", background: statusColor[o.status], padding: "4px 12px", borderRadius: 14 }}>{t("st_status_" + o.status)}</span>
               <ListenButton compact lines={[`${o.other_name}. ${t("st_status_" + o.status)}. ${rupees(o.total_paise + (o.delivery_fee_paise || 0))}`]} />
             </div>
+            <OrderDates o={o} />
             <Lines lines={o.lines} />
             <div style={{ fontSize: 14, fontWeight: 800, margin: "6px 0 0" }}>{t("st_total")}: {rupees(o.total_paise)} · {modeLabel(o.mode, t)}</div>
             <Bill o={o} t={t} api={api} />
+            <CancelNote o={o} />
             <OrderTrack o={o} />
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
@@ -746,7 +749,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Btn onClick={async () => { try { await api.orderUpdate(o.id, "accept_quote"); } catch (_) {} load(); }}>{t("st_quote_accept")}</Btn>
                   {o.mode !== "pickup" && <Btn kind="ghost" onClick={async () => { try { await api.orderUpdate(o.id, "choose_pickup"); } catch (_) {} load(); }}>{t("st_pickup_myself")}</Btn>}
-                  <Btn kind="ghost" onClick={() => cancel(o)}>{t("st_quote_decline")}</Btn>
+                  <Btn kind="ghost" onClick={() => cancel(o, t("cn_c_declined_fee"))}>{t("st_quote_decline")}</Btn>
                 </div>
               </div>
             )}
@@ -764,8 +767,8 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
             {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
-            {o.status === "placed" && (
-              <div><button onClick={() => cancel(o)} style={{ background: "none", border: "none", color: RED, fontWeight: 700, cursor: "pointer", minHeight: 40, padding: 0, fontFamily: "inherit" }}>{t("st_cancel")}</button></div>
+            {["placed", "confirmed", "quoted", "accepted", "ready"].includes(o.status) && o.job_status !== "picked_up" && (
+              <div><CancelButton role="customer" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} /></div>
             )}
           </div>
         ))}
@@ -973,6 +976,11 @@ export function OwnerOrders({ api, onHire }) {
           ) : null)}
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
+          <OrderDates o={o} />
+          <CancelNote o={o} />
+          {["confirmed", "quoted", "accepted", "ready"].includes(o.status) && (
+            <div><CancelButton role="shop" onConfirm={async (reason) => { const r = await api.orderCancel(o.id, reason); load(); return r; }} /></div>
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
             {o.status === "placed" && <>
               <Btn disabled={busy === o.id} onClick={() => act(o, "accept")}>{t("ow_accept")}</Btn>

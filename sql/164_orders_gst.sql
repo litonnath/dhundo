@@ -4,7 +4,8 @@ create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
                other_name text, other_phone text, address_text text, note text,
                lines jsonb, created_at timestamptz, delivery_mins int,
-               rider_name text, rider_phone text, delivery_fee_paise int, job_status text, dist_km numeric, job_id uuid, gst_paise int, delivery_gst_paise int, misc_fee_paise int, misc_gst_paise int, cust_lat double precision, cust_lng double precision)
+               rider_name text, rider_phone text, delivery_fee_paise int, job_status text, dist_km numeric, job_id uuid, gst_paise int, delivery_gst_paise int, misc_fee_paise int, misc_gst_paise int, cust_lat double precision, cust_lng double precision,
+               updated_at timestamptz, cancelled_by text, cancel_reason text)
 language sql
 stable
 security definer
@@ -23,7 +24,8 @@ as $fn$
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id,
-         o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng
+         o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
+         o.updated_at, o.cancelled_by, o.cancel_reason
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id
     left join public.services_jobs j on j.id = o.job_id
@@ -41,7 +43,8 @@ as $fn$
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id,
-         o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng
+         o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
+         o.updated_at, o.cancelled_by, o.cancel_reason
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id and w.user_id = public.services_account_id()
     join public.services_signups c on c.id = o.customer_id

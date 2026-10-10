@@ -3,6 +3,7 @@
 // workers and customers, and the partner programme. Money is never handled
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
+import { CancelButton } from "./cancel.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
@@ -86,6 +87,7 @@ export function RiderJobs({ api, online, where = null }) {
                 )}
               </div>
               <JobCode api={api} jobId={j.id} role="rider" onChanged={load} />
+              <div style={{ marginTop: 6 }}><CancelButton role="rider" label={t("cn_rider_give_back")} onConfirm={async (reason) => { const r = await api.jobRiderCancel(j.id, reason); load(); return r; }} /></div>
             </>
           ) : (
             <DeliveryHandover api={api} jobId={j.id} role="rider" ready onChanged={load} />
