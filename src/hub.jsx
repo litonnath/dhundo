@@ -4,6 +4,7 @@
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
+import { DeliveryRateBox } from "./bizpay.jsx";
 import { OrderHeader, Banner, Steps, Fold, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -184,9 +185,15 @@ const linkBtn = (bg) => ({
 export function RiderHistory({ api }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
+  const [rated, setRated] = useState(() => new Set());
   useEffect(() => {
     let alive = true;
-    Promise.resolve(api.myJobs()).then((r) => { if (alive) setRows(many(r).filter((j) => j.role === "rider" && ["delivered", "cancelled", "expired"].includes(j.status))); }).catch(() => { if (alive) setRows([]); });
+    Promise.resolve(api.myJobs()).then(async (r) => {
+      const list = many(r).filter((j) => j.role === "rider" && ["delivered", "cancelled", "expired"].includes(j.status));
+      if (alive) setRows(list);
+      const ids = list.filter((j) => j.status === "delivered" && j.order_id).map((j) => j.order_id);
+      if (ids.length && api.deliveryRated) { try { const x = many(await api.deliveryRated(ids)); if (alive) setRated(new Set(x.map((y) => (typeof y === "string" ? y : y.order_id)))); } catch (_) { /* keep */ } }
+    }).catch(() => { if (alive) setRows([]); });
     return () => { alive = false; };
   }, [api]);
   if (rows === null) return <div style={{ height: 80 }} />;
@@ -208,6 +215,7 @@ export function RiderHistory({ api }) {
                 {j.pay_method === "cod" && j.paid && j.due_paise != null && <span style={{ fontSize: 13.5, fontWeight: 700, color: T.inkSoft }}>{String(t("jb_h_cash")).replace("{n}", Math.round(j.due_paise / 100 * 100) / 100)}</span>}
               </div>
             )}
+            {done && j.order_id && !rated.has(j.order_id) && <DeliveryRateBox api={api} orderId={j.order_id} who="customer" onDone={(id) => setRated((s) => new Set([...s, id]))} />}
           </div>
         );
       })}

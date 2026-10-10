@@ -459,6 +459,7 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
         </button>
       )}
       <RatingsCard api={api} />
+      {(kind === "delivery" || kind === "travel") && <RatingsCard api={api} source="delivery" title={t("rt_from_customers")} />}
       {(kind === "delivery" || kind === "travel") && <SosButton />}
       <div style={{ display: "grid", gridTemplateColumns: onWallet ? "1fr 1fr" : "1fr", gap: 10, marginTop: 12 }}>
         {onWallet && (
@@ -486,16 +487,16 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
 function Stars({ n, size = 16 }) {
   return <span aria-label={n + " / 5"} style={{ color: "#F59E0B", fontSize: size, letterSpacing: 1 }}>{"\u2605".repeat(Math.round(n))}<span style={{ color: "#D1D5DB" }}>{"\u2605".repeat(5 - Math.round(n))}</span></span>;
 }
-export function RatingsCard({ api }) {
+export function RatingsCard({ api, source = "shop", title = null }) {
   const { t } = useI18n();
   const [rows, setRows] = useState(null);
   useEffect(() => {
     let alive = true;
-    Promise.resolve(api.myReviews ? api.myReviews() : []).then((r) => { if (alive) setRows(many(r)); }).catch(() => { if (alive) setRows([]); });
+    Promise.resolve(source === "delivery" ? (api.myDeliveryRatings ? api.myDeliveryRatings() : []) : (api.myReviews ? api.myReviews() : [])).then((r) => { if (alive) setRows(many(r)); }).catch(() => { if (alive) setRows([]); });
     return () => { alive = false; };
   }, [api]);
   if (rows === null || rows.length === 0) return rows === null ? null : (
-    <div style={{ ...card, marginTop: 12, marginBottom: 0, color: T.inkSoft, fontSize: 14.5 }}>{t("rtg_title")}: {t("rt_none")}</div>
+    <div style={{ ...card, marginTop: 12, marginBottom: 0, color: T.inkSoft, fontSize: 14.5 }}>{title || t("rtg_title")}: {t("rt_none")}</div>
   );
   const rated = rows.filter((r) => !r.complaint);
   const avg = rated.length ? rated.reduce((s, r) => s + r.stars, 0) / rated.length : 0;
@@ -524,7 +525,7 @@ export function RatingsCard({ api }) {
 }
 
 // What the customer sees after a delivered order: stars, a few words, or a problem.
-export function RateBox({ api, orderId, onDone }) {
+export function RateBox({ api, orderId, onDone, title = null, submit = null }) {
   const { t } = useI18n();
   const [stars, setStars] = useState(0);
   const [text, setText] = useState("");
@@ -533,14 +534,14 @@ export function RateBox({ api, orderId, onDone }) {
   const send = async () => {
     setState("busy");
     try {
-      const r = one(await api.reviewAdd({ kind: "order", ref: orderId, stars, comment: text, complaint: problem }));
+      const r = one(submit ? await submit({ stars, comment: text, complaint: problem }) : await api.reviewAdd({ kind: "order", ref: orderId, stars, comment: text, complaint: problem }));
       if (r && (r.ok || r.reason === "already")) { setState("done"); onDone && onDone(orderId); } else setState("err");
     } catch (_) { setState("err"); }
   };
   if (state === "done") return <div style={{ margin: "8px 0", fontSize: 15, fontWeight: 800, color: "#157A43" }}>{"\u2713 "}{t("rt_thanks")}</div>;
   return (
     <div style={{ margin: "10px 0 4px", padding: "12px 12px", borderRadius: 14, background: "#FFF9E8", border: "1px solid #F5E2A8" }}>
-      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("rt_rate")}</div>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{title || t("rt_rate")}</div>
       <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button key={n} onClick={() => setStars(n)} aria-label={n + " / 5"} style={{ background: "none", border: "none", padding: 2, fontSize: 34, lineHeight: 1, cursor: "pointer", color: n <= stars ? "#F59E0B" : "#D1D5DB" }}>{"\u2605"}</button>
@@ -616,4 +617,11 @@ export function LearnPanel({ kind }) {
       ))}
     </div>
   );
+}
+
+// After a delivery: the customer rates the rider, or the rider rates the customer.
+export function DeliveryRateBox({ api, orderId, who, onDone }) {
+  const { t } = useI18n();
+  return <RateBox api={api} orderId={orderId} onDone={onDone} title={t(who === "rider" ? "rt_rate_rider" : "rt_rate_customer")}
+                  submit={({ stars, comment, complaint }) => api.deliveryRate(orderId, stars, comment, complaint)} />;
 }

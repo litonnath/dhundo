@@ -10,7 +10,7 @@ import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo, calcFare } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
-import { RateBox } from "./bizpay.jsx";
+import { RateBox, DeliveryRateBox } from "./bizpay.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
 import { shrink, ScrollRow } from "./market.jsx";
@@ -756,8 +756,13 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
   const { t } = useI18n();
   const [orders, setOrders] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const [ratedDel, setRatedDel] = useState(() => new Set());
   const load = useCallback(async () => {
-    try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); setOrders(many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)))); } catch (_) { setOrders((o) => o || []); }
+    try { if (api.ordersReleaseDue) await api.ordersReleaseDue().catch(() => {}); const list = many(await api.myOrders()).filter((o) => o.role === "customer" && (!view || (view === "active") === !["delivered", "rejected", "cancelled"].includes(o.status)));
+      setOrders(list);
+      const ids = list.filter((o) => o.status === "delivered" && o.job_id).map((o) => o.id);
+      if (ids.length && api.deliveryRated) { try { setRatedDel(new Set(many(await api.deliveryRated(ids)).map((x) => (typeof x === "string" ? x : x.order_id)))); } catch (_) { /* keep */ } }
+    } catch (_) { setOrders((o) => o || []); }
   }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
   const cancel = async (o, reason) => { try { await api.orderCancel(o.id, reason); } catch (_) {} load(); };
@@ -816,6 +821,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
             {o.status === "delivered" && !rated.includes(o.id) && <RateBox api={api} orderId={o.id} onDone={markRated} />}
+            {o.status === "delivered" && o.job_id && !ratedDel.has(o.id) && <DeliveryRateBox api={api} orderId={o.id} who="rider" onDone={(id) => setRatedDel((s) => new Set([...s, id]))} />}
             {!["rejected", "cancelled", "delivered"].includes(o.status) && (
               <Actions>
                 {o.other_phone && <a href={`tel:${o.other_phone}`} style={callStyle}>{t("st_call_shop")}</a>}
