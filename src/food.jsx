@@ -781,26 +781,27 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} />
-            {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
-            <OrderTrack o={o} />
+            {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
+            {!["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />
-            <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
-              <div style={{ fontSize: 14, fontWeight: 800, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
-              <Bill o={o} t={t} api={api} />
-            </Fold>
-            <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>
             {!["rejected", "cancelled"].includes(o.status) && (
-              <div style={{ margin: "8px 0" }}>
+              <div style={{ margin: "8px 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
                 {o.pay_method === "upi" && !o.paid && !o.upi_claimed && o.status !== "delivered" && (
-                  <div style={{ marginTop: 8 }}><Btn kind="ghost" onClick={async () => { try { await api.orderPay(o.id, "upi_sent"); } catch (_) {} load(); }}>{t("pay_i_paid")}</Btn></div>
+                  <Btn kind="ghost" onClick={async () => { try { await api.orderPay(o.id, "upi_sent"); } catch (_) {} load(); }}>{t("pay_i_paid")}</Btn>
                 )}
                 {!o.paid && o.status !== "delivered" && (
-                  <button onClick={async () => { try { await api.orderPay(o.id, o.pay_method === "upi" ? "cod" : "upi"); } catch (_) {} load(); }} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", padding: "8px 0 0", minHeight: 36 }}>{o.pay_method === "upi" ? t("pay_switch_cod") : t("pay_switch_upi")}</button>
+                  <button onClick={async () => { try { await api.orderPay(o.id, o.pay_method === "upi" ? "cod" : "upi"); } catch (_) {} load(); }} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 600, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", padding: 0, minHeight: 36 }}>{o.pay_method === "upi" ? t("pay_switch_cod") : t("pay_switch_upi")}</button>
                 )}
               </div>
             )}
+            <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
+              <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
+              <Bill o={o} t={t} api={api} />
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4, textTransform: "uppercase", margin: "12px 0 4px" }}>{t("sp_title")}</div>
+              <SplitBox o={o} t={t} />
+            </Fold>
             {o.status === "confirmed" && (
               <div style={{ margin: "6px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1D4ED8", marginBottom: 6 }}>{t("st_confirmed_msg")}</div>
@@ -943,13 +944,13 @@ function OrderTrack({ o }) {
   const delivery = o.mode === "delivery";
   if (o.mode === "shop_delivery") {
     const sd = [t("st_status_placed"), t("st_status_confirmed"), t("st_status_quoted"), t("st_status_accepted"), t("st_status_delivered")];
-    const a = o.status === "delivered" ? 4 : ["accepted", "ready"].includes(o.status) ? 3 : o.status === "quoted" ? 2 : o.status === "confirmed" ? 1 : 0;
+    const a = o.status === "delivered" ? 5 : ["accepted", "ready"].includes(o.status) ? 3 : o.status === "quoted" ? 2 : o.status === "confirmed" ? 1 : 0;
     return <Steps steps={sd} at={a} />;
   }
   const steps = delivery
     ? [t("st_status_placed"), t("st_status_accepted"), t("st_tl_prep"), o.job_status === "picked_up" ? t("st_tl_out") : t("st_tl_onway"), t("st_status_delivered")]
     : [t("st_status_placed"), t("st_status_accepted"), t("st_status_ready"), t("st_status_delivered")];
-  const at = o.status === "delivered" ? (delivery ? 4 : 3)
+  const at = o.status === "delivered" ? (delivery ? 5 : 4)
     : delivery ? (o.rider_name || o.job_status === "picked_up" ? 3 : o.status === "placed" ? 0 : 2)
     : o.status === "ready" ? 2 : o.status === "accepted" ? 1 : 0;
   return <Steps steps={steps} at={at} />;
