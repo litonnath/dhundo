@@ -184,8 +184,11 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     const rrow = rateCard.find((c) => c.key === rateKeyFor(slug));
     if (rrow) {
       const mid = e.online.length ? median(e.online) : e.listed.length ? median(e.listed) : null;
-      const perKm = mid != null ? mid : rrow.per_km_rupees;
       const band = rrow.band_pct == null ? 20 : rrow.band_pct;
+      // A driver's own per-km rate only moves the price inside the admin's band
+      // around the rate card, so one high rate cannot push a fare up.
+      const floorKm = Math.ceil(rrow.per_km_rupees * (100 - band) / 100), capKm = Math.floor(rrow.per_km_rupees * (100 + band) / 100);
+      const perKm = mid != null ? Math.min(Math.max(mid, floorKm), Math.max(capKm, floorKm)) : rrow.per_km_rupees;
       const at = (r) => Math.max(rrow.min_rupees, Math.round(rrow.base_rupees + r * trip.km));
       const lo = at(Math.ceil(rrow.per_km_rupees * (100 - band) / 100)), hi = at(Math.floor(rrow.per_km_rupees * (100 + band) / 100));
       const fare = at(perKm);
