@@ -66,14 +66,13 @@ function Bill({ o, t, api }) {
   const line = (k, label, v) => v > 0 && (
     <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
   );
-  if (b.gst + b.delivery + b.dGst + b.misc + b.mGst <= 0) return null;
+  const gstAll = b.gst + b.mGst; // one GST line: on the items and the miscellaneous fee
+  if (gstAll + b.delivery + b.misc <= 0) return null;
   return (
     <div style={{ margin: "4px 0 2px" }}>
-      {line("g", `${t("fr_gst")} (${t("fr_items")})`, b.gst)}
       {line("d", t("st_fee"), b.delivery)}
-      {line("dg", `${t("fr_gst")} (${t("st_fee")})`, b.dGst)}
       {line("m", t("fr_misc"), b.misc)}
-      {line("mg", `${t("fr_gst")} (${t("fr_misc")})`, b.mGst)}
+      {line("g", t("fr_gst"), gstAll)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
       {biz && <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4 }}>{biz.legal_name ? `${biz.legal_name} · ` : ""}GSTIN {biz.gstin}</div>}
     </div>
@@ -641,18 +640,10 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 800, margin: "12px 0" }}>
           <span>{t("st_total")}</span><span>{rupees(total)}</span>
         </div>
-        {gstP > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 8px", color: T.inkSoft }}>
-            <span>{t("fr_gst")} ({gstPct}%)</span><span>{rupees(gstP)}</span>
-          </div>
-        )}
         {mode !== "pickup" && miscP > 0 && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
               <span>{t("fr_misc")}</span><span>{rupees(miscP)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("fr_gst")} ({t("fr_misc")})</span><span>{rupees(miscG)}</span>
             </div>
           </>
         )}
@@ -661,14 +652,16 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
               <span>{t("st_fee")}</span><span>~{"\u20B9"}{feeRs}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
-              <span>{t("fr_gst")} ({t("st_fee")})</span><span>~{"\u20B9"}{Math.round(feeRs * 0.18 * 100) / 100}</span>
-            </div>
           </>
+        )}
+        {gstP + miscG > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+            <span>{t("fr_gst")}</span><span>{rupees(gstP + miscG)}</span>
+          </div>
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + feeRs * 1.18) * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>~{"\u20B9"}{Math.round(((total + gstP + miscP + miscG) / 100 + feeRs) * 100) / 100}</span>
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -967,6 +960,17 @@ export function OwnerOrders({ api, onHire }) {
           <Lines lines={o.lines} />
           <div style={{ fontSize: 14, fontWeight: 800, margin: "4px 0" }}>{rupees(o.total_paise)}{o.gst_paise > 0 ? ` + ${t("fr_gst")} ${rupees(o.gst_paise)}` : ""} · {modeLabel(o.mode, t)}</div>
           {o.address_text && <div style={{ fontSize: 13.5, color: T.ink }}>{o.address_text}</div>}
+          {o.mode !== "pickup" && (typeof o.cust_lat === "number" && typeof o.cust_lng === "number" ? (
+            <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.cust_lat},${o.cust_lng}`} target="_blank" rel="noopener noreferrer"
+               style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "6px 0 2px", minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
+              <Icon name="pin" size={16} /> {t("ow_cust_map")}
+            </a>
+          ) : o.address_text ? (
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.address_text)}`} target="_blank" rel="noopener noreferrer"
+               style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "6px 0 2px", minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1.5px solid ${T.brandDark}`, color: T.brandDark, fontWeight: 800, fontSize: 14, textDecoration: "none" }}>
+              <Icon name="pin" size={16} /> {t("ow_cust_map")}
+            </a>
+          ) : null)}
           {o.note && <div style={{ fontSize: 13, color: T.inkSoft, fontStyle: "italic" }}>{o.note}</div>}
           {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ display: "inline-block", margin: "6px 0", color: T.brandDark, fontWeight: 700 }}>{o.other_phone}</a>}
           <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>

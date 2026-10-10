@@ -3,7 +3,7 @@
 -- The extra charges a CUSTOMER pays are saved on the order when it is made, so
 -- changing a rate later never changes an old order:
 --   gst_paise          GST on the items (restaurant / shop rate)
---   delivery_gst_paise 18% GST on the delivery charge
+--   delivery_gst_paise always 0: no GST on the rider's delivery charge
 --   misc_fee_paise     Dhundo's small miscellaneous fee (delivery orders)
 --   misc_gst_paise     GST on that fee
 -- A trigger fills them, so no order function has to change. Shops, restaurants
@@ -39,8 +39,7 @@ begin
     new.misc_fee_paise := coalesce(v_card.platform_rupees, 0) * 100;
     new.misc_gst_paise := round(new.misc_fee_paise * coalesce(v_card.gst_percent, 18) / 100)::int;
   end if;
-  new.delivery_gst_paise := case when new.mode = 'pickup' then 0
-                                 else round(new.delivery_fee_paise * 0.18)::int end;
+  new.delivery_gst_paise := 0; -- no GST on the rider's delivery charge
   return new;
 end;
 $fn$;

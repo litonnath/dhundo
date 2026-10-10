@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "এপ বন্ধ থাকিলে এলাৰ্ট",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  ow_cust_map: "Show customer on map",
   db_noloc: "Your place has no exact location on the map. Delivery riders may not see your orders until you pin it.",
   db_setloc: "Set location",
   fr_items: "items",
