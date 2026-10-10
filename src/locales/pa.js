@@ -1020,7 +1020,7 @@ export default {
   cn_err_not_yours: "You cannot cancel this order.",
   cn_err_update: "Cancelling is not switched on yet. Please try again later.",
   cn_cancel: "Cancel order",
-  cn_rider_give_back: "Can\u2019t deliver this? Give it back",
+  cn_rider_give_back: "Cancel this delivery (we will find another rider)",
   cn_why: "Why are you cancelling?",
   cn_why_sub: "Pick a reason. The other side will see it.",
   cn_other: "Other reason",
