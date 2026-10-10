@@ -13,7 +13,7 @@ set search_path to 'public'
 as $fn$
   select o.id, 'customer'::text, o.status, o.mode, o.total_paise,
          coalesce(nullif(btrim(w.business_name), ''), w.full_name)::text,
-         case when o.status in ('accepted', 'ready', 'delivered') then w.phone::text end,
+         w.phone::text,
          o.address_text, o.note,
          (select jsonb_agg(jsonb_build_object('name', l.name, 'qty', l.qty, 'price_paise', l.price_paise))
             from public.services_order_lines l where l.order_id = o.id),

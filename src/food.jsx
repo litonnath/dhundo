@@ -757,7 +757,12 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 </div>
               </div>
             )}
-            {o.other_phone && <a href={`tel:${o.other_phone}`} style={{ color: T.brandDark, fontWeight: 700, fontSize: 14 }}>{o.other_phone}</a>}
+            {!["rejected", "cancelled"].includes(o.status) && (o.other_phone || (o.rider_name && o.rider_phone)) && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "6px 0" }}>
+                {o.other_phone && <a href={`tel:${o.other_phone}`} style={callBtn}>{t("st_call_shop")}</a>}
+                {o.rider_name && o.rider_phone && ["accepted", "ready", "picked_up"].includes(o.job_status || o.status) && <a href={`tel:${o.rider_phone}`} style={callBtn}>{t("st_call_rider")}</a>}
+              </div>
+            )}
             {o.delivery_mins && o.mode === "delivery" && ["placed", "accepted", "ready"].includes(o.status) && (
               <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{String(t("st_mins")).replace("{n}", o.delivery_mins)}</div>
             )}
@@ -769,8 +774,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               </div>
             )}
             {o.rider_name && (
-              <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}{" "}
-                {o.rider_phone && <a href={`tel:${o.rider_phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{o.rider_phone}</a>}</div>
+              <div style={{ fontSize: 13.5, marginTop: 4 }}>{String(t("st_rider")).replace("{name}", o.rider_name)}</div>
             )}
             {o.rider_name && o.job_id && o.job_status === "picked_up" && <DeliveryHandover api={api} jobId={o.job_id} role="customer" />}
             {o.rider_name && o.job_id && <RideChat api={api} rideId={o.job_id} role="customer" kind="job" startOpen={false} />}
@@ -809,6 +813,8 @@ export function MyOrdersSheet({ api, onClose }) {
 // Where the order is, as a row of steps. Delivery: placed, accepted, on the way
 // with a rider (out for delivery once picked up), delivered. Pickup: placed,
 // accepted, ready, collected.
+const callBtn = { display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 16px", borderRadius: 12, background: "#16A34A", color: "#fff", fontWeight: 800, fontSize: 14.5, textDecoration: "none", boxSizing: "border-box" };
+
 function OrderTrack({ o }) {
   const { t } = useI18n();
   if (["rejected", "cancelled"].includes(o.status)) return null;
