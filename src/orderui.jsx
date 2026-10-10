@@ -122,3 +122,34 @@ export function PayBadge({ method, paid, claimed, t, style }) {
     </span>
   );
 }
+
+// Who gets what from one order: the shop, the rider, Dhundo and the GST for
+// the government. The rider's share is the delivery job fee; whatever is left
+// of the delivery charge stays with the shop (and the shop covers any shortfall).
+export function splitOf(o) {
+  const n = (v) => Number(v) || 0;
+  const items = n(o.total_paise), delivery = n(o.delivery_fee_paise);
+  const rider = o.job_id || o.rider_fee_paise != null ? n(o.rider_fee_paise) : 0;
+  const platform = n(o.misc_fee_paise);
+  const gst = n(o.gst_paise) + n(o.delivery_gst_paise) + n(o.misc_gst_paise);
+  const shop = items + delivery - rider;
+  return { shop, rider, platform, gst, total: shop + rider + platform + gst };
+}
+
+export function SplitBox({ o, t, who = "all" }) {
+  const sp = splitOf(o);
+  const row = (key, label, v, strong) => (
+    <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: strong ? 15 : 14, fontWeight: strong ? 800 : 600, color: strong ? T.ink : T.inkSoft, padding: "3px 0" }}>
+      <span>{label}</span><span>{rup(v)}</span>
+    </div>
+  );
+  return (
+    <div>
+      {row("shop", t("sp_shop"), sp.shop)}
+      {sp.rider > 0 && row("rider", t("sp_rider"), sp.rider)}
+      {row("platform", t("sp_platform"), sp.platform)}
+      {sp.gst > 0 && row("gst", t("sp_gst"), sp.gst)}
+      <div style={{ borderTop: "1px solid #EEF0F4", marginTop: 4, paddingTop: 4 }}>{row("total", t("sp_total"), sp.total, true)}</div>
+    </div>
+  );
+}

@@ -6,7 +6,7 @@ returns table (id uuid, role text, status text, mode text, total_paise int,
                lines jsonb, created_at timestamptz, delivery_mins int,
                rider_name text, rider_phone text, delivery_fee_paise int, job_status text, dist_km numeric, job_id uuid, gst_paise int, delivery_gst_paise int, misc_fee_paise int, misc_gst_paise int, cust_lat double precision, cust_lng double precision,
                updated_at timestamptz, cancelled_by text, cancel_reason text, rider_after timestamptz, worker_id uuid,
-               pay_method text, paid boolean, upi_claimed boolean)
+               pay_method text, paid boolean, upi_claimed boolean, rider_fee_paise int)
 language sql
 stable
 security definer
@@ -27,7 +27,7 @@ as $fn$
          o.job_id,
          o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
-         o.pay_method, o.paid, o.upi_claimed
+         o.pay_method, o.paid, o.upi_claimed, j.fee_paise
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id
     left join public.services_jobs j on j.id = o.job_id
@@ -47,7 +47,7 @@ as $fn$
          o.job_id,
          o.gst_paise, o.delivery_gst_paise, o.misc_fee_paise, o.misc_gst_paise, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
-         o.pay_method, o.paid, o.upi_claimed
+         o.pay_method, o.paid, o.upi_claimed, j.fee_paise
     from public.services_orders o
     join public.services_workers w on w.id = o.worker_id and w.user_id = public.services_account_id()
     join public.services_signups c on c.id = o.customer_id

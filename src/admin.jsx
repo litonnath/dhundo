@@ -91,7 +91,7 @@ function Table({ head, rows, empty }) {
   if (rows.length === 0) return <div style={{ ...card, color: T.inkSoft, fontSize: 14 }}>{empty}</div>;
   return (
     <div style={{ ...card, padding: 0, overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 640 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 900 }}>
         <thead><tr>{head.map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
         <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} style={td}>{c}</td>)}</tr>)}</tbody>
       </table>
@@ -109,8 +109,8 @@ function Orders({ api }) {
         <Btn kind="ghost" onClick={load}>Refresh</Btn>
       </div>
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
-      <Table head={["When", "Shop", "Customer", "Type", "Status", "Items", "Extras"]} empty="No orders."
-             rows={rows && rows.map((o) => [when(o.created_at), o.shop, <span key="c">{o.customer}<br /><span style={{ color: T.inkSoft }}>{o.customer_phone}</span></span>, o.mode, o.status, rs(o.total_paise), rs(o.charges_paise)])} />
+      <Table head={["When", "Shop", "Customer", "Type", "Status", "Paid", "Customer pays", "Shop gets", "Rider gets", "Dhundo gets", "GST"]} empty="No orders."
+             rows={rows && rows.map((o) => [when(o.created_at), o.shop, <span key="c">{o.customer}<br /><span style={{ color: T.inkSoft }}>{o.customer_phone}</span></span>, o.mode, o.status, o.paid ? `Paid \u00B7 ${o.pay_method === "upi" ? "UPI" : "cash"}` : `Unpaid \u00B7 ${o.pay_method === "upi" ? "UPI" : "cash"}`, rs(Number(o.total_paise) + Number(o.charges_paise)), rs(o.shop_gets_paise), rs(o.rider_gets_paise), rs(o.platform_gets_paise), rs(o.gst_paise)])} />
     </div>
   );
 }

@@ -5,7 +5,7 @@
 // they settle it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./cancel.jsx";
-import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
+import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
@@ -763,6 +763,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ fontSize: 14, fontWeight: 800, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} />
             </Fold>
+            <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>
             {!["rejected", "cancelled"].includes(o.status) && (
               <div style={{ margin: "8px 0" }}>
                 <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
@@ -1053,6 +1054,7 @@ export function OwnerOrders({ api, onHire }) {
                        sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
           <OwnerBanner o={o} t={t} />
           <ItemsBox lines={o.lines} />
+          <Fold title={t("sp_title")}><SplitBox o={o} t={t} /></Fold>
           {(o.address_text || o.note) && (
             <div style={{ padding: "10px 12px", background: "#F7F8FA", borderRadius: 12, margin: "8px 0" }}>
               {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{"\u{1F4CD}"} {o.address_text}</div>}
