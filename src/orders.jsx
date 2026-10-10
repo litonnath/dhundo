@@ -24,7 +24,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
     return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : showWork ? "work" : null;
   });
   const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
-  const tiles = (showWork ? [["work", "bag", t(workKey), badge]] : [
+  const tiles = (showWork ? [["work", "bag", t(workKey), badge], ["items", "tag", t("mb_mine"), 0]] : [
     ["mine", "bag", t("or_mine"), 0],
     ["bookings", "user", t("mbk_title"), 0],
     ["items", "tag", t("mb_mine"), 0],
