@@ -22,7 +22,7 @@ begin
   end if;
   select coalesce(array_agg(u), '{}') into v_urls
     from (select btrim(x) as u from unnest(coalesce(p_urls, '{}')) x
-           where btrim(x) ~ '^https://[^ ]{5,480}$' limit 8) q;
+           where btrim(x) ~ '^https://[^ ]+$' and length(btrim(x)) <= 480 limit 8) q;
   update public.services_workers set menu_photos = v_urls where user_id = v_me;
   if not found then
     return query select false, 'no_listing'::text;
