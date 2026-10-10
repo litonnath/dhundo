@@ -125,13 +125,13 @@ export function PayBadge({ method, paid, claimed, t, style }) {
 // of the delivery charge stays with the shop (and the shop covers any shortfall).
 export function splitOf(o) {
   const n = (v) => Number(v) || 0;
-  const items = n(o.total_paise), delivery = n(o.delivery_fee_paise);
-  // The delivery fee goes to the rider: the job fee once there is a job, the fee
-  // the customer pays until then.
-  const rider = o.rider_fee_paise != null ? n(o.rider_fee_paise) : o.mode === "delivery" ? delivery : 0;
+  // The restaurant gets exactly the items at its own prices. The delivery
+  // partner fee is what the customer paid for delivery. The delivery fee is the
+  // app's; the GST is for the government.
+  const shop = n(o.total_paise);
+  const rider = o.mode === "delivery" ? n(o.delivery_fee_paise) : 0;
   const platform = n(o.misc_fee_paise);
   const gst = n(o.gst_paise) + n(o.delivery_gst_paise) + n(o.misc_gst_paise);
-  const shop = items + delivery - rider;
   return { shop, rider, platform, gst, total: shop + rider + platform + gst };
 }
 
@@ -156,17 +156,10 @@ export function SplitBox({ o, t, who = "all" }) {
 // What the restaurant or shop gets from an order: the items at the prices it
 // set, and the GST on them. Nothing about the rider's fee or Dhundo's fee.
 export function OwnerPart({ o, t }) {
-  const items = Number(o.total_paise) || 0, gst = Number(o.gst_paise) || 0;
-  const row = (label, v, strong) => (
-    <div style={{ display: "flex", justifyContent: "space-between", fontSize: strong ? 15 : 14, fontWeight: strong ? 700 : 500, color: strong ? T.ink : T.inkSoft, padding: "3px 0" }}>
-      <span>{label}</span><span>{rup(v)}</span>
-    </div>
-  );
+  const items = Number(o.total_paise) || 0;
   return (
-    <div>
-      {row(t("op_items"), items)}
-      {gst > 0 && row(t("op_gst"), gst)}
-      <div style={{ borderTop: "1px solid #EEF0F3", marginTop: 4, paddingTop: 4 }}>{row(t("op_total"), items + gst, true)}</div>
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: T.ink, padding: "3px 0" }}>
+      <span>{t("op_items")}</span><span>{rup(items)}</span>
     </div>
   );
 }

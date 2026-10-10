@@ -1145,13 +1145,13 @@ export function OwnerHistory({ api }) {
         const done = o.status === "delivered";
         return (
           <div key={o.id} style={cardStyle}>
-            <OrderHeader name={o.other_name} amount={o.total_paise + (o.gst_paise || 0)} sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
+            <OrderHeader name={o.other_name} amount={o.total_paise} sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <Banner tone={done ? "good" : "bad"} title={t("st_status_" + o.status)} sub={o.updated_at ? dateTime(o.updated_at) : null}>
               <CancelNote o={o} />
             </Banner>
             <ItemsBox lines={o.lines} />
             {done && <div style={{ margin: "6px 0" }}><PayBadge method={o.pay_method} paid={o.paid} t={t} /></div>}
-            {done && <Fold title={t("op_title")} right={rupees(o.total_paise + (o.gst_paise || 0))}><OwnerPart o={o} t={t} /></Fold>}
+            {done && <Fold title={t("op_title")} right={rupees(o.total_paise)}><OwnerPart o={o} t={t} /></Fold>}
           </div>
         );
       })}
@@ -1176,11 +1176,11 @@ export function OwnerOrders({ api, onHire }) {
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "14px 0 8px" }}>{t("ow_title_orders")}{active.length ? ` (${active.length})` : ""}</h2>
       {active.length === 0 ? <div style={{ fontSize: 14, color: T.inkFaint }}>{t("ow_none")}</div> : active.map((o) => (
         <div key={o.id} style={cardStyle}>
-          <OrderHeader name={o.other_name} amount={o.total_paise + (o.gst_paise || 0)}
+          <OrderHeader name={o.other_name} amount={o.total_paise}
                        sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
           <OwnerBanner o={o} t={t} />
           <ItemsBox lines={o.lines} />
-          <Fold title={t("op_title")} right={rupees(o.total_paise + (o.gst_paise || 0))}><OwnerPart o={o} t={t} /></Fold>
+          <Fold title={t("op_title")} right={rupees(o.total_paise)}><OwnerPart o={o} t={t} /></Fold>
           {(o.address_text || o.note) && (
             <div style={{ padding: "10px 12px", background: "#F7F8FA", borderRadius: 12, margin: "8px 0" }}>
               {o.address_text && <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.4 }}>{o.address_text}</div>}

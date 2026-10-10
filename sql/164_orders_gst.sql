@@ -1,4 +1,4 @@
--- 164 part 2 (needs 187_delivery_ratings.sql first). A shop or restaurant's own rows carry only its part: the items and the GST on them, never Dhundo's fee or the rider's fee. order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
+-- 164 part 2 (needs 187_delivery_ratings.sql first). A shop or restaurant's own rows carry only its part: the items at its own prices, never GST, Dhundo's fee or the rider's fee. order lists also carry the GST on the items (gst_paise and the other customer charges), saved on the order by 164. Replaces 146 part 1. Run after 164_order_charges.sql.
 drop function if exists public.services_my_orders();
 create function public.services_my_orders()
 returns table (id uuid, role text, status text, mode text, total_paise int,
@@ -47,7 +47,7 @@ as $fn$
          case when w.lat is null or o.lat is null then null
               else round(public.services_km(w.lat, w.lng, o.lat, o.lng)::numeric * 1.3, 1) end,
          o.job_id,
-         o.gst_paise, 0, 0, 0, o.lat, o.lng,
+         0, 0, 0, 0, o.lat, o.lng,
          o.updated_at, o.cancelled_by, o.cancel_reason, o.rider_after, o.worker_id,
          o.pay_method, o.paid, o.upi_claimed, null::int,
          null::numeric,

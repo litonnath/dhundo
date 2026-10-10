@@ -24,8 +24,8 @@ begin
            c.full_name::text, c.phone::text, o.total_paise,
            (o.gst_paise + o.delivery_fee_paise + o.delivery_gst_paise + o.misc_fee_paise + o.misc_gst_paise)::int,
            o.paid, o.pay_method::text,
-           (o.total_paise + o.delivery_fee_paise - coalesce(j.fee_paise, 0))::int,
-           coalesce(j.fee_paise, 0)::int,
+           o.total_paise::int,
+           o.delivery_fee_paise::int,
            o.misc_fee_paise::int,
            (o.gst_paise + o.delivery_gst_paise + o.misc_gst_paise)::int
       from public.services_orders o
