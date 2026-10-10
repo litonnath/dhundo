@@ -36,6 +36,7 @@ import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 ;
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
+import { WorkerExtras } from "./workerextras.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -483,6 +484,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingsCompleteDue: () => rpc("services_bookings_complete_due", {}, true),
     bookingReschedule: (id, iso) => rpc("services_booking_reschedule", { p_id: id, p_start: iso }, true),
     workerBusy: (id, exclude) => rpc("services_worker_busy", { p_worker: id, p_days: 14, p_exclude: exclude || null }),
+    workerCardExtra: (id) => rpc("services_worker_card_extra", { p_worker: id }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
@@ -951,6 +953,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
         revealed={revealed[row.id]}
         directions={dirs[row.id]} origin={place}
         posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
+        extra={<WorkerExtras api={api} row={row} onOpenBookings={() => onLive && onLive("bookings")} />}
         onCall={handleCall}
         otherLabels={tradeLabels}
       />
@@ -1036,6 +1039,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                       revealed={revealed[row.id]}
                       directions={dirs[row.id]} origin={place}
                       posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
+                      extra={<WorkerExtras api={api} row={row} onOpenBookings={() => onLive && onLive("bookings")} />}
                       onCall={handleCall}
                       otherLabels={tradeLabels}
                     />
@@ -1203,6 +1207,7 @@ function Browse({ api, trades, user, isAdmin, onSignIn, onAdd, place, setPlace, 
                   revealed={revealed[row.id]}
                   directions={dirs[row.id]} origin={place}
                   posExact={posExactOf(row)} roadKm={road[row.id]} lineKm={line[row.id]} onBook={onBook}
+                  extra={<WorkerExtras api={api} row={row} onOpenBookings={() => onLive && onLive("bookings")} />}
                   onCall={handleCall}
                   otherLabels={tradeLabels}
                   nearLabel={nearLabelFor(row)}

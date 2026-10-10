@@ -1662,7 +1662,7 @@ export function CategoryGrid({ groups, counts, onPick }) {
 // renders the distance it is handed.
 // ---------------------------------------------------------------------------
 export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, tradeLabel,
-                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm, onBook }) {
+                              otherLabels, trade, nearLabel, directions, origin, posExact, roadKm, lineKm, onBook, extra = null }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const s = groupStyle(row.trade_group);
@@ -1880,6 +1880,8 @@ export function ListingCard({ row, onCall, revealing, revealed, canCall, rate, t
           </div>
         </div>
       </div>
+
+      {extra}
 
       {/* ------------------------------------------------------- expanded */}
       {open && (
