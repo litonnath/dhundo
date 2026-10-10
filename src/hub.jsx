@@ -78,6 +78,7 @@ export function RiderJobs({ api, online, where = null }) {
       {mine.map((j) => (
         <div key={j.id} style={cardStyle}>
           <JobPositionSender api={api} where={where} />
+          {!(where && where.manual) && <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "0 0 8px" }}>{"\u{1F4F1}"} {t("jb_keep_open")}</div>}
           <OrderHeader name={j.status === "picked_up" ? (j.customer_name || j.drop_text) : j.other_name}
                        sub={j.status === "picked_up" ? j.drop_text : j.note} />
           {j.fee_paise != null && <div style={{ fontSize: 14, fontWeight: 800, color: "#0F6B33", marginTop: 8 }}>{String(t("jb_fee")).replace("{n}", Math.round(j.fee_paise / 100))}</div>}

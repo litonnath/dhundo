@@ -507,6 +507,10 @@ export function DeliveryLive({ api, orderId, riderName }) {
   if (!shop && !door && !rider) return null;
   const km = rider && target ? kmBetween(rider, target) : null;
   const reached = km != null && km < 0.12;
+  // The rider's phone has not reported for a while: say how long, instead of
+  // showing an old dot as if it were live.
+  const ageMin = d && d.seen_at ? Math.round((Date.now() - new Date(d.seen_at).getTime()) / 60000) : null;
+  const stale = rider && ageMin != null && ageMin >= 2 ? ageMin : null;
   const text = !rider ? t("dl_no_pos")
     : !target ? t("dl_on_way")
     : picked ? (reached ? t("dl_at_you") : String(t("dl_to_you")).replace("{n}", fmtKm(km)))
@@ -517,6 +521,7 @@ export function DeliveryLive({ api, orderId, riderName }) {
       <div style={{ fontSize: 15, fontWeight: 800, color: reached ? "#0F6B33" : T.ink, marginTop: 8 }}>
         {reached ? "\u2705 " : "\u{1F6F5} "}{riderName ? `${riderName}: ` : ""}{text}
       </div>
+      {stale != null && <div style={{ fontSize: 13.5, fontWeight: 700, color: "#B45309", marginTop: 2 }}>{String(t("dl_stale")).replace("{n}", stale)}</div>}
       {eta != null && !reached && <div style={{ fontSize: 14, fontWeight: 700, color: T.brandDark, marginTop: 2 }}>{String(picked ? t("dl_eta_you") : t("dl_eta_shop")).replace("{n}", eta)}</div>}
       <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{t("dl_legend")}</div>
     </div>
@@ -528,16 +533,29 @@ export function DeliveryLive({ api, orderId, riderName }) {
 export function JobPositionSender({ api, where = null }) {
   const sent = useRef(0);
   const pinned = where && where.manual;
+  const lastPos = useRef(null);
   useEffect(() => {
     if (pinned) return undefined;
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
     if (!geo) return undefined;
-    const id = geo.watchPosition((g) => {
-      if (Date.now() - sent.current < 8000) return;
+    const push = (g, force) => {
+      if (!force && Date.now() - sent.current < 8000) return;
       sent.current = Date.now();
-      api.setAvailability(true, { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy }, null).catch(() => {});
+      api.setAvailability(true, { lat: g.lat, lng: g.lng, accuracy: g.accuracy }, null).catch(() => {});
+    };
+    const id = geo.watchPosition((g) => {
+      lastPos.current = { lat: g.coords.latitude, lng: g.coords.longitude, accuracy: g.coords.accuracy };
+      push(lastPos.current, false);
     }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
-    return () => geo.clearWatch(id);
+    // Keep the screen awake while a delivery is on, and send the position the
+    // moment the rider comes back to the app (a phone that was locked or
+    // switched away stops sending until then).
+    let lock = null;
+    const hold = async () => { try { if (navigator.wakeLock && !document.hidden) lock = await navigator.wakeLock.request("screen"); } catch (_) { /* not allowed: fine */ } };
+    const onVis = () => { if (!document.hidden) { hold(); if (lastPos.current) push(lastPos.current, true); } };
+    hold();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { geo.clearWatch(id); document.removeEventListener("visibilitychange", onVis); try { if (lock) lock.release(); } catch (_) { /* ignore */ } };
   }, [api, pinned]);
   return null;
 }

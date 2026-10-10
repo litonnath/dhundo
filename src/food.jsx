@@ -776,6 +776,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} />
+            {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} />}
             <OrderTrack o={o} />
             <ItemsBox lines={o.lines} />
@@ -880,6 +881,30 @@ function OwnerBanner({ o, t }) {
   return o.status === "ready"
     ? <Banner tone="good" icon={"\u{1F6CD}\uFE0F"} title={t("ob_o_ready_collect")} />
     : <Banner tone="go" icon={"\u{1F373}"} title={t("ob_o_prep")} sub={t("ob_o_prep_sub")} />;
+}
+
+// An order placed without a pinned location: the customer pins it now, so the
+// rider can find the door and the map can follow the rider.
+function PinDoor({ api, orderId, place, onDone }) {
+  const { t } = useI18n();
+  const [v, setV] = useState(null);
+  const [msg, setMsg] = useState("");
+  const pick = async (p) => {
+    setV(p);
+    if (!p || typeof p.lat !== "number") return;
+    setMsg("");
+    try {
+      const r = one(await api.orderSetDrop(orderId, p.lat, p.lng));
+      if (r && r.ok) onDone(); else setMsg(t("e_save"));
+    } catch (_) { setMsg(t("e_save")); }
+  };
+  return (
+    <div style={{ background: "#FFF7E6", border: "1px solid #F5D58C", borderRadius: 14, padding: "12px 14px", margin: "8px 0" }}>
+      <div style={{ fontSize: 14.5, fontWeight: 800, color: "#8A5A00", marginBottom: 8 }}>{t("pd_title")}</div>
+      <PlaceField value={v} onChange={pick} sheetPlace={v || place} />
+      {msg && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, fontSize: 13.5, marginTop: 6 }}>{msg}</div>}
+    </div>
+  );
 }
 
 // What is happening to this order, said plainly, for the customer.
