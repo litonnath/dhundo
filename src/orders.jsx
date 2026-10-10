@@ -13,16 +13,17 @@ import { RideRequests, RideHistory } from "./ride.jsx";
 import { MyBookings } from "./mybookings.jsx";
 
 
-export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false, bookings = [], onChat = null, onBookingsChanged = null }) {
+export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0, bizMode = false, bookings = [], hasBiz = false, onChat = null, onBookingsChanged = null }) {
   const { t } = useI18n();
   const [view, setView] = useState("active");
-  const showWork = !!role && bizMode;
+  const isWorker = !role && hasBiz && bizMode; // a cook, plumber and so on
+  const showWork = (!!role || isWorker) && bizMode;
   const [part, setPart] = useState(() => {
     let want = null;
     try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "work" && role ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : showWork ? "work" : null;
+    return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : showWork ? "work" : null;
   });
-  const workKey = role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
+  const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
   const tiles = (showWork ? [["work", "bag", t(workKey), badge]] : [
     ["mine", "bag", t("or_mine"), 0],
     ["bookings", "user", t("mbk_title"), 0],
@@ -65,14 +66,15 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
               }}>{t(key)}</button>
             ))}
           </div>
-          {part === "work" && view === "active" && (
+          {part === "work" && isWorker && <MyBookings asWorker api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
+          {part === "work" && !isWorker && view === "active" && (
             <>
               {role === "owner" && <OwnerOrders api={api} onHire={onHire} />}
               {role === "delivery" && <RiderJobs api={api} online={online} where={where} />}
               {role === "ride" && <RideRequests api={api} online={online} trades={trades} where={where} />}
             </>
           )}
-          {part === "work" && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
+          {part === "work" && !isWorker && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
           {part === "mine" && <MyOrdersList api={api} view={view} showEmpty />}
           {part === "bookings" && <MyBookings api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "items" && <ItemOrdersList api={api} onHire={onHire} view={view} />}

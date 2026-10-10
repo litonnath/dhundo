@@ -3338,7 +3338,7 @@ export default function ServicesPage({
       )}
 
       {tab === "orders" && (signedIn ? (
-        <OrdersPage key={ordersKey} bookings={inbox.items} onChat={(x) => setChatItem(x)} onBookingsChanged={inbox.reload} badge={ordersBadge} bizMode={effMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
+        <OrdersPage key={ordersKey} hasBiz={hasListing && !isAdmin} bookings={inbox.items} onChat={(x) => setChatItem(x)} onBookingsChanged={inbox.reload} badge={ordersBadge} bizMode={effMode === "business"} api={api} online={avail.online} where={avail.where} trades={trades}
                     role={hasListing && !isAdmin ? ((myTradeRow.group_name === "Eat & Stay" || myTradeRow.kind === "supplier") ? "owner" : myDriverKind === "delivery" ? "delivery" : myDriverKind === "travel" ? "ride" : null) : null}
                     onHire={() => { try { window.localStorage.setItem("dhundo_ride_mode", "hire"); window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} switchMode("need"); }} />
       ) : (
