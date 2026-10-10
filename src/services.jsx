@@ -374,11 +374,21 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     myRide: () => rpc("services_my_ride", {}, true),
     menuGet: (workerId) => rpc("services_menu_get", { p_worker: workerId }),
     myMenu: () => rpc("services_my_menu", {}, true),
-    menuSave: (m) => rpc("services_menu_save", {
-      p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
-      p_price_rupees: m.price, p_veg: m.veg, p_available: m.available, p_photo: m.photo || null,
-      ...(m.bikeOk === undefined ? {} : { p_bike_ok: !!m.bikeOk }),
-    }, true),
+    menuSave: async (m) => {
+      const body = {
+        p_id: m.id || null, p_category: m.category || "Menu", p_name: m.name, p_about: m.about || null,
+        p_price_rupees: m.price, p_veg: m.veg, p_available: m.available, p_photo: m.photo || null,
+      };
+      if (m.bikeOk === undefined) return rpc("services_menu_save", body, true);
+      try {
+        return await rpc("services_menu_save", { ...body, p_bike_ok: !!m.bikeOk }, true);
+      } catch (e) {
+        // The database has not had the "bike can carry it" update yet (SQL 143/144):
+        // save the product anyway, without that one flag.
+        if (/could not find the function|schema cache/i.test((e && e.message) || "")) return rpc("services_menu_save", body, true);
+        throw e;
+      }
+    },
     // Shops or food places within the radius of a person, with the dishes or
     // goods that match what they typed. Nothing outside the radius comes back.
     storesNear: (o) => rpc("services_stores_near", {
