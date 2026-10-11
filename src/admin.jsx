@@ -11,6 +11,8 @@ const rs = (p) => `₹${(Number(p || 0) / 100).toLocaleString("en-IN", { maximum
 const when = (d) => (d ? new Date(d).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
 const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 14 };
 const th = { padding: "7px 8px", fontWeight: 800, textAlign: "left", color: T.inkSoft, whiteSpace: "nowrap" };
+const lbl = { fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 3 };
+const cell = { ...input, minHeight: 40, marginBottom: 0, padding: "6px 8px", width: "100%", boxSizing: "border-box" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
 const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["payments", "Payments"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
@@ -158,9 +160,53 @@ const stars = (n) => `\u2605 ${Number(n).toFixed(1)}`;
 // Who is rated badly, and every rating and complaint. A partner with 3 or more
 // ratings averaging under 3.5, or 2 or more complaints, is flagged; the admin
 // can hide it until it has been looked at, and bring it back.
+// Refund a person who raised an issue: into their wallet at once, or to their
+// UPI id (you pay it, then mark it paid in the list below). Admin only.
+function RefundBox({ api, accountId, ticketId = null, payment = null, name = "", onDone }) {
+  const left = payment ? Math.max(0, Math.floor((Number(payment.amount_paise) - Number(payment.refunded_paise || 0)) / 100)) : 0;
+  const [amt, setAmt] = useState(left ? String(left) : "");
+  const [dest, setDest] = useState("wallet");
+  const [upi, setUpi] = useState("");
+  const [why, setWhy] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const send = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = await api.adminRefund({ account: accountId, rupees: Number(amt), dest, reason: why, payment: payment && payment.id, ticket: ticketId, upi });
+      const x = Array.isArray(r) ? r[0] : r;
+      if (x && x.ok) { setMsg("Refund recorded."); setWhy(""); onDone && onDone(); }
+      else setMsg({ bad_amount: "Enter an amount from \u20B91 to \u20B950,000.", over_payment: "That is more than was paid on this payment.", bad_upi: "That UPI id does not look right.", bad_input: "Give a reason (a few words).", no_account: "Person not found." }[x && x.reason] || "Could not refund.");
+    } catch (_) { setMsg("Could not refund. Run the latest SQL (221)."); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ ...card, border: "1.5px solid #F59E0B", background: "#FFFBF0" }}>
+      <div style={{ fontSize: 15.5, fontWeight: 800 }}>Refund {name || "this person"}{payment ? ` \u00B7 payment of ${rs(payment.amount_paise)}` : ""}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
+        <div style={{ width: 130 }}><div style={lbl}>Amount (\u20B9)</div><input style={cell} inputMode="numeric" maxLength={6} value={amt} onChange={(e) => setAmt(e.target.value.replace(/\D/g, ""))} /></div>
+        <div style={{ flex: "1 1 200px" }}>
+          <div style={lbl}>Refund to</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[["wallet", "Dhundo wallet (instant)"], ["upi", "Their UPI id"]].map(([k, l]) => (
+              <button key={k} onClick={() => setDest(k)} aria-pressed={dest === k} style={{ flex: 1, minHeight: 40, borderRadius: 10, fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, cursor: "pointer", border: `1.5px solid ${dest === k ? T.brandDark : T.line}`, background: dest === k ? T.brandDark : "#fff", color: dest === k ? "#fff" : T.ink }}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {dest === "upi" && <div style={{ marginBottom: 8 }}><div style={lbl}>Their UPI id (ask them in the chat)</div><input style={cell} value={upi} maxLength={64} onChange={(e) => setUpi(e.target.value)} placeholder="name@bank" /></div>}
+      <div style={{ marginBottom: 8 }}><div style={lbl}>Reason (kept on record)</div><input style={cell} value={why} maxLength={200} onChange={(e) => setWhy(e.target.value)} placeholder="For example: order not delivered" /></div>
+      <Btn disabled={busy || !(Number(amt) > 0) || why.trim().length < 3} onClick={send}>{busy ? "\u2026" : "Refund"}</Btn>
+      {msg && <span role="status" style={{ marginLeft: 10, fontWeight: 700, fontSize: 13.5, color: msg === "Refund recorded." ? "#157A43" : "#B91C1C" }}>{msg}</span>}
+    </div>
+  );
+}
+
 // Every online payment (PayU): who, what for, how much, and whether PayU confirmed it.
 function Payments({ api }) {
   const [rows, err, load] = useList(() => api.adminPayments(), [api]);
+  const [refunds, , reloadRefunds] = useList(() => api.adminRefundsList("to_pay"), [api]);
+  const [refunding, setRefunding] = useState(null);
   const paid = (rows || []).filter((r) => r.status === "paid");
   const sum = (a) => a.reduce((n, r) => n + Number(r.amount_paise || 0), 0);
   const day = new Date(); day.setHours(0, 0, 0, 0);
@@ -178,7 +224,8 @@ function Payments({ api }) {
       </div>
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
       <div style={{ marginBottom: 8 }}><Btn kind="ghost" onClick={load}>Refresh</Btn></div>
-      <Table head={["When", "Person", "For", "Amount", "Status", "PayU id"]} empty="No online payments yet."
+      {refunding && <RefundBox api={api} accountId={refunding.account_id} payment={refunding} name={refunding.name} onDone={() => { setRefunding(null); load(); reloadRefunds(); }} />}
+      <Table head={["When", "Person", "For", "Amount", "Status", "PayU id", ""]} empty="No online payments yet."
              rows={rows && rows.map((r) => [
                when(r.created_at),
                <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>,
@@ -186,6 +233,15 @@ function Payments({ api }) {
                <b key="a">{rs(r.amount_paise)}</b>,
                <span key="s" style={{ fontWeight: 800, color: r.refunded_at ? "#B45309" : r.status === "paid" ? "#157A43" : T.inkSoft }}>{r.refunded_at ? "Refunded" : r.status === "paid" ? "Paid " + when(r.paid_at) : r.status}</span>,
                <span key="g" style={{ fontSize: 12, color: T.inkSoft, overflowWrap: "anywhere" }}>{r.gateway_id || r.txn}</span>,
+               r.status === "paid" && !r.refunded_at ? <Btn key="rf" kind="ghost" onClick={() => setRefunding(r)}>Refund</Btn> : null,
+             ])} />
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 6px" }}>Refunds to pay out</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Refunds sent to a UPI id. Pay each one from your UPI or bank app, then mark it paid. Refunds to the wallet are already done.</div>
+      <Table head={["When", "Person", "Amount", "UPI id", "Reason", ""]} empty="Nothing waiting."
+             rows={refunds && refunds.map((r) => [
+               when(r.created_at), <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>, <b key="a">{rs(r.amount_paise)}</b>,
+               r.upi_id || "\u2014", r.reason,
+               <Btn key="m" kind="ghost" onClick={async () => { try { await api.adminRefundPaid(r.id); } catch (_) {} reloadRefunds(); }}>Mark paid</Btn>,
              ])} />
     </div>
   );
@@ -196,6 +252,7 @@ function Support({ api }) {
   const [status, setStatus] = useState("open");
   const [rows, err, load] = useList(() => api.adminSupportList(status), [api, status]);
   const [sel, setSel] = useState(null);
+  const [refundOpen, setRefundOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -237,6 +294,12 @@ function Support({ api }) {
           <input style={{ ...input, flex: 1, marginBottom: 0 }} value={text} maxLength={1000} placeholder="Write a reply" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") reply(); }} />
           <Btn disabled={busy || !text.trim()} onClick={reply}>Send</Btn>
         </div>
+        {sel.account_id && (
+          <div style={{ marginTop: 12 }}>
+            <button onClick={() => setRefundOpen((v) => !v)} style={{ background: "none", border: "none", color: "#B45309", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit", padding: "4px 0" }}>{refundOpen ? "Hide refund" : "Refund this person"}</button>
+            {refundOpen && <RefundBox api={api} accountId={sel.account_id} ticketId={sel.id} name={sel.name} onDone={() => loadThread(sel.id)} />}
+          </div>
+        )}
         <div style={{ marginTop: 10 }}>
           {sel.status === "open" ? <Btn kind="ghost" onClick={() => setTicketStatus("closed")}>Close ticket</Btn> : <Btn kind="ghost" onClick={() => setTicketStatus("open")}>Reopen</Btn>}
         </div>
