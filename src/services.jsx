@@ -37,6 +37,7 @@ import { PhoneVerifySheet, AdminMfaCard } from "./verify.jsx";
 import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { WorkerExtras } from "./workerextras.jsx";
+import { SupportButton } from "./support.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -503,6 +504,15 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     adminBookingReportResolve: (id) => rpc("services_admin_booking_report_resolve", { p_id: id }, true),
     jobKinds: (ids) => rpc("services_job_kinds", { p_ids: ids }, true),
     workerKinds: (ids) => rpc("services_workers_kinds", { p_ids: ids }),
+    supportOpen: (topic, body, ref) => rpc("services_support_open", { p_topic: topic, p_body: body, p_ref: ref || null }, true),
+    supportSend: (id, body) => rpc("services_support_send", { p_ticket: id, p_body: body }, true),
+    supportMy: () => rpc("services_support_my", {}, true),
+    supportThread: (id) => rpc("services_support_thread", { p_ticket: id }, true),
+    supportClose: (id) => rpc("services_support_close", { p_ticket: id }, true),
+    adminSupportList: (status) => rpc("services_admin_support_list", { p_status: status || "open" }, true),
+    adminSupportThread: (id) => rpc("services_admin_support_thread", { p_ticket: id }, true),
+    adminSupportReply: (id, body) => rpc("services_admin_support_reply", { p_ticket: id, p_body: body }, true),
+    adminSupportStatus: (id, status) => rpc("services_admin_support_status", { p_ticket: id, p_status: status }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
@@ -3489,6 +3499,7 @@ export default function ServicesPage({
                     onInstall={() => setInstallOpen(true)} />
       )}
 
+      <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
       <BottomNav tab={tab} setTab={setTab} online={avail.online} showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}

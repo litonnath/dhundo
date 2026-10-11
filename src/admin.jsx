@@ -13,7 +13,7 @@ const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 
 const th = { padding: "7px 8px", fontWeight: 800, textAlign: "left", color: T.inkSoft, whiteSpace: "nowrap" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
-const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
+const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
 
 export function AdminConsole({ api, panels }) {
   const [tab, setTab] = useState("overview");
@@ -29,6 +29,7 @@ export function AdminConsole({ api, panels }) {
       {tab === "partners" && panels.partners}
       {tab === "quality" && <Quality api={api} />}
       {tab === "reports" && <Reports api={api} />}
+      {tab === "support" && <Support api={api} />}
       {tab === "orders" && <Orders api={api} />}
       {tab === "rides" && <Rides api={api} />}
       {tab === "people" && <People api={api} />}
@@ -156,6 +157,83 @@ const stars = (n) => `\u2605 ${Number(n).toFixed(1)}`;
 // Who is rated badly, and every rating and complaint. A partner with 3 or more
 // ratings averaging under 3.5, or 2 or more complaints, is flagged; the admin
 // can hide it until it has been looked at, and bring it back.
+// Live support: customers and partners write from the Help button; answer here.
+function Support({ api }) {
+  const [status, setStatus] = useState("open");
+  const [rows, err, load] = useList(() => api.adminSupportList(status), [api, status]);
+  const [sel, setSel] = useState(null);
+  const [msgs, setMsgs] = useState([]);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { const id = setInterval(load, 10000); return () => clearInterval(id); }, [load]);
+  const loadThread = useCallback(async (id) => { try { setMsgs(many(await api.adminSupportThread(id))); } catch (_) {} }, [api]);
+  useEffect(() => {
+    if (!sel) return undefined;
+    loadThread(sel.id);
+    const id = setInterval(() => loadThread(sel.id), 5000);
+    return () => clearInterval(id);
+  }, [sel, loadThread]);
+  const reply = async () => {
+    if (!text.trim() || !sel) return;
+    setBusy(true);
+    try { await api.adminSupportReply(sel.id, text.trim()); setText(""); await loadThread(sel.id); load(); } catch (_) {}
+    setBusy(false);
+  };
+  const setTicketStatus = async (st) => { try { await api.adminSupportStatus(sel.id, st); setSel(null); load(); } catch (_) {} };
+  const when = (iso) => new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  if (sel) {
+    return (
+      <div>
+        <button onClick={() => { setSel(null); load(); }} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 800, fontSize: 15, cursor: "pointer", padding: "4px 0", marginBottom: 6, fontFamily: "inherit" }}>{"\u2039"} Back to tickets</button>
+        <div style={{ ...card, marginBottom: 10 }}>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>{sel.topic}</div>
+          <div style={{ fontSize: 14, marginTop: 2 }}><b>{sel.name || "\u2014"}</b>{sel.phone ? <> {"\u00B7 "}<a href={`tel:${sel.phone}`} style={{ color: T.brandDark, fontWeight: 700 }}>{sel.phone}</a></> : null}</div>
+          <div style={{ fontSize: 12.5, color: T.inkSoft }}>Opened {when(sel.created_at)} {"\u00B7"} {sel.status}</div>
+        </div>
+        <div style={{ ...card, maxHeight: 360, overflowY: "auto" }}>
+          {msgs.map((m) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: m.sender === "agent" ? "flex-end" : "flex-start", margin: "6px 0" }}>
+              <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: 14, background: m.sender === "agent" ? "#0A5BB8" : "#EEF2F7", color: m.sender === "agent" ? "#fff" : T.ink, fontSize: 14.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                {m.body}<div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{when(m.created_at)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <input style={{ ...input, flex: 1, marginBottom: 0 }} value={text} maxLength={1000} placeholder="Write a reply" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") reply(); }} />
+          <Btn disabled={busy || !text.trim()} onClick={reply}>Send</Btn>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          {sel.status === "open" ? <Btn kind="ghost" onClick={() => setTicketStatus("closed")}>Close ticket</Btn> : <Btn kind="ghost" onClick={() => setTicketStatus("open")}>Reopen</Btn>}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Support chats</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 10 }}>People write from the Help button in the app. Open a ticket to read it and reply. They see your answer in the app within a few seconds.</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {[["open", "Open"], ["closed", "Closed"], ["all", "All"]].map(([k, l]) => (
+          <button key={k} onClick={() => setStatus(k)} aria-pressed={status === k} style={{ minHeight: 40, padding: "0 16px", borderRadius: 20, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", border: `1.5px solid ${status === k ? T.brandDark : T.line}`, background: status === k ? T.brandDark : T.white, color: status === k ? "#fff" : T.ink }}>{l}</button>
+        ))}
+      </div>
+      {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
+      {rows && rows.length === 0 && <div style={{ ...card, color: T.inkSoft, fontSize: 14 }}>No tickets.</div>}
+      {(rows || []).map((r) => (
+        <button key={r.id} onClick={() => setSel(r)} style={{ display: "block", width: "100%", textAlign: "left", ...card, marginBottom: 8, cursor: "pointer", fontFamily: "inherit", borderLeft: `4px solid ${r.unread ? "#DC2626" : T.line}` }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+            <span style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{r.name || r.phone || "\u2014"} <span style={{ fontWeight: 600, color: T.inkSoft }}>{"\u00B7"} {r.topic}</span></span>
+            {r.unread && <span style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: "#DC2626", borderRadius: 10, padding: "2px 8px" }}>New</span>}
+          </div>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.last_body}</div>
+          <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 2 }}>{when(r.updated_at)} {"\u00B7"} {r.status}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Reports({ api }) {
   const [status, setStatus] = useState("open");
   const [rows, err, load] = useList(() => api.adminBookingReports(status), [api, status]);
