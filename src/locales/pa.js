@@ -1832,4 +1832,12 @@ export default {
   m_added_by: "ਤੁਸੀਂ ਜੋੜਿਆ",
   m_self: "ਆਪ ਲਿਖਵਾਇਆ",
   m_views: "ਨੰਬਰ ਦੇਖੇ",
+  wal_wd_to_upi: "UPI",
+  wal_wd_to_bank: "Bank account",
+  wal_wd_holder: "Account holder name",
+  wal_wd_acct: "Account number",
+  wal_wd_change: "Change",
+  wal_wd_bank_bad: "Check the bank details (name, account number, IFSC) and try again.",
+  wal_wd_amt_ph: "Amount in ₹ (empty = all {a})",
+  wal_wd_big: "That is more than your balance.",
 };

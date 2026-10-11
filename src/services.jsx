@@ -554,6 +554,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         return { ok: res.ok, status: res.status };
       } catch (_) { return { ok: false, status: 0 }; }
     },
+    withdraw2: (dest, upi, rupees) => rpc("services_withdraw_request2", { p_dest: dest, p_upi: upi || null, p_rupees: rupees == null ? null : rupees }, true),
+    adminBankReveal: (id) => rpc("services_admin_bank_reveal", { p_withdrawal: id }, true),
     withdraw: (upi) => rpc("services_withdraw_request", { p_upi: upi }, true),
     myWithdrawals: () => rpc("services_my_withdrawals", {}, true),
     walletHistory: (limit = 50) =>
@@ -2536,6 +2538,7 @@ function AdminWithdrawals({ api }) {
   const [status, setStatus] = useState("requested");
   const [busyId, setBusyId] = useState(null);
   const [notes, setNotes] = useState({});
+  const [shown, setShown] = useState({});
   const [msg, setMsg] = useState("");
   const load = useCallback(() => {
     api.adminWithdrawals(status).then((r) => setList(many(r))).catch(() => setList([]));
@@ -2556,7 +2559,7 @@ function AdminWithdrawals({ api }) {
     <div style={{ marginTop: 26 }}>
       <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 4px" }}>Withdrawal requests</h2>
       <div style={{ fontSize: 13, color: T.inkFaint, marginBottom: 10, lineHeight: 1.5 }}>
-        Pay the amount to the UPI ID in your own UPI app, then press Mark paid (add the UTR as the note).
+        Pay the amount to the UPI ID (or bank account) in your own UPI/banking app, then press Mark paid (add the UTR as the note).
         Reject sends the money back to their wallet; keep the reason as a note for your own records.
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -2571,7 +2574,21 @@ function AdminWithdrawals({ api }) {
         <div style={{ fontSize: 14, color: T.inkFaint }}>None.</div>
       ) : list.map((w) => (
         <div key={w.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{rs(w.amount_paise)} → {w.upi_id}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>
+            {rs(w.amount_paise)} → {w.dest === "bank" ? `Bank ${w.bank_holder || ""} ••••${w.bank_last4 || ""} ${w.bank_ifsc || ""}` : w.upi_id}
+          </div>
+          {w.dest === "bank" && w.status === "requested" && (
+            <div style={{ marginTop: 6 }}>
+              {shown[w.id] ? (
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>A/c {shown[w.id].account_number} · {shown[w.id].ifsc} · {shown[w.id].holder}</div>
+              ) : (
+                <Btn kind="ghost" style={{ padding: "6px 12px", minHeight: 36, fontSize: 13 }} onClick={async () => {
+                  try { const r = one(await api.adminBankReveal(w.id)); if (r) setShown((x) => ({ ...x, [w.id]: r })); else setMsg("Not available"); }
+                  catch (e) { setMsg((e && e.message) || "Failed"); }
+                }}>Show account number (logged)</Btn>
+              )}
+            </div>
+          )}
           <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 2 }}>
             {w.full_name || "—"} · {w.phone || "—"} · {Number(w.listings) || 0} approved listing(s) · {new Date(w.created_at).toLocaleString("en-IN")}
           </div>

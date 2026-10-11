@@ -15,6 +15,7 @@ Do these once. Each step says where. The code is already in the repository.
 | 7 | `217_admin_payments.sql` | the admin Payments tab |
 | 8 | `219_booking_pay_1.sql`, `_2`, `_3` | paying a booked worker, hired vehicle or item by wallet, PayU, QR or cash; refunds |
 | 10 | `221_admin_refunds_1.sql`, `221_admin_refunds_2.sql` | admin-only refunds to a person's wallet or UPI id |
+| 11 | `222_withdraw_1.sql`, `222_withdraw_2.sql` | withdraw any amount (min ₹100) to UPI or a bank account; admin sees a masked account and can reveal it (logged). Needs the Vault key `dhundo_bank_key` (see 155_part3) before bank details can be saved. Payout itself is manual until PayU payouts are active. |
 | 9 | `220_payments_received.sql` | "Payments received" list on the wallet screen |
 | 8b | `218_pay_flags.sql` | paid / not paid for rides and the delivery partner fee, shown to driver and rider; QR for the customer |
 

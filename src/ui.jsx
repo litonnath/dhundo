@@ -706,14 +706,15 @@ export function InvitePanel({ api }) {
   );
 }
 
-const WD_MIN = 50000; // paise: Rs 500, the same figure sql/103 enforces
+const WD_MIN = 10000; // paise: Rs 100, the same figure sql/222_withdraw_1 enforces
 
 export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = null }) {
   const { t, lang } = useI18n();
   useDismissable(true, onClose);
   const [state, setState] = React.useState({ loading: true, paise: 0, rows: [], failed: false });
   const [withdraw, setWithdraw] = React.useState(false);
-  const [wd, setWd] = React.useState({ upi: "", busy: false, err: "", sent: false });
+  const [wd, setWd] = React.useState({ upi: "", busy: false, err: "", sent: false, dest: "upi", amt: "" });
+  const [bank, setBank] = React.useState({ saved: null, holder: "", acct: "", ifsc: "", edit: false });
   const [open, setOpen] = React.useState([]);
   const [recv, setRecv] = React.useState([]);
   const [reload, setReload] = React.useState(0);
@@ -741,18 +742,35 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
     return () => { alive = false; };
   }, [api, reload]);
 
+  React.useEffect(() => {
+    if (!withdraw || !api.bankGet) return;
+    Promise.resolve(api.bankGet()).then((b) => {
+      const x = Array.isArray(b) ? b[0] : b;
+      setBank((y) => ({ ...y, saved: x && x.last4 ? x : null }));
+    }).catch(() => {});
+  }, [withdraw, api]);
+
   const sendWithdraw = async () => {
     setWd((x) => ({ ...x, busy: true, err: "" }));
     try {
-      const r = await api.withdraw(wd.upi.trim());
+      if (wd.dest === "bank" && (!bank.saved || bank.edit)) {
+        const sv = await api.bankSave(bank.holder.trim(), bank.acct.trim(), bank.ifsc.trim().toUpperCase(), null);
+        const sx = Array.isArray(sv) ? sv[0] : sv;
+        if (!sx || !sx.ok) { setWd((y) => ({ ...y, busy: false, err: t("wal_wd_bank_bad") })); return; }
+        const g = await api.bankGet();
+        const gx = Array.isArray(g) ? g[0] : g;
+        setBank({ saved: gx && gx.last4 ? gx : null, holder: "", acct: "", ifsc: "", edit: false });
+      }
+      const amt = String(wd.amt).trim() === "" ? null : Math.floor(Number(wd.amt));
+      const r = await api.withdraw2(wd.dest, wd.dest === "upi" ? wd.upi.trim() : null, amt);
       const x = Array.isArray(r) ? r[0] : r;
       if (x && x.ok) {
-        setWd({ upi: "", busy: false, err: "", sent: true });
+        setWd({ upi: "", busy: false, err: "", sent: true, dest: "upi", amt: "" });
         setWithdraw(false);
         setReload((n) => n + 1);
       } else {
         const k = x && x.reason;
-        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
+        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "no_bank" ? t("wal_wd_bank_bad") : k === "bank_hold" ? t("wal_wd_hold") : k === "insufficient" ? t("wal_wd_big") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
       }
     } catch (e) {
       setWd((y) => ({ ...y, busy: false, err: (e && e.message) || t("e_gone") }));
@@ -889,14 +907,43 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
               <div style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.6, marginBottom: 10 }}>
                 {t("wal_wd_body")}
               </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                {["upi", "bank"].map((d) => (
+                  <button key={d} onClick={() => setWd((x) => ({ ...x, dest: d, err: "" }))} style={{
+                    flex: 1, minHeight: 44, borderRadius: 12, fontFamily: "inherit", fontWeight: 800, fontSize: 14, cursor: "pointer",
+                    border: `1.5px solid ${wd.dest === d ? T.brand : T.line}`, background: "#fff", color: T.ink,
+                  }}>{d === "upi" ? t("wal_wd_to_upi") : t("wal_wd_to_bank")}</button>
+                ))}
+              </div>
+              {wd.dest === "upi" ? (
+                <input
+                  style={{ ...input, marginBottom: 10 }} value={wd.upi} autoCapitalize="none" autoCorrect="off"
+                  onChange={(e) => setWd((x) => ({ ...x, upi: e.target.value, err: "" }))}
+                  placeholder={t("wal_wd_upi_ph")} aria-label={t("wal_wd_upi_ph")} maxLength={70}
+                />
+              ) : bank.saved && !bank.edit ? (
+                <div style={{ fontSize: 13.5, color: T.ink, marginBottom: 10, lineHeight: 1.6 }}>
+                  {bank.saved.holder} · ••••{bank.saved.last4} · {bank.saved.ifsc}{" "}
+                  <button onClick={() => setBank((y) => ({ ...y, edit: true }))} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t("wal_wd_change")}</button>
+                </div>
+              ) : (
+                <div style={{ marginBottom: 10 }}>
+                  <input style={{ ...input, marginBottom: 8 }} value={bank.holder} maxLength={80} placeholder={t("wal_wd_holder")} aria-label={t("wal_wd_holder")}
+                    onChange={(e) => setBank((y) => ({ ...y, holder: e.target.value }))} />
+                  <input style={{ ...input, marginBottom: 8 }} value={bank.acct} inputMode="numeric" maxLength={20} placeholder={t("wal_wd_acct")} aria-label={t("wal_wd_acct")}
+                    onChange={(e) => setBank((y) => ({ ...y, acct: e.target.value.replace(/\D/g, "") }))} />
+                  <input style={input} value={bank.ifsc} autoCapitalize="characters" maxLength={11} placeholder="IFSC" aria-label="IFSC"
+                    onChange={(e) => setBank((y) => ({ ...y, ifsc: e.target.value.toUpperCase() }))} />
+                </div>
+              )}
               <input
-                style={{ ...input, marginBottom: 10 }} value={wd.upi} autoCapitalize="none" autoCorrect="off"
-                onChange={(e) => setWd((x) => ({ ...x, upi: e.target.value, err: "" }))}
-                placeholder={t("wal_wd_upi_ph")} aria-label={t("wal_wd_upi_ph")} maxLength={70}
+                style={{ ...input, marginBottom: 10 }} value={wd.amt} inputMode="numeric"
+                onChange={(e) => setWd((x) => ({ ...x, amt: e.target.value.replace(/\D/g, ""), err: "" }))}
+                placeholder={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))} aria-label={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))}
               />
               {wd.err && <Notice tone="bad">{wd.err}</Notice>}
-              <Btn full disabled={wd.busy || wd.upi.trim().length < 5} onClick={sendWithdraw}>
-                {wd.busy ? "…" : t("wal_wd_req").replace("{a}", rupees(state.paise))}
+              <Btn full disabled={wd.busy || (wd.dest === "upi" ? wd.upi.trim().length < 5 : (!bank.saved || bank.edit) && (bank.holder.trim().length < 2 || bank.acct.length < 6 || bank.ifsc.length !== 11))} onClick={sendWithdraw}>
+                {wd.busy ? "…" : t("wal_wd_req").replace("{a}", wd.amt ? rupees(Number(wd.amt) * 100) : rupees(state.paise))}
               </Btn>
               <button onClick={() => setWithdraw(false)} style={{
                 background: "none", border: "none", cursor: "pointer", color: T.brandDark,
@@ -909,7 +956,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
           {open.map((w) => (
             <div key={w.id} style={{ marginTop: 10 }}>
               <Notice tone="info">
-                {t("wal_wd_pending").replace("{a}", rupees(w.amount_paise)).replace("{u}", w.upi_id)}
+                {t("wal_wd_pending").replace("{a}", rupees(w.amount_paise)).replace("{u}", w.upi_id || t("wal_wd_to_bank"))}
               </Notice>
             </div>
           ))}
