@@ -771,6 +771,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null }) {
       : row.kind === "refund" ? t("wal_kind_refund")
       : row.kind === "referral" ? t("wal_kind_referral")
       : row.kind === "withdrawal" ? t("wal_kind_withdrawal")
+      : row.kind === "earning" ? (row.note || t("wal_kind_earning"))
       : t("wal_kind_adjustment");
 
   return (

@@ -38,3 +38,18 @@ Collecting money for others and paying it on is a regulated activity in India. C
 
 The delivery partner fee is still paid **directly to the rider** on arrival. Online payment for an order covers the items, GST and
 Dhundo's delivery fee only.
+
+## UPI QR, and paying partners (withdrawals to UPI)
+
+**UPI QR.** On an order card, "Pay the shop with a UPI QR" shows a QR code made from the shop's own UPI id and the exact amount.
+Scan it with PhonePe, Google Pay, Paytm or BHIM, or tap "Open my UPI app" on the same phone. This money goes straight to the shop
+(nothing passes through Dhundo), so the customer taps "I have paid" afterwards. The shop adds its UPI id in My business > Payments.
+
+**Earnings and withdrawals.** When a customer pays online (PayU), the partner's share is credited to their wallet:
+a shop gets the items of the order, a driver gets the ride fare, a seller gets the item price. Dhundo keeps its delivery fee and the GST.
+The delivery partner fee is paid by the customer straight to the rider. Partners withdraw from Account > Wallet to their UPI id
+(a new UPI id works after 24 hours, as a safety hold). The admin console lists the requests: pay each one from your PayU/bank/UPI app and mark it paid.
+Run `214_earnings.sql` after `213_payments_2.sql`.
+
+**Paying out automatically** (no admin step) needs PayU's payout product, a separate activation with PayU and its own API
+credentials. When you have it, ask for the payout step to be connected to the same withdrawal list.
