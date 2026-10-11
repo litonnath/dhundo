@@ -6,6 +6,7 @@ import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BusyCalendar, TimeSlots, useBusy, clashWith } from "./busycal.jsx";
 import { RateBox } from "./bizpay.jsx";
+import { PurposePay } from "./paystate.jsx";
 
 const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 const stamp = (iso) => { try { return new Date(iso).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
@@ -196,6 +197,9 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 {onChat && <button onClick={() => onChat(x)} style={pill("#EEF4FD", "#0A5BB8", { flex: "1 1 90px" })}>{t("mbk_chat")}</button>}
                 {!asWorker && <button disabled={busy === x.id} onClick={() => cancel(x)} style={pill("#fff", "#6B7280", { flex: "1 1 90px", border: "1.5px solid #D1D5DB" })}>{t("bk_cancel")}</button>}
               </div>
+            )}
+            {["accepted", "completed"].includes(x.status) && (
+              <div style={{ padding: "0 14px 6px" }}><PurposePay api={api} purpose="booking" refId={x.id} suggest={Number(x.hour_rupees) && Number(x.duration_mins) ? Math.round((Number(x.hour_rupees) * Number(x.duration_mins)) / 60) : 0} /></div>
             )}
             {x.status === "completed" && rated && (
               <div style={{ padding: "0 14px 6px" }}>

@@ -224,7 +224,7 @@ function RateQuick({ api }) {
   );
 }
 
-export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null, onItems = null }) {
+export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, onWallet = null, auto = null, bookings = [], onBookingAnswer = null, profile = null, onProfile = null, shareName = "", onDocs = null, onHours = null, onItems = null, walletPaise = null }) {
   const { t } = useI18n();
   const [d, setD] = useState(null);
   const [itemReqs, setItemReqs] = useState([]); // buy and sell requests for my items
@@ -355,6 +355,16 @@ export function BizDashboard({ api, kind, views = null, requests = 0, onOrders, 
   const waNum = String(CONTACT.whatsapp || "").replace(/\D/g, "");
   return (
     <div style={{ margin: "0 0 20px" }}>
+      {onWallet && walletPaise !== null && (
+        <button onClick={onWallet} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", margin: "0 0 12px", padding: "14px 16px", borderRadius: 18, border: "none", cursor: "pointer", fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#0A5BB8,#032C61)", boxShadow: "0 4px 14px rgba(10,91,184,0.3)" }}>
+          <Icon name="wallet" size={26} />
+          <span style={{ flex: 1 }}>
+            <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, opacity: 0.85, textTransform: "uppercase", letterSpacing: 0.5 }}>{t("wal_title")}</span>
+            <span style={{ display: "block", fontSize: 26, fontWeight: 800, lineHeight: 1.15 }}>{"\u20B9"}{(Number(walletPaise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+          </span>
+          <span style={{ fontWeight: 800, fontSize: 14 }}>{t("db_open")} {"\u203A"}</span>
+        </button>
+      )}
       {kind === "other" && <RateQuick api={api} />}
       {kind === "owner" && taking !== null && (
         <div style={{ padding: "12px 14px", marginBottom: 12, borderRadius: 18, background: taking ? "#F0FAF4" : "#FEF2F2", border: `1.5px solid ${taking ? "#1FA85A" : "#FCA5A5"}` }}>

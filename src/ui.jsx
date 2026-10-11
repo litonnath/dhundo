@@ -715,6 +715,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
   const [withdraw, setWithdraw] = React.useState(false);
   const [wd, setWd] = React.useState({ upi: "", busy: false, err: "", sent: false });
   const [open, setOpen] = React.useState([]);
+  const [recv, setRecv] = React.useState([]);
   const [reload, setReload] = React.useState(0);
   const [verified, setVerified] = React.useState(true);
   const [pvOpen, setPvOpen] = React.useState(false);
@@ -723,6 +724,9 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
     let alive = true;
     Promise.resolve(api.myWithdrawals ? api.myWithdrawals() : [])
       .then((w) => { if (alive) setOpen((Array.isArray(w) ? w : []).filter((x) => x.status === "requested")); })
+      .catch(() => {});
+    Promise.resolve(api.paymentsReceived ? api.paymentsReceived() : [])
+      .then((r) => { if (alive) setRecv(Array.isArray(r) ? r : []); })
       .catch(() => {});
     Promise.resolve(api.phoneVerified ? api.phoneVerified() : true)
       .then((v) => { if (alive) setVerified(v !== false && !(Array.isArray(v) && v[0] === false)); })
@@ -810,6 +814,22 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
         </div>
 
         {extra}
+
+        {recv.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{t("wal_received")}</div>
+            {recv.slice(0, 12).map((r, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 0", borderTop: `1px solid ${T.line}` }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: T.ink }}>{r.what}</span>
+                  <span style={{ display: "block", fontSize: 12, color: T.inkFaint }}>{new Date(r.at).toLocaleDateString([], { day: "numeric", month: "short" })} {"\u00B7"} {r.via === "wallet" ? t("wal_in_wallet") : t("wal_direct")}</span>
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: r.via === "wallet" ? T.green : T.ink }}>{rupees(r.amount_paise)}</span>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4, lineHeight: 1.45 }}>{t("wal_direct_note")}</div>
+          </div>
+        )}
 
         {state.failed && <Notice tone="bad">{t("wal_failed")}</Notice>}
 
@@ -1351,7 +1371,7 @@ export function LocationPill({ place, onOpen, compact }) {
 // Two rows on a phone: identity and location on top, navigation below. The
 // single-row version pushed the tabs onto a wrapped third line and left the
 // location squeezed to three characters.
-export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null, notifCount = 0, onOpenNotifications = null, showBiz = false, onBiz = null }) {
+export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = null, onMode = null, notifCount = 0, onOpenNotifications = null, showBiz = false, onBiz = null, walletPaise = null, onOpenWallet = null }) {
   const { t } = useI18n();
   // One row: who we are, where you are, which language. Everything you DO
   // lives in the bottom bar, within reach of a thumb -- two rows of small
@@ -1384,6 +1404,14 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
           })}
         </span>
         <LanguageSwitch />
+        {onOpenWallet && walletPaise !== null && (
+          <button onClick={onOpenWallet} aria-label={t("wal_title")} style={{
+            minHeight: 42, padding: "0 12px", borderRadius: 21, border: `1px solid ${T.line}`, background: T.white, color: "#0B3A78",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit", fontWeight: 800, fontSize: 14, flexShrink: 0, whiteSpace: "nowrap",
+          }}>
+            <Icon name="wallet" size={18} />{rupees(walletPaise)}
+          </button>
+        )}
         {onOpenNotifications && (
           <button onClick={onOpenNotifications} aria-label="Notifications" style={{
             position: "relative", width: 42, height: 42, borderRadius: "50%", border: `1px solid ${T.line}`, background: T.white,

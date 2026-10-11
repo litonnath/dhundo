@@ -525,6 +525,10 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     rideMarkPaid: (id) => rpc("services_ride_mark_paid", { p_ride: id }, true),
     orderFeeFlags: (ids) => rpc("services_order_fee_flags", { p_ids: ids }, true),
     orderFeeMarkPaid: (id) => rpc("services_order_fee_mark_paid", { p_order: id }, true),
+    payFlags: (purpose, ids) => rpc("services_pay_flags", { p_purpose: purpose, p_ids: ids }, true),
+    payMarkReceived: (purpose, id) => rpc("services_pay_mark_received", { p_purpose: purpose, p_id: id }, true),
+    bookingSetPrice: (id, rupees) => rpc("services_booking_set_price", { p_id: id, p_rupees: rupees }, true),
+    paymentsReceived: () => rpc("services_my_payments_received", {}, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
@@ -3143,7 +3147,10 @@ export default function ServicesPage({
         setWalletPaise(Array.isArray(r) ? Number(r[0] || 0) : Number(r || 0));
       })
       .catch(() => { if (alive) setWalletPaise(null); });
-    return () => { alive = false; };
+    const id = setInterval(() => {
+      api.walletBalance().then((r) => { if (alive) setWalletPaise(Array.isArray(r) ? Number(r[0] || 0) : Number(r || 0)); }).catch(() => {});
+    }, 20000);
+    return () => { alive = false; clearInterval(id); };
   }, [api, signedIn, reloadKey]);
 
   return (
@@ -3164,6 +3171,7 @@ export default function ServicesPage({
         notifCount={signedIn ? inbox.alerts + rideReqs.length : 0}
         showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
         onOpenNotifications={signedIn ? openNotif : null}
+        walletPaise={signedIn ? walletPaise : null} onOpenWallet={signedIn ? () => setWalletOpen(true) : null}
         mode={mode}
       />
 
@@ -3253,7 +3261,7 @@ export default function ServicesPage({
                 if (gaps.includes("vehicle_number")) need.push(t("todo_vehicle"));
                 const total = 7 + (gaps.includes("id_doc") ? 0 : 0);
                 return { pct: Math.max(10, Math.round(100 * (1 - need.length / Math.max(total, need.length)))), missing: need, noPin: myRow.loc_source !== undefined && !["device", "picked"].includes(myRow.loc_source || "") };
-              })()} onProfile={() => setTab("mine")} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} onItems={() => openOrders("items")} />, status: myStatus, owner: isOwnerHome, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(""), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => (isOwnerHome || (myDriverKind !== "delivery" && myDriverKind !== "travel") ? openBiz(null) : setTab("work")), error: avail.error } : null}
+              })()} onProfile={() => setTab("mine")} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} onItems={() => openOrders("items")} walletPaise={walletPaise} />, status: myStatus, owner: isOwnerHome, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(""), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => (isOwnerHome || (myDriverKind !== "delivery" && myDriverKind !== "travel") ? openBiz(null) : setTab("work")), error: avail.error } : null}
           liveNow={liveNow} onLive={(sub) => openOrders(sub)}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />

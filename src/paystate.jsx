@@ -95,3 +95,56 @@ export function FeeCustomerPay({ api, orderId }) {
     </div>
   );
 }
+
+// Paying for a booked worker, a hired vehicle or an item. The worker (or seller)
+// names the price and confirms money received in cash or by QR; the customer
+// chooses how to pay: wallet, UPI or card in the app, a UPI QR, or cash.
+export function PurposePay({ api, purpose, refId, suggest = 0 }) {
+  const { t } = useI18n();
+  const [f, again] = usePoll(async () => many(await api.payFlags(purpose, [refId]))[0], [purpose, refId], 7000);
+  const [price, setPrice] = useState("");
+  const [qr, setQr] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  if (!f) return null;
+  const amount = Number(f.amount_paise) || 0;
+  const paidLine = f.paid ? <div style={{ ...box("good"), fontWeight: 800, fontSize: 14.5 }}>{"\u2713 "}{f.via === "online" ? t("ps_paid_online") : t("ps_paid_confirmed")}{amount ? ` \u00B7 ${rs(amount)}` : ""}</div> : null;
+  if (f.is_receiver) {
+    if (f.paid) return paidLine;
+    return (
+      <div style={box("wait")}>
+        <div style={{ fontWeight: 800, fontSize: 14.5 }}>{amount ? `${t("ps_price")}: ${rs(amount)}` : t("ps_no_price")}</div>
+        <div style={{ fontSize: 13, marginTop: 2 }}>{amount ? t("ps_not_paid") : t("ps_set_hint")}</div>
+        {purpose === "booking" && (
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <input inputMode="numeric" maxLength={6} value={price} placeholder={suggest ? `\u20B9${suggest}` : t("ps_price")} onChange={(e) => { setErr(""); setPrice(e.target.value.replace(/\D/g, "")); }}
+                   style={{ flex: 1, minHeight: 44, fontSize: 16, padding: "0 12px", borderRadius: 12, border: "1px solid #E5C9B0", fontFamily: "inherit" }} />
+            <Btn disabled={busy || !(Number(price) > 0)} onClick={async () => {
+              setBusy(true); setErr("");
+              try { const r = many(await api.bookingSetPrice(refId, Number(price)))[0]; if (r && r.ok) { setPrice(""); again(); } else setErr(t("e_save")); } catch (_) { setErr(t("e_save")); }
+              setBusy(false);
+            }}>{t("ps_set_price")}</Btn>
+          </div>
+        )}
+        {err && <div role="alert" style={{ color: "#B91C1C", fontSize: 13, fontWeight: 700, marginTop: 4 }}>{err}</div>}
+        {amount > 0 && <div style={{ marginTop: 8 }}><Btn onClick={async () => { try { await api.payMarkReceived(purpose, refId); } catch (_) {} again(); }}>{t("ps_received")}</Btn></div>}
+      </div>
+    );
+  }
+  if (f.paid) return paidLine;
+  if (!amount) return <div style={{ ...box("wait"), fontSize: 13.5, fontWeight: 700 }}>{t("ps_wait_price")}</div>;
+  return (
+    <div style={{ margin: "8px 0" }}>
+      <div style={{ ...box("wait"), fontWeight: 800 }}>{t("ps_pay_now")}{` \u00B7 ${rs(amount)}`}</div>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: "#4B6A94", textTransform: "uppercase", letterSpacing: 0.5, margin: "6px 0 4px" }}>{t("ps_modes")}</div>
+      <PayOnline api={api} purpose={purpose} refId={refId} onPaid={again} />
+      {f.upi_id && (
+        <div style={{ marginTop: 8 }}>
+          <Btn kind="ghost" onClick={() => setQr((v) => !v)}>{qr ? t("qr_hide") : t("ps_mode_qr")}</Btn>
+          {qr && <div style={{ marginTop: 8 }}><UpiQr upi={f.upi_id} name={f.other_name} amount={amount / 100} note={`Dhundo ${purpose}`} /></div>}
+        </div>
+      )}
+      <div style={{ fontSize: 12.5, color: "#4B6A94", marginTop: 6 }}>{t("ps_mode_cash")}</div>
+    </div>
+  );
+}
