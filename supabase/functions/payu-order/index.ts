@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   const phone = String((who && who.phone) || "").replace(/\D/g, "").slice(-10);
   const refId = String(prep.ref_id || ref);
   const udf1 = purpose, udf2 = refId;
-  const hash = await sha512([key, txnid, amount, productinfo, firstname, email, udf1, udf2, "", "", "", "", "", "", "", salt].join("|"));
+  const hash = await sha512([key, txnid, amount, productinfo, firstname, email, udf1, udf2, "", "", "", "", "", "", "", "", salt].join("|"));
 
   const rec = await admin.rpc("services_payment_record", {
     p_account: prep.account_id, p_purpose: purpose, p_ref: refId, p_amount: prep.amount_paise, p_rp_order: txnid,
