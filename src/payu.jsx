@@ -75,7 +75,7 @@ export function usePayReturn() {
       const q = new URLSearchParams(window.location.search);
       const v = q.get("pay");
       if (v) {
-        setR({ ok: v === "ok", purpose: q.get("purpose") || "", ref: q.get("ref") || "" });
+        setR({ ok: v === "ok", review: v === "review", purpose: q.get("purpose") || "", ref: q.get("ref") || "" });
         q.delete("pay"); q.delete("purpose"); q.delete("ref");
         const rest = q.toString();
         window.history.replaceState({}, "", window.location.pathname + (rest ? "?" + rest : "") + window.location.hash);

@@ -3542,8 +3542,8 @@ export default function ServicesPage({
 
       <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
       {payRet && (
-        <div role="status" style={{ position: "fixed", left: 12, right: 12, top: 12, zIndex: 700, maxWidth: 520, margin: "0 auto", padding: "12px 14px", borderRadius: 14, background: payRet.ok ? "#E7F5EC" : "#FDECEC", border: `1px solid ${payRet.ok ? "#BEE3CB" : "#FCA5A5"}`, color: payRet.ok ? "#166534" : "#B91C1C", fontWeight: 800, fontSize: 14.5, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.15)" }}>
-          <span style={{ flex: 1 }}>{payRet.ok ? t("po_back_ok") : t("po_back_fail")}</span>
+        <div role="status" style={{ position: "fixed", left: 12, right: 12, top: 12, zIndex: 700, maxWidth: 520, margin: "0 auto", padding: "12px 14px", borderRadius: 14, background: payRet.ok ? "#E7F5EC" : payRet.review ? "#FEF3C7" : "#FDECEC", border: `1px solid ${payRet.ok ? "#BEE3CB" : "#FCA5A5"}`, color: payRet.ok ? "#166534" : payRet.review ? "#92400E" : "#B91C1C", fontWeight: 800, fontSize: 14.5, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.15)" }}>
+          <span style={{ flex: 1 }}>{payRet.ok ? t("po_back_ok") : payRet.review ? t("po_back_review") : t("po_back_fail")}</span>
           <button onClick={clearPayRet} style={{ border: "none", background: "transparent", fontSize: 22, cursor: "pointer", color: "inherit", lineHeight: 1 }}>{"\u00D7"}</button>
         </div>
       )}

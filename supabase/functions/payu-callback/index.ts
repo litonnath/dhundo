@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
     const cents = Math.round(parseFloat(f("amount")) * 100);
     const { data, error } = await admin.rpc("services_payment_mark_paid", { p_rp_order: txnid, p_rp_payment: f("mihpayid") || null, p_amount: cents });
     if (!error && (data === "paid" || data === "already")) result = "ok";
+    else if (!error && data === "review") result = "review";
   }
   const back = `${appUrl}/?pay=${result}&purpose=${encodeURIComponent(purpose)}&ref=${encodeURIComponent(ref)}`;
   return new Response(null, { status: 303, headers: { Location: back } });

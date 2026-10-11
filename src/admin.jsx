@@ -220,6 +220,7 @@ function Payments({ api }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Paid today</div><div style={{ fontSize: 22, fontWeight: 800 }}>{rs(sum(today))}</div></div>
         <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Paid (last 200)</div><div style={{ fontSize: 22, fontWeight: 800 }}>{rs(sum(paid))}</div></div>
+        <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: "#B91C1C", fontWeight: 700 }}>Needs refund</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(rows || []).filter((r) => r.issue && !r.refunded_at).length}</div></div>
         <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Waiting for PayU</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(rows || []).filter((r) => r.status === "created").length}</div></div>
       </div>
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
@@ -231,7 +232,7 @@ function Payments({ api }) {
                <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>,
                label[r.purpose] || r.purpose,
                <b key="a">{rs(r.amount_paise)}</b>,
-               <span key="s" style={{ fontWeight: 800, color: r.refunded_at ? "#B45309" : r.status === "paid" ? "#157A43" : T.inkSoft }}>{r.refunded_at ? "Refunded" : r.status === "paid" ? "Paid " + when(r.paid_at) : r.status}</span>,
+               <span key="s" style={{ fontWeight: 800, color: r.refunded_at ? "#B45309" : r.status === "paid" ? "#157A43" : T.inkSoft }}>{r.refunded_at ? "Refunded" : r.status === "paid" ? "Paid " + when(r.paid_at) : r.status}{r.issue && !r.refunded_at ? <><br /><span style={{ color: "#B91C1C" }}>Needs refund: {r.issue}</span></> : null}</span>,
                <span key="g" style={{ fontSize: 12, color: T.inkSoft, overflowWrap: "anywhere" }}>{r.gateway_id || r.txn}</span>,
                r.status === "paid" && !r.refunded_at ? <Btn key="rf" kind="ghost" onClick={() => setRefunding(r)}>Refund</Btn> : null,
              ])} />
