@@ -6,6 +6,7 @@
 // their hands; the seller types it in and the sale is complete. Everything is
 // paid in cash at the handover.
 // ---------------------------------------------------------------------------
+import { PayOnline } from "./razorpay.jsx";
 import React, { useState, useEffect, useCallback } from "react";
 import { T, Btn, Notice, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -142,6 +143,7 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
                 </div>
               </div>
             )}
+            {o.role === "buyer" && ["requested", "accepted"].includes(o.status) && Number(o.offer_rupees) >= 1 && <div style={{ margin: "8px 0" }}><PayOnline api={api} purpose="item" refId={o.id} /></div>}
             {o.role === "buyer" && o.status === "accepted" && (
               <div style={{ background: "#F3F6FA", border: `1px solid ${T.line}`, borderRadius: 12, textAlign: "center", padding: "10px 12px", margin: "8px 0" }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("mb_code_title")}</div>

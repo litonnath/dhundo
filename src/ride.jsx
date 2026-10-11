@@ -21,6 +21,7 @@ import { tripKm } from "./regions.js";
 import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 import { OrderHeader } from "./orderui.jsx";
+import { PayOnline } from "./razorpay.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -452,6 +453,7 @@ function RideDone({ api, ride, who, onClose }) {
         <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.5, margin: "6px 0 4px" }}>{t(who === "driver" ? "rdn_drv" : "rdn_pax")}</div>
         {ride && ride.fare_paise != null && <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: "8px 0" }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</div>}
         {ride && <div style={{ textAlign: "left", margin: "8px 0 14px", background: "#F7F9FB", borderRadius: 14, padding: "4px 12px" }}><Timeline pick={ride.pick_text} drop={ride.drop_text} /></div>}
+        {api && ride && ride.id && who !== "driver" && Number(ride.fare_paise) >= 100 && <div style={{ margin: "6px 0 10px" }}><PayOnline api={api} purpose="ride" refId={ride.id} full /></div>}
         {api && ride && ride.id && <div style={{ textAlign: "left" }}><RideRateBox api={api} rideId={ride.id} who={who === "driver" ? "passenger" : "driver"} /></div>}
         <Btn full onClick={onClose}>{t("rdn_ok")}</Btn>
       </div>

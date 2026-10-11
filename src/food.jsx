@@ -20,6 +20,7 @@ import { useI18n } from "./i18n.jsx";
 import { ContactRow, RequestSheet, foodKind } from "./foodkinds.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
+import { PayOnline } from "./razorpay.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -817,6 +818,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             {!["rejected", "cancelled"].includes(o.status) && (
               <div style={{ margin: "8px 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
+                {!o.paid && !["delivered", "cancelled", "rejected"].includes(o.status) && <PayOnline api={api} purpose="order" refId={o.id} onPaid={load} />}
                 {o.pay_method === "upi" && !o.paid && !o.upi_claimed && o.status !== "delivered" && (
                   <Btn kind="ghost" onClick={async () => { try { await api.orderPay(o.id, "upi_sent"); } catch (_) {} load(); }}>{t("pay_i_paid")}</Btn>
                 )}

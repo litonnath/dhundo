@@ -513,6 +513,11 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     adminSupportThread: (id) => rpc("services_admin_support_thread", { p_ticket: id }, true),
     adminSupportReply: (id, body) => rpc("services_admin_support_reply", { p_ticket: id, p_body: body }, true),
     adminSupportStatus: (id, status) => rpc("services_admin_support_status", { p_ticket: id, p_status: status }, true),
+    payCreate: async (purpose, ref) => {
+      const res = await fetch(`${supabaseUrl}/functions/v1/razorpay-order`, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ purpose, ref }) });
+      return res.json().catch(() => null);
+    },
+    paymentStatus: (purpose, ref) => rpc("services_payment_status", { p_purpose: purpose, p_ref: ref }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
