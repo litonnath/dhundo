@@ -4,6 +4,7 @@
 // here: the people involved agree it between themselves.
 // ---------------------------------------------------------------------------
 import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
+import { FeeRiderPay } from "./paystate.jsx";
 import { DeliveryRateBox } from "./bizpay.jsx";
 import { OrderHeader, Banner, Steps, Fold, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
@@ -102,6 +103,7 @@ export function RiderJobs({ api, online, where = null }) {
               )}
             </div>
           )}
+          {j.order_id && <FeeRiderPay api={api} orderId={j.order_id} />}
           <Banner tone={j.status === "picked_up" ? "go" : "wait"}
                   title={j.status === "picked_up" ? t("jb_step2") : t("jb_step1")}>
             {j.due_at && <DueTimer due={j.due_at} style={{ marginTop: 8 }} />}

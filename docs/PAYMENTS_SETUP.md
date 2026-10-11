@@ -13,6 +13,7 @@ Do these once. Each step says where. The code is already in the repository.
 | 5 | `215_wallet_2.sql` | pay from wallet, settle a payment |
 | 6 | `216_refunds.sql` | a cancelled paid order or item is refunded to the wallet |
 | 7 | `217_admin_payments.sql` | the admin Payments tab |
+| 8 | `218_pay_flags.sql` | paid / not paid for rides and the delivery partner fee, shown to driver and rider; QR for the customer |
 
 Also needed for the other new screens (run if you have not): `212_support_1/2/3.sql`.
 

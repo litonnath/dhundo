@@ -22,6 +22,7 @@ import { FormSheet } from "./rates.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 import { PayOnline } from "./payu.jsx";
 import { OrderUpiQr } from "./upiqr.jsx";
+import { FeeCustomerPay } from "./paystate.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -813,6 +814,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} eat={eatIds[o.worker_id] !== false} />}
+            {o.mode === "delivery" && o.rider_name && o.delivery_fee_paise > 0 && !["cancelled", "rejected"].includes(o.status) && <FeeCustomerPay api={api} orderId={o.id} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {!["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />
