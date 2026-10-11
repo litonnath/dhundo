@@ -31,10 +31,11 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => null);
   const purpose = String(body && body.purpose || "");
   const ref = String(body && body.ref || "");
-  if (!auth || !purpose || !ref) return reply({ ok: false, reason: "bad_request" }, 400);
+  const topup = purpose === "topup";
+  if (!auth || !purpose || (!ref && !topup)) return reply({ ok: false, reason: "bad_request" }, 400);
 
   const asUser = createClient(url, anon, { global: { headers: { Authorization: auth } } });
-  const { data, error } = await asUser.rpc("services_payment_prepare", { p_purpose: purpose, p_ref: ref });
+  const { data, error } = await asUser.rpc("services_payment_prepare", { p_purpose: purpose, p_ref: topup ? null : ref, p_amount_rupees: topup ? Math.round(Number(body && body.amount) || 0) : null });
   const prep = Array.isArray(data) ? data[0] : data;
   if (error || !prep || !prep.ok) return reply({ ok: false, reason: (prep && prep.reason) || "not_payable" }, 400);
 
@@ -46,11 +47,12 @@ Deno.serve(async (req) => {
   const firstname = String((who && who.full_name) || "Customer").replace(/[^A-Za-z0-9 ]/g, "").slice(0, 40) || "Customer";
   const email = (who && who.email) || fallbackEmail;
   const phone = String((who && who.phone) || "").replace(/\D/g, "").slice(-10);
-  const udf1 = purpose, udf2 = ref;
+  const refId = String(prep.ref_id || ref);
+  const udf1 = purpose, udf2 = refId;
   const hash = await sha512([key, txnid, amount, productinfo, firstname, email, udf1, udf2, "", "", "", "", "", "", "", salt].join("|"));
 
   const rec = await admin.rpc("services_payment_record", {
-    p_account: prep.account_id, p_purpose: purpose, p_ref: ref, p_amount: prep.amount_paise, p_rp_order: txnid,
+    p_account: prep.account_id, p_purpose: purpose, p_ref: refId, p_amount: prep.amount_paise, p_rp_order: txnid,
   });
   if (rec.error) return reply({ ok: false, reason: "record_failed" }, 500);
 

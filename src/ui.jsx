@@ -708,7 +708,7 @@ export function InvitePanel({ api }) {
 
 const WD_MIN = 50000; // paise: Rs 500, the same figure sql/103 enforces
 
-export function WalletSheet({ api, phone, onClose, PhoneVerify = null }) {
+export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = null }) {
   const { t, lang } = useI18n();
   useDismissable(true, onClose);
   const [state, setState] = React.useState({ loading: true, paise: 0, rows: [], failed: false });
@@ -809,6 +809,8 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null }) {
           </div>
         </div>
 
+        {extra}
+
         {state.failed && <Notice tone="bad">{t("wal_failed")}</Notice>}
 
         {/* Said before the history, not after: somebody who sees ₹5 and a
@@ -824,7 +826,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null }) {
           <PhoneVerify api={api} phone={phone} onClose={() => setPvOpen(false)}
                        onDone={() => { setPvOpen(false); setVerified(true); setReload((n) => n + 1); }} />
         )}
-        <Notice tone="info">{t("wal_not_spendable")}</Notice>
+        <Notice tone="info">{t("wal_spend_note")}</Notice>
 
         {/* Below the balance and its caveat, above withdraw: this is the one
             thing on the screen a person can act on today. */}

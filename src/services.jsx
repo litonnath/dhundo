@@ -38,7 +38,7 @@ import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { WorkerExtras } from "./workerextras.jsx";
 import { SupportButton } from "./support.jsx";
-import { usePayReturn } from "./payu.jsx";
+import { usePayReturn, AddMoney } from "./payu.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -514,8 +514,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     adminSupportThread: (id) => rpc("services_admin_support_thread", { p_ticket: id }, true),
     adminSupportReply: (id, body) => rpc("services_admin_support_reply", { p_ticket: id, p_body: body }, true),
     adminSupportStatus: (id, status) => rpc("services_admin_support_status", { p_ticket: id, p_status: status }, true),
-    payCreate: async (purpose, ref) => {
-      const res = await fetch(`${supabaseUrl}/functions/v1/payu-order`, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ purpose, ref }) });
+    walletPay: (purpose, ref) => rpc("services_wallet_pay", { p_purpose: purpose, p_ref: ref }, true),
+    payCreate: async (purpose, ref, amount) => {
+      const res = await fetch(`${supabaseUrl}/functions/v1/payu-order`, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ purpose, ref, amount }) });
       return res.json().catch(() => null);
     },
     paymentStatus: (purpose, ref) => rpc("services_payment_status", { p_purpose: purpose, p_ref: ref }, true),
@@ -3194,7 +3195,7 @@ export default function ServicesPage({
                           onDone={() => setVerifyOpen(false)} />
       )}
       {walletOpen && signedIn && (
-        <WalletSheet api={api} phone={user && user.phone} PhoneVerify={PhoneVerifySheet}
+        <WalletSheet api={api} phone={user && user.phone} PhoneVerify={PhoneVerifySheet} extra={<AddMoney api={api} />}
                      onClose={() => setWalletOpen(false)} />
       )}
       {locOpen && (
