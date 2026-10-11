@@ -520,6 +520,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       return res.json().catch(() => null);
     },
     paymentStatus: (purpose, ref) => rpc("services_payment_status", { p_purpose: purpose, p_ref: ref }, true),
+    adminPayments: () => rpc("services_admin_payments", { p_limit: 200 }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),
     cfg: { url: supabaseUrl, anonKey },
     accessToken: async () => (getAccessToken ? getAccessToken() : null),

@@ -13,7 +13,7 @@ const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 
 const th = { padding: "7px 8px", fontWeight: 800, textAlign: "left", color: T.inkSoft, whiteSpace: "nowrap" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
-const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
+const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["payments", "Payments"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
 
 export function AdminConsole({ api, panels }) {
   const [tab, setTab] = useState("overview");
@@ -34,6 +34,7 @@ export function AdminConsole({ api, panels }) {
       {tab === "rides" && <Rides api={api} />}
       {tab === "people" && <People api={api} />}
       {tab === "money" && panels.money}
+      {tab === "payments" && <Payments api={api} />}
       {tab === "fares" && <FareCalculator api={api} />}
       {tab === "ads" && panels.ads}
       {tab === "security" && panels.security}
@@ -157,6 +158,39 @@ const stars = (n) => `\u2605 ${Number(n).toFixed(1)}`;
 // Who is rated badly, and every rating and complaint. A partner with 3 or more
 // ratings averaging under 3.5, or 2 or more complaints, is flagged; the admin
 // can hide it until it has been looked at, and bring it back.
+// Every online payment (PayU): who, what for, how much, and whether PayU confirmed it.
+function Payments({ api }) {
+  const [rows, err, load] = useList(() => api.adminPayments(), [api]);
+  const paid = (rows || []).filter((r) => r.status === "paid");
+  const sum = (a) => a.reduce((n, r) => n + Number(r.amount_paise || 0), 0);
+  const day = new Date(); day.setHours(0, 0, 0, 0);
+  const today = paid.filter((r) => r.paid_at && new Date(r.paid_at) >= day);
+  const when = (iso) => (iso ? new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "\u2014");
+  const label = { order: "Order", ride: "Ride", item: "Item", topup: "Wallet top-up" };
+  return (
+    <div>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Online payments</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 10 }}>Payments through PayU. A payment shows Paid once PayU has confirmed it to our server. "Created" means the person was sent to PayU but we have not heard back (they may have closed the page).</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Paid today</div><div style={{ fontSize: 22, fontWeight: 800 }}>{rs(sum(today))}</div></div>
+        <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Paid (last 200)</div><div style={{ fontSize: 22, fontWeight: 800 }}>{rs(sum(paid))}</div></div>
+        <div style={{ ...card, flex: "1 1 160px", margin: 0 }}><div style={{ fontSize: 12.5, color: T.inkSoft, fontWeight: 700 }}>Waiting for PayU</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(rows || []).filter((r) => r.status === "created").length}</div></div>
+      </div>
+      {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
+      <div style={{ marginBottom: 8 }}><Btn kind="ghost" onClick={load}>Refresh</Btn></div>
+      <Table head={["When", "Person", "For", "Amount", "Status", "PayU id"]} empty="No online payments yet."
+             rows={rows && rows.map((r) => [
+               when(r.created_at),
+               <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>,
+               label[r.purpose] || r.purpose,
+               <b key="a">{rs(r.amount_paise)}</b>,
+               <span key="s" style={{ fontWeight: 800, color: r.refunded_at ? "#B45309" : r.status === "paid" ? "#157A43" : T.inkSoft }}>{r.refunded_at ? "Refunded" : r.status === "paid" ? "Paid " + when(r.paid_at) : r.status}</span>,
+               <span key="g" style={{ fontSize: 12, color: T.inkSoft, overflowWrap: "anywhere" }}>{r.gateway_id || r.txn}</span>,
+             ])} />
+    </div>
+  );
+}
+
 // Live support: customers and partners write from the Help button; answer here.
 function Support({ api }) {
   const [status, setStatus] = useState("open");
