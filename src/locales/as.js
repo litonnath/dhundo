@@ -735,7 +735,7 @@ export default {
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
   sp_help: "Help",
-  sp_title: "Help & support",
+  sup_title: "Help & support",
   sp_sub: "Quick answers, or chat with our team",
   sp_hello: "Hi! I'm the Dhundo helper. Pick a topic, or type your problem below.",
   sp_open: "Your open chats",

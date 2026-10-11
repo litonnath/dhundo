@@ -122,7 +122,7 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${T.line}` }}>
           {view !== "menu" && <button onClick={() => { setView("menu"); setTicket(null); setTopic(null); loadMine(); }} aria-label="Back" style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><Icon name="back" size={20} /></button>}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#0B3A78" }}>{t("sp_title")}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#0B3A78" }}>{t("sup_title")}</div>
             <div style={{ fontSize: 12.5, color: T.inkSoft }}>{view === "chat" ? t("sp_team_hint") : t("sp_sub")}</div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: T.inkSoft, padding: 4 }}>{"×"}</button>
