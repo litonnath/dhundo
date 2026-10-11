@@ -21,7 +21,7 @@ import { tripKm } from "./regions.js";
 import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 import { OrderHeader } from "./orderui.jsx";
-import { PayOnline } from "./razorpay.jsx";
+import { PayOnline } from "./payu.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);

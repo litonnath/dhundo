@@ -1,5 +1,5 @@
 -- ===========================================================================
--- 213_payments_1.sql -- online payment with Razorpay (UPI, QR, cards). Part 1
+-- 213_payments_1.sql -- online payment through a gateway (PayU: UPI, cards). Part 1
 -- of 2: the payments ledger, and the check of what a person may pay for and
 -- how much. The amount is always worked out here, from the order, ride or
 -- item itself, never taken from the phone. Run 213_payments_2.sql next.
@@ -10,8 +10,8 @@ create table if not exists public.services_payments (
   purpose       text not null check (purpose in ('order', 'ride', 'item')),
   ref_id        uuid not null,
   amount_paise  int not null check (amount_paise between 100 and 50000000),
-  rp_order_id   text not null unique,
-  rp_payment_id text,
+  rp_order_id   text not null unique, -- the gateway transaction id (PayU txnid)
+  rp_payment_id text,               -- the gateway payment id (PayU mihpayid)
   status        text not null default 'created' check (status in ('created', 'paid', 'failed')),
   created_at    timestamptz not null default now(),
   paid_at       timestamptz

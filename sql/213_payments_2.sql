@@ -1,5 +1,5 @@
 -- ===========================================================================
--- 213_payments_2.sql -- online payment, part 2 of 2: recording a Razorpay
+-- 213_payments_2.sql -- online payment, part 2 of 2: recording a gateway
 -- order and marking it paid. Only the two Edge Functions (service role) can
 -- call these; nobody on a phone can mark a payment paid. Run after part 1.
 -- ===========================================================================

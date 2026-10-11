@@ -6,7 +6,7 @@
 // their hands; the seller types it in and the sale is complete. Everything is
 // paid in cash at the handover.
 // ---------------------------------------------------------------------------
-import { PayOnline } from "./razorpay.jsx";
+import { PayOnline } from "./payu.jsx";
 import React, { useState, useEffect, useCallback } from "react";
 import { T, Btn, Notice, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";

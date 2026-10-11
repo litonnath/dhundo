@@ -38,6 +38,7 @@ import { RideScreen, RideRequests, RideTools } from "./ride.jsx";
 import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { WorkerExtras } from "./workerextras.jsx";
 import { SupportButton } from "./support.jsx";
+import { usePayReturn } from "./payu.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -514,7 +515,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     adminSupportReply: (id, body) => rpc("services_admin_support_reply", { p_ticket: id, p_body: body }, true),
     adminSupportStatus: (id, status) => rpc("services_admin_support_status", { p_ticket: id, p_status: status }, true),
     payCreate: async (purpose, ref) => {
-      const res = await fetch(`${supabaseUrl}/functions/v1/razorpay-order`, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ purpose, ref }) });
+      const res = await fetch(`${supabaseUrl}/functions/v1/payu-order`, { method: "POST", headers: await authHeaders(), body: JSON.stringify({ purpose, ref }) });
       return res.json().catch(() => null);
     },
     paymentStatus: (purpose, ref) => rpc("services_payment_status", { p_purpose: purpose, p_ref: ref }, true),
@@ -2945,6 +2946,7 @@ export default function ServicesPage({
 
   const signedIn = !!(user && user.id);
   const inbox = useInbox(api, signedIn);
+  const [payRet, clearPayRet] = usePayReturn();
   // What needs attention on the Orders tab: orders waiting for the restaurant or
   // shop, a delivery charge or pickup waiting for the customer to answer, a
   // second hand request waiting for the seller.
@@ -3505,6 +3507,12 @@ export default function ServicesPage({
       )}
 
       <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
+      {payRet && (
+        <div role="status" style={{ position: "fixed", left: 12, right: 12, top: 12, zIndex: 700, maxWidth: 520, margin: "0 auto", padding: "12px 14px", borderRadius: 14, background: payRet.ok ? "#E7F5EC" : "#FDECEC", border: `1px solid ${payRet.ok ? "#BEE3CB" : "#FCA5A5"}`, color: payRet.ok ? "#166534" : "#B91C1C", fontWeight: 800, fontSize: 14.5, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.15)" }}>
+          <span style={{ flex: 1 }}>{payRet.ok ? t("po_back_ok") : t("po_back_fail")}</span>
+          <button onClick={clearPayRet} style={{ border: "none", background: "transparent", fontSize: 22, cursor: "pointer", color: "inherit", lineHeight: 1 }}>{"\u00D7"}</button>
+        </div>
+      )}
       <BottomNav tab={tab} setTab={setTab} online={avail.online} showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}

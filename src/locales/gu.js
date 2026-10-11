@@ -734,6 +734,8 @@ export default {
   rd_alerts_more: "એપ બંધ હોય ત્યારે એલર્ટ",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  po_back_ok: "Payment received. Thank you!",
+  po_back_fail: "The payment did not go through. You were not charged, or the amount will be returned by your bank.",
   po_pay: "Pay now (UPI / QR)",
   po_wait: "Opening payment\u2026",
   po_done: "Paid online",

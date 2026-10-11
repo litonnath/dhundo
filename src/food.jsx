@@ -20,7 +20,7 @@ import { useI18n } from "./i18n.jsx";
 import { ContactRow, RequestSheet, foodKind } from "./foodkinds.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
-import { PayOnline } from "./razorpay.jsx";
+import { PayOnline } from "./payu.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
