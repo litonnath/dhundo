@@ -10,8 +10,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const url = Deno.env.get("SUPABASE_URL")!;
 const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const key = Deno.env.get("PAYU_KEY") || "";
-const salt = Deno.env.get("PAYU_SALT") || "";
+const key = (Deno.env.get("PAYU_KEY") || "").trim();
+const salt = (Deno.env.get("PAYU_SALT") || "").trim();
 const base = Deno.env.get("PAYU_BASE") || "https://secure.payu.in/_payment";
 const fallbackEmail = Deno.env.get("PAYU_FALLBACK_EMAIL") || "customer@dhundo.in";
 const cors = {

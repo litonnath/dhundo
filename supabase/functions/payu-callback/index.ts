@@ -7,8 +7,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const url = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const key = Deno.env.get("PAYU_KEY") || "";
-const salt = Deno.env.get("PAYU_SALT") || "";
+const key = (Deno.env.get("PAYU_KEY") || "").trim();
+const salt = (Deno.env.get("PAYU_SALT") || "").trim();
 const sha512 = async (text: string) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-512", new TextEncoder().encode(text)))].map((b) => b.toString(16).padStart(2, "0")).join("");
 const same = (a: string, b: string) => a.length === b.length && [...a].reduce((n, c, i) => n | (c.charCodeAt(0) ^ b.charCodeAt(i)), 0) === 0;
