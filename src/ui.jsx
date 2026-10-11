@@ -770,7 +770,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
         setReload((n) => n + 1);
       } else {
         const k = x && x.reason;
-        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "no_bank" ? t("wal_wd_bank_bad") : k === "bank_hold" ? t("wal_wd_hold") : k === "insufficient" ? t("wal_wd_big") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
+        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "no_bank" ? t("wal_wd_bank_bad") : k === "bank_hold" ? t("wal_wd_bank_hold") : k === "insufficient" ? t("wal_wd_big") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
       }
     } catch (e) {
       setWd((y) => ({ ...y, busy: false, err: (e && e.message) || t("e_gone") }));
@@ -937,7 +937,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
                 </div>
               )}
               <input
-                style={{ ...input, marginBottom: 10 }} value={wd.amt} inputMode="numeric"
+                style={{ ...input, marginBottom: 10 }} value={wd.amt} inputMode="numeric" maxLength={7}
                 onChange={(e) => setWd((x) => ({ ...x, amt: e.target.value.replace(/\D/g, ""), err: "" }))}
                 placeholder={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))} aria-label={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))}
               />

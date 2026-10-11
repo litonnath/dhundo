@@ -1840,4 +1840,5 @@ export default {
   wal_wd_bank_bad: "Check the bank details (name, account number, IFSC) and try again.",
   wal_wd_amt_ph: "Amount in ₹ (empty = all {a})",
   wal_wd_big: "That is more than your balance.",
+  wal_wd_bank_hold: "For your safety, new bank details can be used after 24 hours. Please try again tomorrow.",
 };
