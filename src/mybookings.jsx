@@ -77,6 +77,7 @@ function PlanBox({ plan, startAt, t, asWorker = false, live = false, api = null,
 export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false, notices = [], onNoticeDismiss = null }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(null);
+  const [cmsg, setCmsg] = useState(null);
   const [resched, setResched] = useState(null); // { id, value }
   const [rmsg, setRmsg] = useState("");
   const [sure, setSure] = useState(null);
@@ -126,7 +127,6 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     setBusy(null); onChanged && onChanged();
   };
   const remove = async (x) => { setBusy(x.id); try { await api.bookingRemove(x.id); } catch (_) {} setBusy(null); setSure(null); onChanged && onChanged(); };
-  const [cmsg, setCmsg] = useState(null);
   const complete = async (x) => {
     setBusy(x.id); setCmsg(null);
     try { const r = await api.bookingComplete(x.id); const y = Array.isArray(r) ? r[0] : r; if (y && y.ok === false && y.reason === "verify_first") setCmsg({ id: x.id, msg: t("rp_verify_first") }); } catch (_) {}

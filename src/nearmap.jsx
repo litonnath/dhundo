@@ -481,11 +481,11 @@ export function PassengerLive({ api, ride, started = false, height = 230, fill =
   const dropPt = typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null;
   const target = started && dropPt ? dropPt : pick;
   const rt = useRoadRoute(drv, target);
-  if (!pick) return null;
-  const km = drv ? kmBetween(drv, target) : null;
+  const km = drv && target ? kmBetween(drv, target) : null;
   const info = started ? (drv && km != null ? String(t("rdv_trip_left")).replace("{n}", fmtKm(km)).replace("{m}", rt ? rt.min : "?") : "")
     : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait");
   useEffect(() => { if (onInfo) onInfo(info); }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!pick) return null;
   return (
     <div>
       <LiveRideMap pick={pick} drop={dropPt} driver={drv} route={rt ? rt.pts : null} height={height} toward={started ? "drop" : "pick"} fill={fill} />
@@ -528,10 +528,10 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
   const here = pick ? (pinned ? { lat: where.lat, lng: where.lng, heading: bearing({ lat: where.lat, lng: where.lng }, pick) } : me) : null;
   const rt = useRoadRoute(here, goal);
   useEffect(() => { if (here && onPos) onPos(here); }, [here && here.lat, here && here.lng]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!pick) return null;
-  const km = here ? kmBetween(here, goal) : null;
+  const km = here && goal ? kmBetween(here, goal) : null;
   const info = here ? `${String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}` : "";
   useEffect(() => { if (onInfo) onInfo(info); }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!pick) return null;
   return (
     <div>
       <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow fill={fill} />
@@ -663,6 +663,7 @@ export function JobPositionSender({ api, where = null }) {
 export function RiderJobMap({ api, job, where = null, onChanged = null, eat = true }) {
   const { t } = useI18n();
   const ks = (key) => t(eat ? key : key + "_s");
+  const [pinMsg, setPinMsg] = useState("");
   const me = useJobPosition(api, where);
   const shop = typeof job.pickup_lat === "number" ? { lat: job.pickup_lat, lng: job.pickup_lng } : null;
   const door = typeof job.drop_lat === "number" ? { lat: job.drop_lat, lng: job.drop_lng } : null;
@@ -687,7 +688,6 @@ export function RiderJobMap({ api, job, where = null, onChanged = null, eat = tr
   const reached = km != null && km < 0.12;
   // A point that is missing can be saved from the rider's own phone, standing
   // at the restaurant or at the customer's door.
-  const [pinMsg, setPinMsg] = useState("");
   const save = async (kind) => {
     setPinMsg("");
     try {
