@@ -34,7 +34,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
     <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
-    <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px calc(96px + env(safe-area-inset-bottom))" }}>
+    <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 24px" }}>
       {part && (
         <button onClick={() => setPart(null)} style={{
           display: "inline-flex", alignItems: "center", gap: 6, background: T.white, border: `1px solid ${T.line}`, borderRadius: 20,

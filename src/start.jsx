@@ -101,10 +101,10 @@ export function OfferTypeGate({ onPick, onBack, inline = false, trades = [] }) {
         }}><Icon name="back" size={16} /> {t("w_back")}</button>
       </div>
       <Hero search={oq} setSearch={setOq} onVoice={setOq} tone={picking} title={t(meta2[4])} sub={t(picking === "ride" || picking === "hire" ? "offer_which" : "offer_what")} placeholder={t("st_search")} />
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px calc(96px + env(safe-area-inset-bottom))" }}>{step2}</div>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "62px 16px 24px" }}>{step2}</div>
     </div>
   ) : (
-    <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px calc(96px + env(safe-area-inset-bottom))" : "20px 16px 34px", boxSizing: "border-box" }}>
+    <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", padding: inline ? "26px 16px 24px" : "20px 16px 34px", boxSizing: "border-box" }}>
       <button onClick={() => (picking ? setType(null) : onBack())} style={{
         display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 0",
         color: T.brandDark, fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 40, marginBottom: 6,
@@ -203,7 +203,7 @@ export function CustomerLauncher({ onPick, onOffer, hasBusiness = false, liveNow
           </div>
         ) : null;
   return (
-    <div style={{ padding: "22px 16px calc(96px + env(safe-area-inset-bottom))", boxSizing: "border-box", background: BLUE_WASH, minHeight: "70vh" }}>
+    <div style={{ padding: "22px 16px 24px", boxSizing: "border-box", background: BLUE_WASH, minHeight: "70vh" }}>
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
         {showSwitch && <div role="tablist" style={{ display: "flex", gap: 6, background: "#EEF1F5", borderRadius: 16, padding: 5, margin: "0 auto 18px", maxWidth: 440 }}>
           {[["user", "user", t("nm_mode_user")], ["business", "construction", t("nm_mode_biz")]].map(([k, icon, label]) => (
