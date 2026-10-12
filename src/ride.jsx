@@ -19,7 +19,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 ;
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav, kmBetween } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav, kmBetween, useRoadRoute } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 import { OrderHeader } from "./orderui.jsx";
 import { RideDriverPay, RidePassengerPay } from "./paystate.jsx";
@@ -672,6 +672,35 @@ function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
   );
 }
 
+// The map of waiting requests: me, every pickup, and for the chosen one the
+// real road to the pickup and then to the destination.
+function RequestsMap({ sorted, selId, setSelId }) {
+  const { t } = useI18n();
+  const cur = sorted.find((r) => r.id === selId) || sorted[0];
+  const me = { lat: sorted[0].my_lat, lng: sorted[0].my_lng };
+  const pickPt = typeof cur.pick_lat === "number" ? { lat: cur.pick_lat, lng: cur.pick_lng } : null;
+  const dropPt = typeof cur.drop_lat === "number" ? { lat: cur.drop_lat, lng: cur.drop_lng } : null;
+  const toPick = useRoadRoute(pickPt ? me : null, pickPt);
+  const toDrop = useRoadRoute(pickPt && dropPt ? pickPt : null, dropPt);
+  const fare = (r) => (r.fare_paise != null ? `\u20B9${Math.round(r.fare_paise / 100)}` : "");
+  const markers = [{ id: "me", kind: "me", ...me }].concat(
+    sorted.filter((r) => typeof r.pick_lat === "number").map((r) => ({
+      id: r.id, kind: "pickup", lat: r.pick_lat, lng: r.pick_lng, selected: r.id === cur.id,
+      label: r.id === cur.id ? `${fare(r) || t("rdr_title")} \u00B7 ${r.pick_km} km` : fare(r),
+    })));
+  const lines = [];
+  if (toPick) lines.push({ pts: toPick.pts });
+  if (dropPt) {
+    markers.push({ id: "drop", kind: "drop", lat: dropPt.lat, lng: dropPt.lng, label: cur.trip_km != null ? `${cur.trip_km} km` : "" });
+    if (toDrop) lines.push({ pts: toDrop.pts });
+  }
+  return (
+    <div style={{ margin: "0 0 10px" }}>
+      <UberMap markers={markers} lines={lines} height="52vh" fitKey={cur.id + (toPick ? "r" : "") + (toDrop ? "d" : "")} onSelect={(id) => { if (id !== "me" && id !== "drop") setSelId(id); }} />
+    </div>
+  );
+}
+
 export function RideRequests({ api, online, trades = [], where = null }) {
   const { t, lang } = useI18n();
   const [rides, setRides] = useState([]);
@@ -734,29 +763,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
       {mine.map((r) => <DriverRideView key={r.id} api={api} ride={r} where={where} busy={busy} onMove={move} />)}
       {online && !busyNow && <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>}
-      {online && !busyNow && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (() => {
-        const cur = sorted.find((r) => r.id === selId) || sorted[0];
-        const me = { lat: sorted[0].my_lat, lng: sorted[0].my_lng };
-        const fare = (r) => (r.fare_paise != null ? `\u20B9${Math.round(r.fare_paise / 100)}` : "");
-        const markers = [{ id: "me", kind: "me", ...me }].concat(
-          sorted.filter((r) => typeof r.pick_lat === "number").map((r) => ({
-            id: r.id, kind: "pickup", lat: r.pick_lat, lng: r.pick_lng, selected: r.id === cur.id,
-            label: r.id === cur.id ? `${fare(r) || t("rdr_title")} \u00B7 ${r.pick_km} km` : fare(r),
-          })));
-        const lines = [];
-        if (typeof cur.pick_lat === "number") {
-          lines.push({ pts: [[me.lat, me.lng], [cur.pick_lat, cur.pick_lng]], dashed: true });
-          if (typeof cur.drop_lat === "number") {
-            markers.push({ id: "drop", kind: "drop", lat: cur.drop_lat, lng: cur.drop_lng, label: cur.trip_km != null ? `${cur.trip_km} km` : "" });
-            lines.push({ pts: [[cur.pick_lat, cur.pick_lng], [cur.drop_lat, cur.drop_lng]] });
-          }
-        }
-        return (
-          <div style={{ margin: "0 0 10px" }}>
-            <UberMap markers={markers} lines={lines} height="52vh" fitKey={cur.id} onSelect={(id) => { if (id !== "me" && id !== "drop") setSelId(id); }} />
-          </div>
-        );
-      })()}
+      {online && !busyNow && sorted.length > 0 && typeof sorted[0].my_lat === "number" && <RequestsMap sorted={sorted} selId={selId} setSelId={setSelId} />}
       {msg && <Notice tone="bad">{msg}</Notice>}
       {busyNow ? null : !online ? (
         <Notice tone="info">{t("jb_offline")}</Notice>

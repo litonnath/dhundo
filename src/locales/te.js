@@ -1879,4 +1879,6 @@ export default {
   rdv_trip_left: "{n} to go · {m} min",
   rdv_auto: "The ride finishes by itself near the destination, or tap finish.",
   rdv_driver_coming: "Your driver is on the way",
+  rdv_road_wait: "finding the road…",
+  rdv_retry: "Try again",
 };

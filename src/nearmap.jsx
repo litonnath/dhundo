@@ -116,7 +116,28 @@ export function UberMap({ markers, lines = [], height = "50vh", onSelect, fitKey
 // the app's own map, with the turns listed, instead of handing over to another
 // maps app. Routes come from the OpenStreetMap-based OSRM service.
 // ---------------------------------------------------------------------------
-const OSRM = "https://router.project-osrm.org/route/v1/driving/";
+const OSRM_HOSTS = ["https://router.project-osrm.org/route/v1/driving/", "https://routing.openstreetmap.de/routed-car/route/v1/driving/"];
+const roadCache = new Map();
+// Road routes: try each free routing server in turn, twice, and remember the
+// answer for five minutes, so the real road is drawn even when one is busy.
+async function osrmFetch(path, signal) {
+  const hit = roadCache.get(path);
+  if (hit && Date.now() - hit.at < 300000) return { json: async () => hit.data };
+  let lastErr = new Error("no route");
+  for (let round = 0; round < 2; round++) {
+    for (const host of OSRM_HOSTS) {
+      try {
+        const res = await fetch(host + path, { signal });
+        if (!res.ok) throw new Error("http " + res.status);
+        const data = await res.json();
+        if (data && data.routes && data.routes[0]) { roadCache.set(path, { at: Date.now(), data }); return { json: async () => data }; }
+        lastErr = new Error("no route");
+      } catch (e) { if (signal && signal.aborted) throw e; lastErr = e; }
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  throw lastErr;
+}
 function stepText(st, t) {
   const m = st.maneuver || {};
   const mod = String(m.modifier || "");
@@ -136,6 +157,7 @@ export function RouteNav({ from, to, title, onClose }) {
   const [start, setStart] = useState(from && typeof from.lat === "number" ? from : null);
   const [route, setRoute] = useState(null);
   const [state, setState] = useState("load");
+  const [tryN, setTryN] = useState(0);
   useEffect(() => {
     if (start) return undefined;
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
@@ -146,9 +168,9 @@ export function RouteNav({ from, to, title, onClose }) {
   useEffect(() => {
     if (!start) return undefined;
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 9000);
+    const timer = setTimeout(() => ctl.abort(), 24000);
     setState("load");
-    fetch(`${OSRM}${start.lng},${start.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`, { signal: ctl.signal })
+    osrmFetch(`${start.lng},${start.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`, ctl.signal)
       .then((r) => r.json())
       .then((j) => {
         const r = j && j.routes && j.routes[0];
@@ -163,9 +185,9 @@ export function RouteNav({ from, to, title, onClose }) {
       .catch(() => setState("fail"))
       .finally(() => clearTimeout(timer));
     return () => { ctl.abort(); clearTimeout(timer); };
-  }, [start && start.lat, start && start.lng, to.lat, to.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [start && start.lat, start && start.lng, to.lat, to.lng, tryN]); // eslint-disable-line react-hooks/exhaustive-deps
   const markers = start ? [{ id: "me", kind: "me", ...start }, { id: "to", kind: "pickup", lat: to.lat, lng: to.lng }] : [{ id: "to", kind: "pickup", lat: to.lat, lng: to.lng }];
-  const lines = route ? [{ pts: route.pts }] : start ? [{ pts: [[start.lat, start.lng], [to.lat, to.lng]], dashed: true }] : [];
+  const lines = route ? [{ pts: route.pts }] : [];
   return (
     <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 590, background: "#F4F6F8", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", padding: "12px 14px", background: T.white, borderBottom: `1px solid ${T.line}` }}>
@@ -180,7 +202,7 @@ export function RouteNav({ from, to, title, onClose }) {
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px 24px" }}>
         {state === "load" && <div style={{ fontSize: 14, color: T.inkSoft, padding: "8px 4px" }}>{t("nav_loading")}</div>}
-        {state === "fail" && <div style={{ fontSize: 14, color: "#B91C1C", padding: "8px 4px", lineHeight: 1.5 }}>{t("nav_failed")}</div>}
+        {state === "fail" && <div style={{ fontSize: 14, color: "#B91C1C", padding: "8px 4px", lineHeight: 1.5 }}>{t("nav_failed")} <button onClick={() => setTryN((n) => n + 1)} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>{t("rdv_retry")}</button></div>}
         {route && route.steps.map((st, i) => {
           const x = stepText(st, t);
           const d = st.distance || 0;
@@ -263,7 +285,7 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
     setRoadMin(null);
     if (!near || !pickOk) return undefined;
     const ctl = new AbortController();
-    fetch(`${OSRM}${near.at.lng},${near.at.lat};${pick.lng},${pick.lat}?overview=false`, { signal: ctl.signal })
+    osrmFetch(`${near.at.lng},${near.at.lat};${pick.lng},${pick.lat}?overview=false`, ctl.signal)
       .then((r) => r.json())
       .then((j) => { const r = j && j.routes && j.routes[0]; if (r) setRoadMin(Math.max(1, Math.round(r.duration / 60))); })
       .catch(() => {});
@@ -333,20 +355,32 @@ const fmtKm = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` :
 // start moves about 200 m. Used on the live ride maps.
 function useRoadRoute(from, to) {
   const [r, setR] = useState(null);
+  const [tick, setTick] = useState(0);
   const fl = from && Math.round(from.lat * 500), fg = from && Math.round(from.lng * 500);
+  const tk = to ? `${to.lat},${to.lng}` : "";
+  // A new destination clears the old road; a moving start keeps it until the new one arrives.
+  useEffect(() => { setR(null); }, [tk]);
+  // Nothing drawn yet: ask again every few seconds until a road comes back.
   useEffect(() => {
-    if (!from || !to) { setR(null); return undefined; }
+    if (r || !from || !to) return undefined;
+    const id = setInterval(() => setTick((n) => n + 1), 6000);
+    return () => clearInterval(id);
+  }, [!!r, !!from, tk]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!from || !to) return undefined;
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
-    fetch(`${OSRM}${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+    const timer = setTimeout(() => ctl.abort(), 24000);
+    osrmFetch(`${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`, ctl.signal)
       .then((x) => x.json())
       .then((j) => { const x = j && j.routes && j.routes[0]; if (x) setR({ pts: x.geometry.coordinates.map(([lng, lat]) => [lat, lng]), min: Math.max(1, Math.round(x.duration / 60)), km: x.distance / 1000 }); })
       .catch(() => {})
       .finally(() => clearTimeout(timer));
     return () => { ctl.abort(); clearTimeout(timer); };
-  }, [fl, fg, to && to.lat, to && to.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fl, fg, tk, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   return r;
 }
+
+export { useRoadRoute };
 
 export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick" }) {
   const box = useRef(null);
@@ -386,8 +420,6 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
             html: `<div style="width:${delivery ? 24 : 44}px;height:${delivery ? 24 : 44}px;border-radius:50%;background:#1D4ED8;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="${delivery ? 14 : 26}" height="${delivery ? 14 : 26}" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
         }).addTo(layer);
         if (route && route.length > 1) L.polyline(route, { color: "#1D4ED8", weight: 5, opacity: 0.85 }).addTo(layer);
-        else if (toward === "drop" && drop && typeof drop.lat === "number") L.polyline([[driver.lat, driver.lng], [drop.lat, drop.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
-        else if (pick) L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
         pts.push([driver.lat, driver.lng]);
       }
       if (pts.length === 0) return;
@@ -440,7 +472,7 @@ export function PassengerLive({ api, ride, started = false, height = 230 }) {
       <LiveRideMap pick={pick} drop={dropPt} driver={drv} route={rt ? rt.pts : null} height={height} toward={started ? "drop" : "pick"} />
       <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
         {started ? (drv && km != null ? String(t("rdv_trip_left")).replace("{n}", fmtKm(km)).replace("{m}", rt ? rt.min : "?") : "")
-          : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ""}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
+          : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
       </div>
     </div>
   );
@@ -485,7 +517,7 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
   return (
     <div>
       <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} />
-      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", fmtKm(km))}{rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ""}</div>}
+      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}{rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}</div>}
     </div>
   );
 }
@@ -531,8 +563,8 @@ export function DeliveryLive({ api, orderId, riderName, eat = true }) {
   useEffect(() => {
     if (!rider || !target) { setRoute(null); setEta(null); return undefined; }
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
-    fetch(`${OSRM}${rider.lng},${rider.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+    const timer = setTimeout(() => ctl.abort(), 24000);
+    osrmFetch(`${rider.lng},${rider.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, ctl.signal)
       .then((r) => r.json())
       .then((j) => { const r0 = j && j.routes && j.routes[0]; if (r0) { setRoute(r0.geometry.coordinates.map(([lng, lat]) => [lat, lng])); setEta(Math.max(1, Math.round(r0.duration / 60))); } })
       .catch(() => {})
@@ -624,8 +656,8 @@ export function RiderJobMap({ api, job, where = null, onChanged = null, eat = tr
   useEffect(() => {
     if (!me || !target) { setRoute(null); setEta(null); return undefined; }
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
-    fetch(`${OSRM}${me.lng},${me.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+    const timer = setTimeout(() => ctl.abort(), 24000);
+    osrmFetch(`${me.lng},${me.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`, ctl.signal)
       .then((r) => r.json())
       .then((j) => { const r0 = j && j.routes && j.routes[0]; if (r0) { setRoute(r0.geometry.coordinates.map(([lng, lat]) => [lat, lng])); setEta({ min: Math.max(1, Math.round(r0.duration / 60)), km: r0.distance / 1000 }); } })
       .catch(() => {})
