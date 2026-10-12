@@ -54,6 +54,7 @@ Payments and wallet:
 36. `237_plan_no_auto_complete.sql` (a scheduled ride is completed only by the rider)
 37. `238_block_while_due.sql` (no new ride, booking, order or item while a finished ride or booking is unpaid)
 38. `239_popups_1.sql`, `_2.sql`, `_3.sql` (a message pops up for the customer and the provider when a ride, order or booking is completed or a payment goes through)
+39. `240_phone_otp.sql` (phone check by WhatsApp code). Then deploy `supabase functions deploy phone-otp` and set the secrets in PHONE_CHECK.md.
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 
