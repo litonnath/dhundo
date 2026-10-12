@@ -95,7 +95,6 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   return (
     <div style={{ marginTop: 6 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "6px 0 8px" }}>{t("hr_title")}</h2>
-      <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 10px" }}>{t("hr_personal")}</div>
       {signedIn && (
         <button onClick={() => { loadMine(); setHistOpen(true); }} style={{ display: "block", width: "100%", minHeight: 46, margin: "0 0 12px", borderRadius: 12, border: `1.5px solid ${T.line}`, background: T.white, color: T.ink, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>
           {t("hq_title")}{mine.length ? ` (${mine.length})` : ""}
