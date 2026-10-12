@@ -53,6 +53,7 @@ Payments and wallet:
 35. `236_live_share.sql` (automatic live location for both sides of rides, deliveries and bookings)
 36. `237_plan_no_auto_complete.sql` (a scheduled ride is completed only by the rider)
 37. `238_block_while_due.sql` (no new ride, booking, order or item while a finished ride or booking is unpaid)
+38. `239_popups_1.sql`, `_2.sql`, `_3.sql` (a message pops up for the customer and the provider when a ride, order or booking is completed or a payment goes through)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

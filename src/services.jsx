@@ -41,6 +41,7 @@ import { SupportButton } from "./support.jsx";
 import { usePayReturn, AddMoney } from "./payu.jsx";
 import { PayLinkSheet } from "./receipt.jsx";
 import { PaymentDue } from "./paydue.jsx";
+import { Popups } from "./popups.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -479,6 +480,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     ridePlanRequest: (o) => rpc("services_ride_plan_request", { p_worker: o.worker, p_start: o.start, p_minutes: o.minutes, p_repeat: o.repeat, p_until: o.until || null, p_pick: o.pick, p_drop: o.drop, p_km: o.km, p_note: o.note || null, p_pick_lat: o.pickLat == null ? null : o.pickLat, p_pick_lng: o.pickLng == null ? null : o.pickLng, p_drop_lat: o.dropLat == null ? null : o.dropLat, p_drop_lng: o.dropLng == null ? null : o.dropLng }, true),
+    popupsPending: () => rpc("services_popups_pending", {}, true),
+    popupsSeen: (ids) => rpc("services_popups_seen", { p_ids: ids }, true),
     liveShare: (kind, id, lat, lng) => rpc("services_live_share", { p_kind: kind, p_ref: id, p_lat: lat, p_lng: lng }, true),
     livePeer: (kind, id) => rpc("services_live_peer", { p_kind: kind, p_ref: id }, true),
     planCode: (id) => rpc("services_plan_code", { p_booking: id }, true),
@@ -3599,6 +3602,7 @@ export default function ServicesPage({
       )}
 
       <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
+      {signedIn && <Popups api={api} />}
       {signedIn && !isAdmin && <PaymentDue api={api} bookings={inbox.items} />}
       {payRideId && signedIn && <PayLinkSheet api={api} purpose="ride" refId={payRideId} onClose={() => setPayRideId(null)} />}
       {payRet && !payRet.ok && (
