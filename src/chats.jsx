@@ -67,7 +67,7 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
   const [ask, setAsk] = useState(null);
   return (
     <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 16px 120px" }}>
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 16px calc(96px + env(safe-area-inset-bottom))" }}>
       <PageHero title={t("ch_tab")} sub={t("ch_note")} />
       {onRequests && (
         <button onClick={onRequests} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", ...blueCard, borderRadius: 14, padding: "12px 14px", marginBottom: 12, cursor: "pointer", fontFamily: "inherit" }}>

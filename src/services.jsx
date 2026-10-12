@@ -3194,7 +3194,7 @@ export default function ServicesPage({
 
   return (
     <div style={{
-      background: T.paper, minHeight: "100vh",
+      background: T.paper, minHeight: "100dvh",
       fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       color: T.ink,
       // Room for the bottom bar, so it never covers the last card.
@@ -3366,7 +3366,7 @@ export default function ServicesPage({
         const cur = parts.find((x) => x.key === bizOpen && x.node) || null;
         return (
           <div style={{ background: "linear-gradient(180deg,#E3EEFF 0,#F4F8FE 280px,#F7F9FC 100%)", minHeight: "70vh" }}>
-          <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px 120px" }}>
+          <div style={{ maxWidth: 560, margin: "0 auto", padding: "10px 16px calc(96px + env(safe-area-inset-bottom))" }}>
             <HomeButton onClick={() => (cur && parts.length > 1 ? setBizOpen(null) : setTab("browse"))} />
             {cur ? (
               <h1 style={{ fontSize: 22, fontWeight: 800, margin: "14px 0 12px", color: "#0B3A78" }}>{cur.label}</h1>

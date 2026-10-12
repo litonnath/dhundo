@@ -249,7 +249,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     wasActive.current = false; setRide(null); setBusy(false);
   };
 
-  const wrap = { maxWidth: 560, margin: "0 auto", padding: "14px 16px 130px" };
+  const wrap = { maxWidth: 560, margin: "0 auto", padding: "14px 16px calc(96px + env(safe-area-inset-bottom))" };
 
   if (ride) {
     const accepted = ride.status === "accepted";
