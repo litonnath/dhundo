@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="theme-color" content="#054291" />
     <title>Dhundo — find a mistri, driver or cook near you</title>
     <meta name="description" content="Dhundo finds you local masons, drivers, cooks, electricians, plumbers and material suppliers across India. Call them directly. No commission." />
@@ -35,6 +35,11 @@
         .dh-deskbar{display:flex !important}
       }
       @media (max-width:899px){nav[aria-label="Dhundo"]{border-radius:20px 20px 0 0;backdrop-filter:blur(10px)}}
+    </style>
+    <style>
+      /* Map layers keep their own stacking order, so a map never draws over a
+         pop-up sheet that opens above it. */
+      .leaflet-container{isolation:isolate;z-index:0}
     </style>
     <style>
       /* Pop-up sheets slide up from the bottom on a phone and sit in the
