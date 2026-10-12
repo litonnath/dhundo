@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 import { PurposePay } from "./paystate.jsx";
 import React, { useState, useEffect, useCallback } from "react";
-import { T, Btn, Notice, input } from "./ui.jsx";
+import { T, Btn, Notice, input, useShowMore } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideChat } from "./ridechat.jsx";
@@ -110,13 +110,14 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
     setBusy(null); load();
   };
   const label = (o) => (o.status === "requested" ? (o.role === "buyer" ? t("mb_wait") : t("mb_new")) : o.status === "accepted" ? t("mb_accepted") : o.status === "completed" ? t("mb_done") : o.status === "declined" ? t("mb_declined") : t("mb_cancelled"));
+  const [shownI, moreI] = useShowMore(rows || [], view === "past" ? 5 : 1000);
   if (view && rows && rows.length === 0) return null;
   return (
     <div>
       {view && rows && rows.length > 0 && title}
       {rows === null && <div style={{ color: T.inkSoft }}>{"\u2026"}</div>}
       {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("mb_none")}</div>}
-      {(rows || []).map((o) => {
+      {shownI.map((o) => {
         const total = o.offer_rupees + Math.round((o.delivery_fee_paise || 0) / 100);
         return (
           <div key={o.id} style={{ border: "1px solid #E5E7EB", borderLeft: `4px solid ${STATUS_COLOR[o.status] || T.line}`, borderRadius: 14, boxShadow: "0 1px 2px rgba(15,23,42,0.04)", padding: "14px 15px", marginBottom: 10 }}>
@@ -182,6 +183,7 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
           </div>
         );
       })}
+      {moreI}
     </div>
   );
 }

@@ -734,6 +734,7 @@ export default {
   rd_alerts_more: "செயலி மூடியிருக்கும்போது அறிவிப்பு",
   fr_bill: "Customer pays ₹{c} (miscellaneous fee ₹{p} + GST ₹{g} on top of the rider\u2019s fare)",
   fr_gst: "GST",
+  sm_more: "Show {n} more",
   wal_received: "Payments received",
   wal_in_wallet: "Added to your wallet",
   wal_direct: "Paid to you directly",

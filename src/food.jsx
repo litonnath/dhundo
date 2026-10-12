@@ -9,7 +9,7 @@ import { CancelButton, CancelNote, OrderDates, DueTimer, dateTime } from "./canc
 import { OrderHeader, Banner, Steps, ItemsBox, Fold, Actions, PayBadge, SplitBox, OwnerPart, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { FeeHelper, useGstRates, useRateCard, orderBill, useBusinessInfo, calcFare } from "./fares.jsx";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, Chip, groupStyle, Hero, ListenButton, useShowMore } from "./ui.jsx";
 import { RateBox, DeliveryRateBox } from "./bizpay.jsx";
 import { PlaceField } from "./locpicker.jsx";
 import { TileArt } from "./scenes.jsx";
@@ -814,6 +814,7 @@ export function HoldPay({ api, orderId, cents, shop, onDone }) {
 export function MyOrdersList({ api, view = null, title = null, showEmpty = false }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState(null);
+  const [pastList, morePast] = useShowMore(orders, 5);
   const [showAll, setShowAll] = useState(false);
   const [canRateDel, setCanRateDel] = useState(() => new Set());
   const [givenR, setGivenR] = useState({});
@@ -857,7 +858,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
     <div>
         {view && orders && orders.length > 0 && title}
         {!view && <AlertsCard api={api} compact />}
-        {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (showAll || view !== "active" ? orders : latestPerShop(orders)).map((o) => (
+        {orders === null ? "…" : orders.length === 0 ? <div style={{ color: T.inkSoft }}>{t("st_noorders")}</div> : (view === "active" ? (showAll ? orders : latestPerShop(orders)) : pastList).map((o) => (
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
@@ -929,6 +930,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
             )}
           </div>
         ))}
+        {view !== "active" && morePast}
         {olderCount > 0 && (
           <button onClick={() => setShowAll((v) => !v)} style={{ width: "100%", minHeight: 46, borderRadius: 14, border: `1.5px solid ${T.line}`, background: "#fff", color: T.brandDark, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
             {showAll ? t("od_hide_older") : String(t("od_show_older")).replace("{n}", olderCount)}
@@ -1212,11 +1214,12 @@ export function OwnerHistory({ api }) {
     const id = setInterval(() => { if (!document.hidden) pull(); }, 30000);
     return () => { alive = false; clearInterval(id); };
   }, [api]);
+  const [shownO, moreO] = useShowMore(orders || [], 5);
   if (orders === null) return <div style={{ height: 80 }} />;
   if (orders.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
   return (
     <div>
-      {orders.map((o) => {
+      {shownO.map((o) => {
         const done = o.status === "delivered";
         return (
           <div key={o.id} style={cardStyle}>
@@ -1230,6 +1233,7 @@ export function OwnerHistory({ api }) {
           </div>
         );
       })}
+      {moreO}
     </div>
   );
 }

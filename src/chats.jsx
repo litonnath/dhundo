@@ -5,7 +5,7 @@
 // when its request is declined or cancelled and is deleted 24 hours later.
 // ---------------------------------------------------------------------------
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, BLUE_WASH, PageHero, blueCard, blueTile } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, CloseButton, useDismissable, BLUE_WASH, PageHero, blueCard, blueTile, useShowMore } from "./ui.jsx";
 import { fmtLength } from "./hub.jsx";
 import { useI18n } from "./i18n.jsx";
 
@@ -237,6 +237,7 @@ export function ChatScreen({ api, item, onClose, onChanged }) {
 export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onClose, onChat, onChanged }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
+  const [shownN, moreN] = useShowMore(items, 5);
   const [busy, setBusy] = useState(null);
   const [askDel, setAskDel] = useState(null);
   const act = async (fn) => { setBusy(true); try { await fn(); } catch (_) { /* the list reloads */ } setBusy(null); onChanged && onChanged(); };
@@ -270,7 +271,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
             </div>
           </div>
         ))}
-        {items.map((x) => (
+        {shownN.map((x) => (
           <div key={x.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderLeft: `4px solid ${dot(x)}`, borderRadius: 12, padding: "11px 13px", marginBottom: 9 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
               <Avatar name={x.other_name} size={38} />
@@ -311,6 +312,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
             )}
           </div>
         ))}
+        {moreN}
         {jobs.length > 0 && <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft, margin: "14px 2px 6px" }}>{t("jb_title")}</div>}
         {jobs.map((j) => (
           <div key={j.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 13px", marginBottom: 9 }}>

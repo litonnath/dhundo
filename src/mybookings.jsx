@@ -4,7 +4,7 @@
 import { PlanLive, WorkSiteMap } from "./planlive.jsx";
 import { LiveShare } from "./liveshare.jsx";
 import React, { useState, useEffect } from "react";
-import { T, Icon } from "./ui.jsx";
+import { T, Icon, useShowMore } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BusyCalendar, TimeSlots, useBusy, clashWith } from "./busycal.jsx";
 import { RateBox } from "./bizpay.jsx";
@@ -103,6 +103,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   useEffect(loadRated, [doneIds]); // eslint-disable-line react-hooks/exhaustive-deps
   // A finished booking moves to Past at once; it can still be rated there.
   const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
+  const [shownB, moreB] = useShowMore(list, view === "past" ? 5 : 1000);
   const noteBox = notices.length > 0 && (
     <div>
       {notices.map((n) => (
@@ -161,7 +162,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   return (
     <div>
       {noteBox}
-      {list.map((x) => {
+      {shownB.map((x) => {
         const [fg, bg] = TONE[x.status] || TONE.cancelled;
         const lo = Number(x.rate_min) || 0, hi = Number(x.rate_max) || 0, m = Number(x.duration_mins) || 0;
         // The worker's own rates win; what is missing is worked out from the others.
@@ -306,6 +307,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
           </div>
         );
       })}
+      {moreB}
     </div>
   );
 }

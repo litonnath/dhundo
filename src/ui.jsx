@@ -57,6 +57,20 @@ export const T = {
 // there is no icon package in the bundle.
 const P = { fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" };
 
+
+// Long lists show the latest few first; a button shows the rest.
+export function useShowMore(list, n = 5) {
+  const { t } = useI18n();
+  const [all, setAll] = React.useState(false);
+  const arr = Array.isArray(list) ? list : [];
+  const items = all ? arr : arr.slice(0, n);
+  const hidden = arr.length - items.length;
+  const more = hidden > 0 ? (
+    <button onClick={() => setAll(true)} style={{ display: "block", width: "100%", minHeight: 46, margin: "6px 0 10px", borderRadius: 14, border: `1.5px solid ${T.line}`, background: T.white, color: T.brandDark, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>{String(t("sm_more")).replace("{n}", hidden)}</button>
+  ) : null;
+  return [items, more];
+}
+
 export function Icon({ name, size = 24, style }) {
   const paths = {
     construction: <><rect {...P} x="3" y="6" width="8" height="5" rx="1" /><rect {...P} x="13" y="6" width="8" height="5" rx="1" /><rect {...P} x="8" y="13" width="8" height="5" rx="1" /><path {...P} d="M3 21h18" /></>,
@@ -717,6 +731,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
   const [bank, setBank] = React.useState({ saved: null, holder: "", acct: "", ifsc: "", edit: false });
   const [open, setOpen] = React.useState([]);
   const [recv, setRecv] = React.useState([]);
+  const [shownW, moreW] = useShowMore(state.rows, 5);
   const [reload, setReload] = React.useState(0);
   const [verified, setVerified] = React.useState(true);
   const [pvOpen, setPvOpen] = React.useState(false);
@@ -978,7 +993,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
           </div>
         ) : (
           <div style={{ display: "grid", gap: 2 }}>
-            {state.rows.map((row) => (
+            {shownW.map((row) => (
               <div key={row.id} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "12px 2px", borderBottom: `1px solid ${T.line}`,
@@ -1008,6 +1023,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
                 </span>
               </div>
             ))}
+            {moreW}
           </div>
         )}
       </div>

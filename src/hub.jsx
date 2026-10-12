@@ -10,7 +10,7 @@ import { DeliveryRateBox } from "./bizpay.jsx";
 import { OrderHeader, Banner, Steps, Fold, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
+import { T, useShowMore, Btn, CloseButton, useDismissable, input, Notice, InvitePanel } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { rateText } from "./rates.jsx";
 import { PlaceField } from "./locpicker.jsx";
@@ -217,6 +217,7 @@ export function RiderHistory({ api }) {
     }).catch(() => { if (alive) setRows([]); });
     return () => { alive = false; };
   }, [api]);
+  const [shownR, moreR] = useShowMore(rows || [], 5);
   if (rows === null) return <div style={{ height: 80 }} />;
   if (rows.length === 0) return <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>;
   return (
@@ -227,7 +228,7 @@ export function RiderHistory({ api }) {
           <span><span style={{ display: "block", color: "#B7791F", fontSize: 16, letterSpacing: 1 }}>{"\u2605".repeat(Math.round(mineAvg.avg))}{"\u2606".repeat(5 - Math.round(mineAvg.avg))}</span><span style={{ display: "block", fontSize: 13, color: T.inkSoft }}>{String(t("rt_count")).replace("{n}", mineAvg.n)}</span></span>
         </div>
       )}
-      {rows.map((j) => {
+      {shownR.map((j) => {
         const done = j.status === "delivered";
         const cash = j.pay_method === "cod" && j.due_paise != null;
         const tile = (label, value, tone) => (
@@ -270,6 +271,7 @@ export function RiderHistory({ api }) {
           </div>
         );
       })}
+      {moreR}
     </div>
   );
 }

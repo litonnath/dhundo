@@ -6,7 +6,7 @@
 import { useRateCard, calcFare, KmRateFields, rateKeyFor } from "./fares.jsx";
 import { RideRateBox } from "./bizpay.jsx";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { T, Btn, Icon, Notice, input, useDismissable, ListenButton } from "./ui.jsx";
+import { T, Btn, Icon, Notice, input, useDismissable, ListenButton, useShowMore } from "./ui.jsx";
 import { PlaceField, describePoint } from "./locpicker.jsx";
 import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -474,6 +474,7 @@ export function RideHistory({ api }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(null);
+  const [shownH, moreH] = useShowMore(rows || [], 5);
   const [rated, setRated] = useState(() => new Set());
   const show = async () => {
     setOpen(true);
@@ -492,7 +493,7 @@ export function RideHistory({ api }) {
         <FormSheet title={t("rh_title")} onClose={() => setOpen(false)}>
           {rows === null && <div style={{ fontSize: 14, color: T.inkSoft }}>{"\u2026"}</div>}
           {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint }}>{t("rh_none")}</div>}
-          {(rows || []).map((r) => (
+          {shownH.map((r) => (
             <div key={r.id} style={{ border: `1px solid ${T.line}`, borderLeft: `4px solid ${col[r.status] || T.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 10, boxShadow: "0 1px 6px rgba(11,58,120,0.07)" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: col[r.status] || T.inkSoft }}>{t("rh_" + r.status)}</span>
@@ -506,6 +507,7 @@ export function RideHistory({ api }) {
               {r.status === "done" && !rated.has(r.id) && <RideRateBox api={api} rideId={r.id} who={r.role === "driver" ? "passenger" : "driver"} onDone={(id) => setRated((s) => new Set([...s, id]))} />}
             </div>
           ))}
+          {moreH}
         </FormSheet>
       )}
     </>
