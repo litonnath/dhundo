@@ -54,6 +54,7 @@ $fn$;
 revoke all on function public.services_payment_amount(uuid, text, uuid) from public, anon, authenticated;
 
 drop function if exists public.services_payment_prepare(text, uuid);
+drop function if exists public.services_payment_prepare(text, uuid, int);
 create function public.services_payment_prepare(p_purpose text, p_ref uuid, p_amount_rupees int default null)
 returns table (ok boolean, reason text, amount_paise int, account_id uuid, ref_id uuid)
 language plpgsql

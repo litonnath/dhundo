@@ -27,6 +27,7 @@ $fn$;
 revoke all on function public.services_my_rider() from public, anon, authenticated;
 grant execute on function public.services_my_rider() to authenticated;
 
+drop function if exists public.services_set_rider(int, int, boolean, boolean);
 drop function if exists public.services_set_rider(int, boolean, boolean);
 create function public.services_set_rider(p_per_km_min int, p_per_km_max int, p_rides boolean, p_delivery boolean)
 returns table (ok boolean)
