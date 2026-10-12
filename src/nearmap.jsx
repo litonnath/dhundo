@@ -24,6 +24,9 @@ const CREDIT = CFG.CARTO_KEY ? "&copy; OpenStreetMap contributors &copy; CARTO" 
 // label, a green pickup pin with the fare, a red drop pin, and the route.
 // Clean (no zoom buttons, pinch or scroll to zoom), tall, tappable.
 // ---------------------------------------------------------------------------
+// Bike, auto, and one class for car, taxi and cab: drivers of any of them answer a request for that class.
+export const vehicleClass = (slug) => (/(bike|moto|scooter)/i.test(slug || "") ? "bike" : /(auto|rick|toto)/i.test(slug || "") ? "auto" : /(taxi|cab|(^|-)car($|-))/i.test(slug || "") ? "cab" : slug);
+
 export function vehicleEmoji(txt) {
   const x = String(txt || "").toLowerCase();
   if (/bike|moto|two/.test(x)) return "\u{1F3CD}\u{FE0F}";
@@ -271,7 +274,7 @@ export function NearbyDrivers({ api, pick, state, slugs, vehicle, onlineIds, onl
   // ordinary search did not return them.
   const have = new Set((rows || []).map((r) => r.id));
   const merged = (rows || []).concat(onlineRows.filter((r) => r && r.id && !have.has(r.id)));
-  const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || r.trade_slug === vehicle));
+  const shown = merged.filter((r) => (!slugs || slugs.includes(r.trade_slug)) && (!vehicle || vehicle === "any" || vehicleClass(r.trade_slug) === vehicleClass(vehicle)));
   const sorted = shown.slice().sort((a, b) => (onlineIds.has(b.id) ? 1 : 0) - (onlineIds.has(a.id) ? 1 : 0)
     || (Number(a.distance_km ?? 1e9) - Number(b.distance_km ?? 1e9)));
   // The nearest driver who is live, and how long he needs to reach the pickup:

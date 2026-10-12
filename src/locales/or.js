@@ -1892,4 +1892,13 @@ export default {
   hr_personal: "Bike taxi, cab and auto can also be hired just for you, by the hour, for a day (8 hours) or for a month. The driver gets your request as a booking and accepts it.",
   hr_month: "1 month",
   or_hire_bk: "Hire bookings",
+  rd_cab_class: "Car / Taxi / Cab",
+  hr_by_hours: "By hours",
+  hr_by_days: "By days",
+  hr_from: "From",
+  hr_to: "To",
+  hr_days_n: "{n} day(s) in all",
+  hr_days_word: "days",
+  hr_day_word: "day",
+  hr_day_from_hour: "8 hours a day at the hourly rate",
 };

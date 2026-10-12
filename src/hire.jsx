@@ -10,7 +10,7 @@ import { FormSheet } from "./rates.jsx";
 import { fmtLength } from "./hub.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BookingSheet } from "./hub.jsx";
-import { kmBetween, vehicleEmoji } from "./nearmap.jsx";
+import { kmBetween, vehicleEmoji, vehicleClass } from "./nearmap.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -19,6 +19,12 @@ const money = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSignIn }) {
   const { t } = useI18n();
   const [hours, setHours] = useState(2);
+  const [byDays, setByDays] = useState(false);
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const [from, setFrom] = useState(todayStr);
+  const [to, setTo] = useState(todayStr);
+  const days = Math.min(365, Math.max(1, Math.round((new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000) + 1)) || 1;
+  const [preset, setPreset] = useState(null);
   const [rows, setRows] = useState(null);
   const [info, setInfo] = useState({});
   const [book, setBook] = useState(null);
@@ -38,7 +44,8 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
     (async () => {
       try {
         const all = many(await api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 30, state: place && place.state }));
-        const list = all.filter((r) => (vehicle === "any" ? slugs.includes(r.trade_slug) : r.trade_slug === vehicle)).slice(0, 12);
+        const classes = slugs.map(vehicleClass);
+        const list = all.filter((r) => (vehicle === "any" ? classes.includes(vehicleClass(r.trade_slug)) : vehicleClass(r.trade_slug) === vehicleClass(vehicle))).slice(0, 12);
         if (!live) return;
         const ids = list.map((r) => r.id);
         const [prices, homes, online, rates] = await Promise.all([
@@ -56,9 +63,11 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
           const rr = rates[i] || [];
           const cheapest = (unit) => rr.filter((x) => x.unit === unit).sort((a, b) => a.rupees - b.rupees)[0];
           const hr = cheapest("hour");
+          const dy = cheapest("day");
           const km = cheapest("km");
           o[r.id] = {
             hourly: hr ? Number(hr.rupees) : null,
+            daily: dy ? Number(dy.rupees) : null,
             perKm: km ? Number(km.rupees) : (Number(pr.per_km_rupees) > 0 ? Number(pr.per_km_rupees) : null),
             away: hm && typeof hm.lat === "number" ? kmBetween(pick, hm) : (r.distance_km != null ? Number(r.distance_km) : null),
             where: (hm && hm.address) || r.locality || "",
@@ -92,8 +101,24 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
           {t("hq_title")}{mine.length ? ` (${mine.length})` : ""}
         </button>
       )}
-      <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, marginBottom: 6 }}>{t("hr_hours")}</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {[[false, "hr_by_hours"], [true, "hr_by_days"]].map(([k, key]) => (
+          <button key={String(k)} onClick={() => setByDays(k)} aria-pressed={byDays === k} style={{ flex: 1, minHeight: 42, borderRadius: 21, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, border: `1.5px solid ${byDays === k ? T.brandDark : T.line}`, background: byDays === k ? T.brandSoft : T.white, color: byDays === k ? T.brandDeep : T.ink }}>{t(key)}</button>
+        ))}
+      </div>
+      {byDays && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <label style={{ flex: "1 1 140px", fontSize: 13, fontWeight: 700, color: T.inkSoft }}>{t("hr_from")}
+            <input type="date" min={todayStr()} value={from} onChange={(e) => { setFrom(e.target.value); if (e.target.value > to) setTo(e.target.value); }} style={{ ...input, marginTop: 4, marginBottom: 0 }} />
+          </label>
+          <label style={{ flex: "1 1 140px", fontSize: 13, fontWeight: 700, color: T.inkSoft }}>{t("hr_to")}
+            <input type="date" min={from} value={to} onChange={(e) => setTo(e.target.value)} style={{ ...input, marginTop: 4, marginBottom: 0 }} />
+          </label>
+          <div style={{ flex: "1 1 100%", fontSize: 13.5, fontWeight: 800, color: T.brandDark }}>{String(t("hr_days_n")).replace("{n}", days)}</div>
+        </div>
+      )}
+      {!byDays && <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, marginBottom: 6 }}>{t("hr_hours")}</div>}
+      <div style={{ display: byDays ? "none" : "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {[1, 2, 4, 8, 240].map((h) => (
           <button key={h} onClick={() => setHours(h)} aria-pressed={hours === h} style={{ minWidth: 58, minHeight: 42, borderRadius: 21, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, border: `1.5px solid ${hours === h ? T.brandDark : T.line}`, background: hours === h ? T.brandSoft : T.white, color: hours === h ? T.brandDeep : T.ink }}>{h === 240 ? t("hr_month") : String(t("hr_h")).replace("{n}", h)}</button>
         ))}
@@ -105,7 +130,8 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
       {rows && rows.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, lineHeight: 1.6 }}>{t("hr_none")}</div>}
       {(rows || []).map((r) => {
         const d = info[r.id] || {};
-        const work = d.hourly != null ? hours * d.hourly : null;
+        const unitCost = byDays ? (d.daily != null ? d.daily : d.hourly != null ? d.hourly * 8 : null) : d.hourly;
+        const work = unitCost != null ? (byDays ? days : hours) * unitCost : null;
         const travel = d.perKm != null && d.away != null ? Math.round(d.away * 10) / 10 * d.perKm : 0;
         return (
           <div key={r.id} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
@@ -125,7 +151,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
                 <span style={{ color: T.inkSoft, fontWeight: 700 }}>{t("hr_nohr")}</span>
               ) : (
                 <>
-                  <div>{hours} h {"×"} {money(d.hourly)}/h = <b>{money(work)}</b></div>
+                  {byDays ? <div>{days} {t("hr_days_word")} {"×"} {money(unitCost)}/{t("hr_day_word")} = <b>{money(work)}</b>{d.daily == null ? <span style={{ color: T.inkSoft }}> ({t("hr_day_from_hour")})</span> : null}</div> : <div>{hours} h {"×"} {money(d.hourly)}/h = <b>{money(work)}</b></div>}
                   {travel > 0 && <div>{(Math.round(d.away * 10) / 10)} km {"×"} {money(d.perKm)}/km = <b>{money(travel)}</b> <span style={{ color: T.inkSoft }}>({t("hr_travel")})</span></div>}
                   <div style={{ fontSize: 16, fontWeight: 800, marginTop: 3 }}>{t("hr_total")}: {money(work + travel)}</div>
                 </>
@@ -141,7 +167,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
             })()}
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Btn kind="call" disabled={busy === r.id} onClick={() => call(r)}>{t("fk_call")}</Btn>
-              <Btn onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } setBook(r); }}>{mine.some((m) => m.worker_id === r.id) ? t("hq_again") : t("hr_book")}</Btn>
+              <Btn onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } if (byDays) { const st = new Date(from + "T09:00:00"); setPreset({ start: st.getTime() < Date.now() ? new Date(Date.now() + 10 * 60000) : st, mins: days * 1440 }); } else setPreset(null); setBook(r); }}>{mine.some((m) => m.worker_id === r.id) ? t("hq_again") : t("hr_book")}</Btn>
             </div>
           </div>
         );
@@ -164,7 +190,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
           ))}
         </FormSheet>
       )}
-      {book && <BookingSheet api={api} row={book} place={place} onClose={() => setBook(null)} />}
+      {book && <BookingSheet api={api} row={book} place={place} preset={preset} onClose={() => setBook(null)} />}
     </div>
   );
 }

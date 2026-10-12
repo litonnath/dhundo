@@ -358,15 +358,15 @@ const pad2 = (x) => String(x).padStart(2, "0");
 const localStamp = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
 
-export function BookingSheet({ api, row, onClose, place }) {
+export function BookingSheet({ api, row, onClose, place, preset = null }) {
   const { t, lang } = useI18n();
   useDismissable(true, onClose);
-  const [mins, setMins] = useState(60);
+  const [mins, setMins] = useState(preset && preset.mins ? preset.mins : 60);
   const [custom, setCustom] = useState(false);
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState(60);
-  const [whenKey, setWhenKey] = useState("now");
-  const [start, setStart] = useState(localStamp(new Date(Date.now() + 5 * 60000)));
+  const [whenKey, setWhenKey] = useState(preset && preset.start ? "pick" : "now");
+  const [start, setStart] = useState(localStamp(preset && preset.start ? preset.start : new Date(Date.now() + 5 * 60000)));
   const [pay, setPay] = useState("");
   const [where, setWhere] = useState(() => (place && (place.address || place.area) ? place : null));
   const [busy, setBusy] = useState(false);

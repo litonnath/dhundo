@@ -19,7 +19,7 @@ import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 ;
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav, kmBetween, useRoadRoute } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav, kmBetween, useRoadRoute, vehicleClass } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 import { OrderHeader } from "./orderui.jsx";
 import { RideDriverPay, RidePassengerPay } from "./paystate.jsx";
@@ -51,7 +51,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const isPlainCar = (x) => { const k = `${x.slug || ""} ${x.name_en || ""}`; return /\bcar\b/i.test(k) && !/taxi|cab/i.test(k); };
   // Hiring covers every vehicle, bike taxi, cab and auto too: hired personally by the
   // hour, the day or the month, the driver receives it as a booking.
-  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? true : isTravel(x) && !isPlainCar(x)))
+  const vehicles = allVeh.filter((x) => !isDelivery(x) && !isPlainCar(x) && (hire ? true : isTravel(x)))
     .sort((a, b) => (hire ? 0 : rank(a) - rank(b)));
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
@@ -350,7 +350,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       <div style={{ fontSize: 14, fontWeight: 700, margin: "4px 0 8px" }}>{t("rd_which")}</div>
       <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", marginBottom: 14 }}>
         {(hire ? [{ slug: "any", label: t("rd_any"), icon: "search", color: T.brandDark }] : []).concat(
-          vehicles.map((x) => ({ slug: x.slug, label: vehicleLabel(x, lang), icon: tradeIcon(x, "drivers"), color: vividFor(x.slug) }))
+          vehicles.map((x) => ({ slug: x.slug, label: vehicleClass(x.slug) === "cab" ? t("rd_cab_class") : vehicleLabel(x, lang), icon: tradeIcon(x, "drivers"), color: vividFor(x.slug) }))
         ).map((v) => (
           <button key={v.slug} onClick={() => setVehicle(v.slug)} aria-pressed={vehicle === v.slug} style={{
             display: "flex", alignItems: "center", gap: 9, textAlign: "left", padding: "9px 10px", minHeight: 52, borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
