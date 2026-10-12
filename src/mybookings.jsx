@@ -69,15 +69,7 @@ function PlanBox({ plan, startAt, t, asWorker = false, live = false, api = null,
       </div>
       <div style={{ fontSize: 14.5, color: T.ink, marginBottom: 4 }}>{plan.trips} {t("rp_trips")} {"\u00D7"} {"\u20B9"}{plan.fare} = <b>{"\u20B9"}{plan.total}</b></div>
       {plan.extra ? <div style={{ fontSize: 13.5, color: T.inkSoft, overflowWrap: "anywhere" }}>{plan.extra}</div> : null}
-      {live && api && id && <div style={{ margin: "0 -14px" }}><PlanLive api={api} id={id} accepted={accepted} asWorker={asWorker} /></div>}
-      {asWorker && live && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0 4px" }}>
-          {[[t("rp_nav_pick"), `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(plan.from)}&travelmode=driving`],
-            [t("rp_nav_route"), `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(plan.from)}&destination=${encodeURIComponent(plan.to)}&travelmode=driving`]].map(([label, href]) => (
-            <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={{ flex: "1 1 150px", display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, padding: "0 14px", borderRadius: 22, background: "#0B3A78", color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none", textAlign: "center" }}>{label}</a>
-          ))}
-        </div>
-      )}
+      {live && api && id && <div style={{ margin: "0 -14px" }}><PlanLive api={api} id={id} accepted={accepted} asWorker={asWorker} fromText={plan.from} toText={plan.to} /></div>}
     </div>
   );
 }

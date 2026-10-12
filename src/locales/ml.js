@@ -1941,4 +1941,6 @@ export default {
   hr_map_hide: "Hide map",
   hr_vehicle_base: "Vehicle",
   hr_work_place: "Work place",
+  pl_go_pickup: "Go to the pickup",
+  pl_go_dest: "Go to the destination",
 };

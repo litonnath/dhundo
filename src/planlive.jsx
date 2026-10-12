@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { UberMap, useRoadRoute, kmBetween, RouteNav } from "./nearmap.jsx";
+import { searchAnywhere } from "./regions.js";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const fmt = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
@@ -54,9 +55,11 @@ export function WorkSiteMap({ site, address }) {
   );
 }
 
-export function PlanLive({ api, id, accepted, asWorker }) {
+export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = "" }) {
   const { t } = useI18n();
   const [pts, setPts] = useState([]);
+  const [geo, setGeo] = useState({}); // addresses looked up when the booking carries no points
+  const [nav, setNav] = useState(null);
   const [on, setOn] = useState(false);
   const [mine, setMine] = useState(null);
   const [note, setNote] = useState("");
@@ -86,7 +89,16 @@ export function PlanLive({ api, id, accepted, asWorker }) {
   }, [on, accepted, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const get = (k) => pts.find((p) => p.kind === k);
-  const a = get("pick"), b = get("drop"), other = get("other");
+  const sa = get("pick"), sb = get("drop"), other = get("other");
+  // Older requests have no saved points: find the two addresses on the map instead.
+  useEffect(() => {
+    if ((sa && sb) || (!fromText && !toText)) return undefined;
+    let alive = true;
+    const look = async (txt) => { try { const r = await searchAnywhere(txt, {}); const hit = (r.rows || []).find((x) => typeof x.lat === "number"); return hit ? { lat: hit.lat, lng: hit.lng } : null; } catch (_) { return null; } };
+    (async () => { const [x, y] = await Promise.all([look(fromText), look(toText)]); if (alive) setGeo({ a: x, b: y }); })();
+    return () => { alive = false; };
+  }, [!!sa, !!sb, fromText, toText]); // eslint-disable-line react-hooks/exhaustive-deps
+  const a = sa || (geo.a ? { lat: geo.a.lat, lng: geo.a.lng } : null), b = sb || (geo.b ? { lat: geo.b.lat, lng: geo.b.lng } : null);
   const meP = mine || get("me");
   const pick = a ? { lat: a.lat, lng: a.lng } : null, drop = b ? { lat: b.lat, lng: b.lng } : null;
   const rider = asWorker ? meP : other;
@@ -100,10 +112,28 @@ export function PlanLive({ api, id, accepted, asWorker }) {
   if (toPick) lines.push({ pts: toPick.pts, dashed: true });
   if (trip) lines.push({ pts: trip.pts });
   const away = rider && pick ? kmBetween(rider, pick) : null;
+  const navRow = (n, title, text, to, from) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: `1px solid ${T.line}` }}>
+      <span style={{ width: 26, height: 26, borderRadius: "50%", background: n === 1 ? "#16A34A" : "#DC2626", color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: T.ink }}>{title}</span>
+        <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, overflowWrap: "anywhere" }}>{text}</span>
+      </span>
+      <Btn onClick={() => setNav({ from, to, title })}>{t("rdv_dir")}</Btn>
+      <a href={`https://www.google.com/maps/dir/?api=1${from ? `&origin=${from.lat},${from.lng}` : ""}&destination=${to.lat},${to.lng}&travelmode=driving`} target="_blank" rel="noopener noreferrer" aria-label="Google Maps" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, minWidth: 44, borderRadius: 22, background: "#0B3A78", color: "#fff", fontWeight: 800, fontSize: 12, textDecoration: "none", padding: "0 10px" }}>Maps</a>
+    </div>
+  );
   return (
     <div style={{ padding: "4px 14px 8px" }}>
+      {nav && <RouteNav from={nav.from} to={nav.to} title={nav.title} onClose={() => setNav(null)} />}
       <UberMap markers={markers} lines={lines} height="34vh" fitKey={`${!!meP}${!!other}${!!trip}`} />
       {away != null && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "6px 0 2px" }}>{String(t("pl_rider_away")).replace("{n}", fmt(away))}</div>}
+      {asWorker && (
+        <div style={{ margin: "6px 0 4px" }}>
+          {navRow(1, t("pl_go_pickup"), fromText, pick, meP ? { lat: meP.lat, lng: meP.lng } : null)}
+          {navRow(2, t("pl_go_dest"), toText, drop, pick)}
+        </div>
+      )}
       {accepted && (
         <div style={{ margin: "6px 0 2px" }}>
           <Btn full kind={on ? "ghost" : "primary"} onClick={() => setOn((v) => !v)}>{on ? t("pl_stop") : t("pl_share")}</Btn>
