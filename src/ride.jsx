@@ -12,13 +12,14 @@ import { useMyLocation } from "./device.jsx";
 import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { FormSheet } from "./rates.jsx";
-import { RideChat, RideCode } from "./ridechat.jsx";
+import { RideCode } from "./ridechat.jsx";
+import { ActionIcons, ChatSheet } from "./ridedrive.jsx";
 import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
 ;
 import { tripKm } from "./regions.js";
-import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav } from "./nearmap.jsx";
+import { NearbyDrivers, PassengerLive, DriverLive, UberMap, RouteNav, kmBetween } from "./nearmap.jsx";
 import { alertNewJob } from "./hub.jsx";
 import { OrderHeader } from "./orderui.jsx";
 import { RideDriverPay, RidePassengerPay } from "./paystate.jsx";
@@ -304,10 +305,8 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     );
     return (
       <div style={wrap}>
-        {accepted && <PassengerLive api={api} ride={ride} />}
-        {accepted && <RideCode api={api} rideId={ride.id} role="passenger" />}
-        {accepted && <RideChat api={api} rideId={ride.id} role="passenger" />}
-        {!accepted && hasPos ? (
+        {accepted && <PassengerRideView api={api} ride={ride} vTrade={vTrade} lang={lang} busy={busy} onCancel={cancel} />}
+        {accepted ? null : !accepted && hasPos ? (
           <NearbyDrivers api={api} pick={{ lat: ride.pick_lat, lng: ride.pick_lng }} drop={dropPt} state={place && place.state} slugs={null}
                          vehicle={ride.vehicle || "any"} onlineIds={new Set(online.map((d) => d.id))} onlineRows={online}
                          fares={fares} trip={null} between={sheetFor} />
@@ -588,6 +587,91 @@ export function RideTools({ api, online }) {
   );
 }
 
+// What the driver sees once a ride is accepted: the map with the road to the
+// pickup, then (after the passenger's code is verified) the road to the
+// destination, round call and message buttons, and everything else folded
+// behind "Details". The ride finishes by itself near the destination, or the
+// driver taps finish; payment is checked after that.
+function DriverRideView({ api, ride: r, where, busy, onMove }) {
+  const { t } = useI18n();
+  const [started, setStarted] = useState(false);
+  const [chat, setChat] = useState(false);
+  const [more, setMore] = useState(false);
+  const [full, setFull] = useState(false);
+  const auto = useRef(false);
+  const dropPt = typeof r.drop_lat === "number" ? { lat: r.drop_lat, lng: r.drop_lng } : null;
+  const goal = started && dropPt ? dropPt : { lat: r.pick_lat, lng: r.pick_lng };
+  const onPos = (here) => {
+    if (started && dropPt && !auto.current && kmBetween(here, dropPt) < 0.1) { auto.current = true; onMove(r, "done"); }
+  };
+  return (
+    <div style={{ ...card, border: `2px solid ${T.green}`, padding: "12px 12px 14px" }}>
+      {full && typeof goal.lat === "number" && <RouteNav from={where && where.manual ? where : null} to={goal} title={started ? t("rdv_to_drop") : t("rdr_dir_pick")} onClose={() => setFull(false)} />}
+      {chat && <ChatSheet api={api} rideId={r.id} role="driver" onClose={() => setChat(false)} />}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.other_name}</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: started ? "#B45309" : T.green }}>{started ? t("rdv_trip") : t("rdv_to_pick")}</div>
+        </div>
+        {r.fare_paise != null && <span style={{ fontSize: 20, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(r.fare_paise / 100)}</span>}
+      </div>
+      <DriverLive api={api} ride={r} where={where} target={started ? "drop" : "pick"} height="52vh" onPos={onPos} />
+      <button onClick={() => setFull(true)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit", width: "100%", minHeight: 42, padding: "6px 14px", fontSize: 14 }}>{t("rdv_full")}</button>
+      <ActionIcons phone={r.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more} />
+      {more && (
+        <div style={{ background: "#F7F9FB", border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", marginBottom: 10 }}>
+          <Route pick={r.pick_text} drop={r.drop_text} />
+          <div style={{ fontSize: 13.5, color: T.ink, fontWeight: 700 }}>{r.fare_paise != null ? String(t("rdr_fare")).replace("{n}", Math.round(r.fare_paise / 100)) : t("rdr_nofare")}</div>
+          {!started && <div style={{ marginTop: 8 }}><Btn kind="ghost" disabled={busy === r.id} onClick={() => onMove(r, "release")}>{t("rdr_release")}</Btn></div>}
+        </div>
+      )}
+      <RideCode api={api} rideId={r.id} role="driver" onState={setStarted} hideStarted />
+      {started && (
+        <>
+          <Btn full disabled={busy === r.id} onClick={() => onMove(r, "done")}>{t("rdr_finish")}</Btn>
+          <div style={{ fontSize: 12.5, color: T.inkSoft, textAlign: "center", margin: "6px 0 8px" }}>{t("rdv_auto")}</div>
+          <RideDriverPay api={api} rideId={r.id} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// The passenger's view of an accepted ride: the same layout from the other side.
+function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
+  const { t } = useI18n();
+  const [started, setStarted] = useState(false);
+  const [chat, setChat] = useState(false);
+  const [more, setMore] = useState(false);
+  return (
+    <div>
+      {chat && <ChatSheet api={api} rideId={ride.id} role="passenger" onClose={() => setChat(false)} />}
+      <div style={{ ...card, padding: "12px 12px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: started ? "#B45309" : T.green }}>{started ? t("rdv_trip") : t("rdv_driver_coming")}{ride.other_vehicle ? ` \u00B7 ${ride.other_vehicle}` : ""}</div>
+          </div>
+          {ride.fare_paise != null && <span style={{ fontSize: 20, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</span>}
+        </div>
+        <PassengerLive api={api} ride={ride} started={started} height="48vh" />
+        <RideCode api={api} rideId={ride.id} role="passenger" onState={setStarted} hideStarted />
+        <ActionIcons phone={ride.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more} />
+        {more && (
+          <div style={{ background: "#F7F9FB", border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px" }}>
+            <Timeline pick={ride.pick_text} drop={ride.drop_text} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+              {vTrade && <span style={{ fontSize: 12.5, fontWeight: 800, color: T.ink, background: "#E5E7EB", borderRadius: 14, padding: "5px 11px" }}>{vehicleLabel(vTrade, lang)}</span>}
+              {ride.fare_paise != null && <span style={{ fontSize: 12.5, fontWeight: 700, color: T.inkSoft }}>{String(t("rdr_fare")).replace("{n}", Math.round(ride.fare_paise / 100))}</span>}
+            </div>
+            {!started && <Btn kind="ghost" full disabled={busy} onClick={onCancel} style={{ color: "#B91C1C", borderColor: "#FCA5A5" }}>{t("rd_cancel")}</Btn>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function RideRequests({ api, online, trades = [], where = null }) {
   const { t, lang } = useI18n();
   const [rides, setRides] = useState([]);
@@ -648,24 +732,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
     <div style={{ marginTop: 4 }}>
       {doneRide && <RideDone api={api} ride={doneRide} who="driver" onClose={() => setDoneRide(null)} />}
       {navFor && <RouteNav from={where && where.manual ? where : null} to={{ lat: navFor.pick_lat, lng: navFor.pick_lng }} title={t("rdr_dir_pick")} onClose={() => setNavFor(null)} />}
-      {mine.map((r) => (
-        <div key={r.id} style={{ ...card, border: `2px solid ${T.green}` }}>
-          <OrderHeader name={r.other_name} sub={t("rdr_active")} inset="-14px -15px 10px" />
-          <DriverLive api={api} ride={r} where={where} />
-          <RideDriverPay api={api} rideId={r.id} />
-          <RideCode api={api} rideId={r.id} role="driver" onState={setStarted} />
-          <RideChat api={api} rideId={r.id} role="driver" />
-          <Route pick={r.pick_text} drop={r.drop_text} />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-            {r.other_phone && <a href={`tel:${r.other_phone}`} style={linkBtn(T.green)}>{t("rdr_call_pax")}</a>}
-            <button onClick={() => setNavFor(r)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit" }}>{t("rdr_dir_pick")}</button>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {!started && <Btn kind="ghost" disabled={busy === r.id} onClick={() => move(r, "release")}>{t("rdr_release")}</Btn>}
-            <Btn disabled={busy === r.id || !started} onClick={() => move(r, "done")}>{t("rdr_finish")}</Btn>
-          </div>
-        </div>
-      ))}
+      {mine.map((r) => <DriverRideView key={r.id} api={api} ride={r} where={where} busy={busy} onMove={move} />)}
       {online && !busyNow && <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "0 0 8px" }}>{t("rdr_title")}</h2>}
       {online && !busyNow && sorted.length > 0 && typeof sorted[0].my_lat === "number" && (() => {
         const cur = sorted.find((r) => r.id === selId) || sorted[0];

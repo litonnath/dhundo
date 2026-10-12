@@ -74,7 +74,7 @@ export function RideChat({ api, rideId, role, kind = "ride", startOpen = true })
 // The pickup code. Passenger: shows the four digits. Driver: asks for them
 // and starts the ride when they match. onStarted tells the screen to unlock
 // "Ride finished".
-export function RideCode({ api, rideId, role, onState }) {
+export function RideCode({ api, rideId, role, onState, hideStarted = false }) {
   const { t } = useI18n();
   const [st, setSt] = useState(null);
   const [val, setVal] = useState("");
@@ -94,6 +94,7 @@ export function RideCode({ api, rideId, role, onState }) {
   if (!st) return null;
   const box = { borderRadius: 14, padding: "12px 14px", margin: "10px 0" };
   if (st.started) {
+    if (hideStarted) return null;
     return <div style={{ ...box, background: "#ECFDF3", border: "1px solid #A7E3BE", fontSize: 14.5, fontWeight: 800, color: "#0F6B33" }}>{"\u2713 "}{t(role === "driver" ? "rv_ok" : "rv_started")}</div>;
   }
   if (role !== "driver") {

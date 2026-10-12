@@ -329,7 +329,26 @@ export function bearing(a, b) {
 }
 const fmtKm = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
 
-export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230 }) {
+// Road route (and minutes) from one point to another, asked again whenever the
+// start moves about 200 m. Used on the live ride maps.
+function useRoadRoute(from, to) {
+  const [r, setR] = useState(null);
+  const fl = from && Math.round(from.lat * 500), fg = from && Math.round(from.lng * 500);
+  useEffect(() => {
+    if (!from || !to) { setR(null); return undefined; }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    fetch(`${OSRM}${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`, { signal: ctl.signal })
+      .then((x) => x.json())
+      .then((j) => { const x = j && j.routes && j.routes[0]; if (x) setR({ pts: x.geometry.coordinates.map(([lng, lat]) => [lat, lng]), min: Math.max(1, Math.round(x.duration / 60)), km: x.distance / 1000 }); })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+    return () => { ctl.abort(); clearTimeout(timer); };
+  }, [fl, fg, to && to.lat, to && to.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  return r;
+}
+
+export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick" }) {
   const box = useRef(null);
   const st = useRef({});
   useEffect(() => {
@@ -367,6 +386,7 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
             html: `<div style="width:${delivery ? 24 : 44}px;height:${delivery ? 24 : 44}px;border-radius:50%;background:#1D4ED8;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center"><svg width="${delivery ? 14 : 26}" height="${delivery ? 14 : 26}" viewBox="0 0 24 24" style="transform:rotate(${h}deg)"><path d="M12 2l7 18-7-4-7 4z" fill="#fff"/></svg></div>` }),
         }).addTo(layer);
         if (route && route.length > 1) L.polyline(route, { color: "#1D4ED8", weight: 5, opacity: 0.85 }).addTo(layer);
+        else if (toward === "drop" && drop && typeof drop.lat === "number") L.polyline([[driver.lat, driver.lng], [drop.lat, drop.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
         else if (pick) L.polyline([[driver.lat, driver.lng], [pick.lat, pick.lng]], { color: "#1D4ED8", weight: 3, dashArray: "6 8", opacity: 0.8 }).addTo(layer);
         pts.push([driver.lat, driver.lng]);
       }
@@ -382,7 +402,7 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
 
 // The passenger's view: poll the matched driver every few seconds, work out
 // which way he is heading from his last two fixes.
-export function PassengerLive({ api, ride }) {
+export function PassengerLive({ api, ride, started = false, height = 230 }) {
   const { t } = useI18n();
   const [drv, setDrv] = useState(null);
   const prev = useRef(null);
@@ -409,14 +429,18 @@ export function PassengerLive({ api, ride }) {
     const id = setInterval(tick, 5000);
     return () => { live = false; clearInterval(id); };
   }, [api, ride.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (typeof ride.pick_lat !== "number") return null;
-  const pick = { lat: ride.pick_lat, lng: ride.pick_lng };
-  const km = drv ? kmBetween(drv, pick) : null;
+  const pick = typeof ride.pick_lat === "number" ? { lat: ride.pick_lat, lng: ride.pick_lng } : null;
+  const dropPt = typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null;
+  const target = started && dropPt ? dropPt : pick;
+  const rt = useRoadRoute(drv, target);
+  if (!pick) return null;
+  const km = drv ? kmBetween(drv, target) : null;
   return (
     <div>
-      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={drv} />
+      <LiveRideMap pick={pick} drop={dropPt} driver={drv} route={rt ? rt.pts : null} height={height} toward={started ? "drop" : "pick"} />
       <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
-        {drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${toward === true ? ` · ${t("rd_live_toward")}` : toward === false ? ` · ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
+        {started ? (drv && km != null ? String(t("rdv_trip_left")).replace("{n}", fmtKm(km)).replace("{m}", rt ? rt.min : "?") : "")
+          : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ""}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
       </div>
     </div>
   );
@@ -424,7 +448,7 @@ export function PassengerLive({ api, ride }) {
 
 // The driver's view: own position and heading from the phone, sent every few
 // seconds while the ride is on, with the pickup in view.
-export function DriverLive({ api, ride, where = null }) {
+export function DriverLive({ api, ride, where = null, target = "pick", height = 230, onPos = null }) {
   const { t } = useI18n();
   const [me, setMe] = useState(null);
   const last = useRef(null);
@@ -450,14 +474,18 @@ export function DriverLive({ api, ride, where = null }) {
     }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
     return () => geo.clearWatch(id);
   }, [api, pinned]);
-  if (typeof ride.pick_lat !== "number") return null;
-  const pick = { lat: ride.pick_lat, lng: ride.pick_lng };
-  const here = pinned ? { lat: where.lat, lng: where.lng, heading: bearing({ lat: where.lat, lng: where.lng }, pick) } : me;
-  const km = here ? kmBetween(here, pick) : null;
+  const pick = typeof ride.pick_lat === "number" ? { lat: ride.pick_lat, lng: ride.pick_lng } : null;
+  const dropPt = typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null;
+  const goal = target === "drop" && dropPt ? dropPt : pick;
+  const here = pick ? (pinned ? { lat: where.lat, lng: where.lng, heading: bearing({ lat: where.lat, lng: where.lng }, pick) } : me) : null;
+  const rt = useRoadRoute(here, goal);
+  useEffect(() => { if (here && onPos) onPos(here); }, [here && here.lat, here && here.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!pick) return null;
+  const km = here ? kmBetween(here, goal) : null;
   return (
     <div>
-      <LiveRideMap pick={pick} drop={typeof ride.drop_lat === "number" ? { lat: ride.drop_lat, lng: ride.drop_lng } : null} driver={here} />
-      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t("rd_pick_in")).replace("{n}", fmtKm(km))}</div>}
+      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} />
+      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", fmtKm(km))}{rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ""}</div>}
     </div>
   );
 }
