@@ -1923,4 +1923,13 @@ export default {
   rp_new_driver: "New driver",
   rp_nav_pick: "Google Maps: to the pickup",
   rp_nav_route: "Google Maps: pickup to destination",
+  rp_done: "Ride completed",
+  pl_share: "Share my live location",
+  pl_stop: "Stop sharing",
+  pl_not_yet: "Live location starts 3 hours before the first trip.",
+  pl_no_gps: "Allow location to share it.",
+  pl_waiting_other: "Waiting for the other person to share their location.",
+  pl_rider_away: "The rider is {n} from the pickup",
+  pl_customer: "Customer",
+  pl_rider: "Rider",
 };

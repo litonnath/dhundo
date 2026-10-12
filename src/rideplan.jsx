@@ -8,6 +8,7 @@ import { useI18n } from "./i18n.jsx";
 import { useRateCard, calcFare, rateKeyFor } from "./fares.jsx";
 import { BusyCalendar, useBusy, clashWith } from "./busycal.jsx";
 import { vehicleClass } from "./nearmap.jsx";
+import { RoutePreviewMap } from "./planlive.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -75,6 +76,7 @@ export function RidePlanSheet({ api, pick, drop, km, vehicle, place, signedIn, o
       const r = one(await api.ridePlanRequest({
         worker: sel, start: startAt.toISOString(), minutes: mins, repeat, until: repeat === "once" ? null : until,
         pick: pick.address || pick.area || "", drop: drop.address || drop.area || "", km, note,
+        pickLat: pick.lat, pickLng: pick.lng, dropLat: drop.lat, dropLng: drop.lng,
       }));
       if (r && r.ok) setDone(r);
       else setMsg(r && r.reason === "already_open" ? t("rp_open") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
@@ -96,6 +98,7 @@ export function RidePlanSheet({ api, pick, drop, km, vehicle, place, signedIn, o
             <div><b>{t("rd_drop")}:</b> {drop.address || drop.area}</div>
             {km ? <div style={{ color: T.inkSoft }}>{km} km</div> : null}
           </div>
+          <div style={{ marginBottom: 12 }}><RoutePreviewMap pick={pick} drop={drop} height="30vh" /></div>
           <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft, margin: "0 0 6px" }}>{t("rp_driver")}</div>
           {drivers === null && <div style={{ fontSize: 14, color: T.inkSoft }}>{"…"}</div>}
           {drivers && drivers.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, marginBottom: 8 }}>{t("hr_none")}</div>}

@@ -1,6 +1,7 @@
 // Bookings: a worker asked to come (cook, plumber and so on). Used by the
 // customer ("My bookings") and by the worker ("Requests from customers").
 // One card per request: who, what for, when, where, the rate card, the answer.
+import { PlanLive } from "./planlive.jsx";
 import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -54,7 +55,7 @@ function ReschedPanel({ api, x, resched, setResched, busy, rmsg, setRmsg, onSave
 // A scheduled ride request carries its details in the note; show them as a clean card.
 const PLAN_RE = /^Scheduled rides\. From: (.*?) To: (.*?)\. Pickup (.*?), drop by (.*?)\. (One trip|Every day until .*?|Every week until .*?)\. (\d+) trip\(s\) x Rs (\d+) = Rs (\d+)\.(?: (.*))?$/s;
 const parsePlan = (note) => { const m = PLAN_RE.exec(String(note || "")); return m ? { from: m[1], to: m[2], pick: m[3], drop: m[4], rep: m[5], trips: m[6], fare: m[7], total: m[8], extra: m[9] || "" } : null; };
-function PlanBox({ plan, startAt, t, asWorker = false, live = false }) {
+function PlanBox({ plan, startAt, t, asWorker = false, live = false, api = null, id = null, accepted = false }) {
   const dot = (shape, color) => <span style={{ width: 11, height: 11, borderRadius: shape === "dot" ? "50%" : 3, background: color, flexShrink: 0, marginTop: 5 }} />;
   const chip = (txt) => <span style={{ fontSize: 13, fontWeight: 800, color: "#0B3A78", background: "#EAF1FB", borderRadius: 14, padding: "5px 11px" }}>{txt}</span>;
   const rep = plan.rep.startsWith("Every day") ? `${t("rp_daily")} \u00B7 ${t("rp_until")} ${plan.rep.replace(/^Every day until /, "")}` : plan.rep.startsWith("Every week") ? `${t("rp_weekly")} \u00B7 ${t("rp_until")} ${plan.rep.replace(/^Every week until /, "")}` : t("rp_once");
@@ -68,6 +69,7 @@ function PlanBox({ plan, startAt, t, asWorker = false, live = false }) {
       </div>
       <div style={{ fontSize: 14.5, color: T.ink, marginBottom: 4 }}>{plan.trips} {t("rp_trips")} {"\u00D7"} {"\u20B9"}{plan.fare} = <b>{"\u20B9"}{plan.total}</b></div>
       {plan.extra ? <div style={{ fontSize: 13.5, color: T.inkSoft, overflowWrap: "anywhere" }}>{plan.extra}</div> : null}
+      {live && api && id && <div style={{ margin: "0 -14px" }}><PlanLive api={api} id={id} accepted={accepted} asWorker={asWorker} /></div>}
       {asWorker && live && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0 4px" }}>
           {[[t("rp_nav_pick"), `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(plan.from)}&travelmode=driving`],
@@ -200,7 +202,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 </div>
               ) : null;
             })()}
-            {plan ? <PlanBox plan={plan} startAt={x.start_at} t={t} asWorker={asWorker} live={live} /> : (
+            {plan ? <PlanBox plan={plan} startAt={x.start_at} t={t} asWorker={asWorker} live={live} api={api} id={x.id} accepted={x.status === "accepted"} /> : (
               <div style={{ padding: "6px 14px 4px" }}>
                 {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
                 {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
@@ -229,7 +231,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
             )}
             {live && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
-                {asWorker && x.status === "accepted" && <button disabled={busy === x.id} onClick={() => complete(x)} style={pill("#15803D", "#fff", { flex: "1 1 150px" })}>{t("mbk_mark_done")}</button>}
+                {asWorker && x.status === "accepted" && <button disabled={busy === x.id} onClick={() => complete(x)} style={pill("#15803D", "#fff", { flex: "1 1 150px" })}>{plan ? t("rp_done") : t("mbk_mark_done")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
                 {!(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}
