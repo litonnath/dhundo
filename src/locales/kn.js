@@ -1921,4 +1921,6 @@ export default {
   rp_open: "You already have an open request with this driver.",
   rp_first: "First trip",
   rp_new_driver: "New driver",
+  rp_nav_pick: "Google Maps: to the pickup",
+  rp_nav_route: "Google Maps: pickup to destination",
 };
