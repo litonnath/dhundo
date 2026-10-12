@@ -1,6 +1,6 @@
 // PAYMENT DUE: once a ride or a booking is finished and not yet paid, the customer sees a bar on every screen
 // until it is paid (or the rider / worker confirms the cash). It opens the pay sheet: PayU or the wallet.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { PayLinkSheet } from "./receipt.jsx";
@@ -12,6 +12,7 @@ export function PaymentDue({ api, bookings = [] }) {
   const { t } = useI18n();
   const [due, setDue] = useState([]);
   const [open, setOpen] = useState(null);
+  const hasDue = useRef(false);
   const bk = bookings.filter((x) => x.role === "customer" && x.status === "completed").map((x) => x.id).join(",");
   useEffect(() => {
     let alive = true;
@@ -32,9 +33,13 @@ export function PaymentDue({ api, bookings = [] }) {
       } catch (_) { /* next tick */ }
     };
     pull();
-    const timer = setInterval(() => { if (!document.hidden) pull(); }, 20000);
-    return () => { alive = false; clearInterval(timer); };
-  }, [api, bk]);
+    // Quicker while something is due, and at once when a payment has just gone through.
+    const timer = setInterval(() => { if (!document.hidden) pull(); }, hasDue.current ? 6000 : 20000);
+    const onPaid = () => { pull(); setTimeout(pull, 2500); };
+    window.addEventListener("dhundo:paid", onPaid);
+    return () => { alive = false; clearInterval(timer); window.removeEventListener("dhundo:paid", onPaid); };
+  }, [api, bk, due.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  hasDue.current = due.length > 0;
   if (!due.length) return null;
   const d = due[0];
   return (
@@ -46,7 +51,7 @@ export function PaymentDue({ api, bookings = [] }) {
         </span>
         <Btn onClick={() => setOpen(d)}>{t("pd_pay")}</Btn>
       </div>
-      {open && <PayLinkSheet api={api} purpose={open.purpose} refId={open.id} onClose={() => { setOpen(null); }} />}
+      {open && <PayLinkSheet api={api} purpose={open.purpose} refId={open.id} onClose={() => { setOpen(null); try { window.dispatchEvent(new Event("dhundo:paid")); } catch (_) { /* no window */ } }} />}
     </>
   );
 }

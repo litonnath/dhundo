@@ -73,7 +73,7 @@ export function PayLinkSheet({ api, purpose, refId, onClose }) {
           <div style={{ flex: 1, fontSize: 19, fontWeight: 800, color: T.ink }}>{t("plk_title")}</div>
           <CloseButton onClick={onClose} />
         </div>
-        <PayOnline api={api} purpose={purpose} refId={refId} full onPaid={onClose} />
+        <PayOnline api={api} purpose={purpose} refId={refId} full onPaid={() => { try { window.dispatchEvent(new Event("dhundo:paid")); } catch (_) { /* no window */ } onClose(); }} />
       </div>
     </div>
   );

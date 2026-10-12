@@ -3006,6 +3006,14 @@ export default function ServicesPage({
     setHomeKey((k) => k + 1); setTab("browse");
     try { window.scrollTo(0, 0); } catch (_) { /* no window */ }
   };
+  // A payment went through: re-read the inbox (bookings), the wallet balance, and everything keyed to them.
+  const refreshPaidRef = useRef(null);
+  refreshPaidRef.current = () => { try { inbox.reload(); } catch (_) { /* later */ } setReloadKey((k) => k + 1); };
+  useEffect(() => {
+    const f = () => { if (refreshPaidRef.current) refreshPaidRef.current(); };
+    window.addEventListener("dhundo:paid", f);
+    return () => window.removeEventListener("dhundo:paid", f);
+  }, []);
   const goHomeRef = useRef(goHome);
   goHomeRef.current = goHome;
   useEffect(() => {

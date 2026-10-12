@@ -51,7 +51,7 @@ export function PayOnline({ api, purpose, refId, onPaid = null, full = false, st
     try {
       const r = await api.walletPay(purpose, refId);
       const x = Array.isArray(r) ? r[0] : r;
-      if (x && x.ok) { setAlready(true); onPaid && onPaid(); return; }
+      if (x && x.ok) { setAlready(true); try { window.dispatchEvent(new Event("dhundo:paid")); } catch (_) { /* no window */ } onPaid && onPaid(); return; }
       if (x && x.reason === "insufficient") setLow(true); else setState("error");
       if (x && x.reason === "insufficient") setState("idle");
     } catch (_) { setState("error"); }
