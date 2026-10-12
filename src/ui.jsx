@@ -1433,7 +1433,7 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
     }}>
       <div style={{
         maxWidth: 1180, margin: "0 auto", padding: "8px 14px",
-        display: "flex", alignItems: "center", gap: 10,
+        display: "flex", alignItems: "center", gap: 8, minWidth: 0,
       }}>
         <button
           onClick={() => setTab("browse")}
@@ -1454,8 +1454,8 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         <LanguageSwitch />
         {onOpenWallet && walletPaise !== null && (
           <button onClick={onOpenWallet} aria-label={t("wal_title")} style={{
-            minHeight: 42, padding: "0 12px", borderRadius: 21, border: `1px solid ${T.line}`, background: T.white, color: "#0B3A78",
-            cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit", fontWeight: 800, fontSize: 14, flexShrink: 0, whiteSpace: "nowrap",
+            minHeight: 42, padding: "0 10px", borderRadius: 21, border: `1px solid ${T.line}`, background: T.white, color: "#0B3A78",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, flexShrink: 0, whiteSpace: "nowrap",
           }}>
             <Icon name="wallet" size={18} />{rupees(walletPaise)}
           </button>
