@@ -2995,6 +2995,17 @@ export default function ServicesPage({
   useEffect(() => { if (tab !== "add") setListedNow(false); }, [tab]);
   const openBiz = (k) => { setBizOpen(k); setTab("bizpage"); };
   const openOrders = (sub) => { try { window.localStorage.setItem("dhundo_orders_tab", sub || ""); } catch (_) {} setOrdersKey((k) => k + 1); setTab("orders"); };
+  // Back from PayU: show what was just paid for (the order, ride, booking, item or
+  // wallet), not the main menu.
+  useEffect(() => {
+    if (!payRet || !signedIn) return;
+    const pu = payRet.purpose;
+    if (pu === "order") openOrders("mine");
+    else if (pu === "booking") openOrders("bookings");
+    else if (pu === "item") openOrders("items");
+    else if (pu === "topup") setWalletOpen(true);
+    else if (pu === "ride") { try { window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} setTab("browse"); }
+  }, [payRet, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!signedIn) { setOrdersBadge(0); setLiveNow([]); return undefined; }
     let live = true;
