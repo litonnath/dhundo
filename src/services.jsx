@@ -2990,11 +2990,20 @@ export default function ServicesPage({
   const [ordersBadge, setOrdersBadge] = useState(0);
   const [ordersKey, setOrdersKey] = useState(0);
   const [homeKey, setHomeKey] = useState(0); // bumping it returns the home screen to its start
+  // Home, from any screen: close whatever is open on top, and show the home screen from its start.
+  const goHome = () => {
+    setOfferPick(false); setItemOpen(null); setBizOpen(null); setChatItem(null); setNotifOpen(false); setWalletOpen(false); setLocOpen(false);
+    setHomeKey((k) => k + 1); setTab("browse");
+    try { window.scrollTo(0, 0); } catch (_) { /* no window */ }
+  };
+  const goHomeRef = useRef(goHome);
+  goHomeRef.current = goHome;
   useEffect(() => {
-    const go = () => { setOfferPick(false); setHomeKey((k) => k + 1); setTab("browse"); };
+    const go = () => goHomeRef.current();
     window.addEventListener("dhundo:home", go);
     return () => window.removeEventListener("dhundo:home", go);
   }, []);
+  const navTab = (k) => { if (k === "browse") goHome(); else setTab(k); };
   const [liveNow, setLiveNow] = useState([]);
   const [bizOpen, setBizOpen] = useState(null);
   const [myStatus, setMyStatus] = useState(null);
@@ -3215,7 +3224,7 @@ export default function ServicesPage({
       {langGate && <LanguageGate onDone={closeLangGate} />}
       <Header
         tab={tab}
-        setTab={setTab}
+        setTab={navTab}
         isAdmin={isAdmin}
         place={place}
         onOpenLocation={() => setLocOpen(true)}
@@ -3418,7 +3427,7 @@ export default function ServicesPage({
 
       {tab === "work" && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "10px 16px 0" }}>
-          <HomeButton onClick={() => setTab("browse")} />
+          <HomeButton onClick={goHome} />
         </div>
       )}
       {tab === "work" && (
@@ -3434,7 +3443,7 @@ export default function ServicesPage({
 
       {tab === "mine" && signedIn && (
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "14px 16px 60px" }}>
-          <div style={{ marginBottom: 12 }}><HomeButton onClick={() => setTab("browse")} /></div>
+          <div style={{ marginBottom: 12 }}><HomeButton onClick={goHome} /></div>
           <h1 style={{ fontSize: 23, fontWeight: 800, margin: "0 0 18px" }}>{t("nav_mine")}</h1>
           <MyListing api={api} trades={trades} isAdmin={isAdmin}
                      onGoAdd={() => setTab("add")} />
@@ -3579,7 +3588,7 @@ export default function ServicesPage({
           <button onClick={clearPayRet} style={{ border: "none", background: "transparent", fontSize: 22, cursor: "pointer", color: "inherit", lineHeight: 1 }}>{"\u00D7"}</button>
         </div>
       )}
-      <BottomNav tab={tab} setTab={setTab} online={avail.online} showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
+      <BottomNav tab={tab} setTab={navTab} online={avail.online} showBiz={isBizAccount && effMode === "business"} onBiz={() => { setBizOpen(null); setTab("bizpage"); }}
                  signedIn={signedIn} hasListing={hasListing} mode={mode}
                  onWallet={signedIn ? () => setWalletOpen(true) : null}
                  chatBadge={signedIn ? inbox.unread : 0} ordersBadge={signedIn ? ordersBadge : 0}
