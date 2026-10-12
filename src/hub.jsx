@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 import { CancelButton, dateTime, DueTimer } from "./cancel.jsx";
 import { FeeRiderPay } from "./paystate.jsx";
+import { PayQr } from "./receipt.jsx";
 import { DeliveryRateBox } from "./bizpay.jsx";
 import { OrderHeader, Banner, Steps, Fold, PayBadge, callStyle, outlineStyle, cardStyle } from "./orderui.jsx";
 import { scheduleLine } from "./bizmore.jsx";
@@ -98,6 +99,7 @@ export function RiderJobs({ api, online, where = null }) {
               <div style={{ fontSize: 15, fontWeight: 800, color: j.paid ? "#0F6B33" : "#8A5A00", marginTop: 6 }}>
                 {j.paid ? t("pay_dont_collect") : j.pay_method === "upi" ? t("pay_upi_check") : String(t("pay_collect")).replace("{n}", Math.round((j.due_paise || 0) / 100 * 100) / 100)}
               </div>
+              {!j.paid && j.pay_method === "cod" && j.order_id && <PayQr orderId={j.order_id} />}
               {!j.paid && j.pay_method === "cod" && <div style={{ fontSize: 13, color: "#8A5A00", lineHeight: 1.5, marginTop: 4 }}>{t("pay_cod_settle")}</div>}
               {!j.paid && j.status === "picked_up" && (
                 <div style={{ marginTop: 8 }}><Btn full onClick={async () => { try { await api.orderPay(j.order_id || null, "mark_paid"); } catch (_) {} load(); }}>{t("pay_collected")}</Btn></div>

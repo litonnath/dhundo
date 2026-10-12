@@ -23,6 +23,7 @@ import { RideChat, JobCode, DeliveryHandover } from "./ridechat.jsx";
 import { PayOnline } from "./payu.jsx";
 import { OrderUpiQr } from "./upiqr.jsx";
 import { FeeCustomerPay } from "./paystate.jsx";
+import { Receipt } from "./receipt.jsx";
 
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -874,6 +875,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                 )}
               </div>
             )}
+            {o.paid && o.pay_method === "upi" && <Receipt api={api} purpose="order" refId={o.id} />}
             <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />

@@ -1858,4 +1858,13 @@ export default {
   pay_cod_settle: "You keep your delivery fee from this cash. The rest is taken from your wallet balance for the shop and Dhundo, so keep your wallet topped up.",
   wal_owe: "You owe Dhundo money from cash orders you collected. Add money to your wallet to clear it; new earnings also reduce it.",
   fee_upto: "up to",
+  rcp_title: "Receipt",
+  rc_status: "Status",
+  rc_when: "Paid on",
+  rc_via: "Paid with",
+  rc_via_wallet: "Dhundo wallet",
+  rc_via_online: "UPI / card (PayU)",
+  rc_ref: "Reference",
+  rqr_btn: "Customer pays by UPI instead",
+  rqr_hint: "The customer scans this with their phone, signs in and pays in the app. The money goes to Dhundo and is shared with the shop and you after delivery.",
 };
