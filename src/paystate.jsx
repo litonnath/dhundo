@@ -8,6 +8,7 @@ import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { PayOnline } from "./payu.jsx";
 import { UpiQr } from "./upiqr.jsx";
+import { PayQr } from "./receipt.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const rs = (p) => `₹${(Number(p || 0) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -50,7 +51,12 @@ export function RideDriverPay({ api, rideId }) {
   const { t } = useI18n();
   const [f, again] = usePoll(async () => many(await api.ridePayFlags([rideId]))[0], [rideId]);
   if (!f || !f.is_driver) return null;
-  return <ReceiverBox t={t} paid={f.paid} via={f.via} amount={f.fare_paise} label={t("ps_fare")} onConfirm={async () => { await api.rideMarkPaid(rideId); again(); }} />;
+  return (
+    <>
+      {!f.paid && <div style={{ ...box("wait"), textAlign: "center" }}><div style={{ fontWeight: 800, fontSize: 15 }}>{t("ps_not_done")}{f.fare_paise ? ` \u00B7 ${rs(f.fare_paise)}` : ""}</div><PayQr purpose="ride" refId={rideId} startOpen /></div>}
+      <ReceiverBox t={t} paid={f.paid} via={f.via} amount={f.fare_paise} label={t("ps_fare")} onConfirm={async () => { await api.rideMarkPaid(rideId); again(); }} />
+    </>
+  );
 }
 
 // The passenger's end-of-ride payment: paid, or QR / app / wallet.

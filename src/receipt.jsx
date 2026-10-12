@@ -3,7 +3,8 @@
 // money goes to Dhundo's account and is shared out after delivery, never straight
 // to the rider or the shop.
 import React, { useEffect, useState } from "react";
-import { T } from "./ui.jsx";
+import { T, CloseButton, useDismissable } from "./ui.jsx";
+import { PayOnline } from "./payu.jsx";
 import { useI18n } from "./i18n.jsx";
 import { Fold } from "./orderui.jsx";
 
@@ -35,11 +36,11 @@ export function Receipt({ api, purpose, refId }) {
 }
 
 // The rider shows this when the customer wants to pay by UPI instead of cash.
-export function PayQr({ orderId }) {
+export function PayQr({ orderId, purpose = "order", refId = null, startOpen = false }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [img, setImg] = useState("");
-  const link = `${window.location.origin}/?payorder=${encodeURIComponent(orderId)}`;
+  const link = `${window.location.origin}/?${purpose === "ride" ? "payride" : "payorder"}=${encodeURIComponent(refId || orderId)}`;
   useEffect(() => {
     if (!open) return undefined;
     let alive = true;
@@ -53,9 +54,27 @@ export function PayQr({ orderId }) {
       {open && (
         <div style={{ textAlign: "center", padding: 12, borderRadius: 14, background: "#F6F9FE", border: "1px solid #D6E3F5" }}>
           {img ? <img src={img} alt="QR" width={220} height={220} style={{ background: "#fff", padding: 8, borderRadius: 12 }} /> : <div style={{ height: 220 }} />}
-          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 6, lineHeight: 1.5 }}>{t("rqr_hint")}</div>
+          <div style={{ fontSize: 13.5, color: T.inkSoft, marginTop: 6, lineHeight: 1.5 }}>{t(purpose === "ride" ? "rqr_hint_ride" : "rqr_hint")}</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Opened by scanning the driver's QR: pay for the ride in the app.
+export function PayLinkSheet({ api, purpose, refId, onClose }) {
+  const { t } = useI18n();
+  useDismissable(true, onClose);
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+         style={{ position: "fixed", inset: 0, zIndex: 620, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.white, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 520, padding: "16px 16px calc(20px + env(safe-area-inset-bottom))", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ flex: 1, fontSize: 19, fontWeight: 800, color: T.ink }}>{t("plk_title")}</div>
+          <CloseButton onClick={onClose} />
+        </div>
+        <PayOnline api={api} purpose={purpose} refId={refId} full onPaid={onClose} />
+      </div>
     </div>
   );
 }

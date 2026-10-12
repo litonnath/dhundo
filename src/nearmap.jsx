@@ -382,9 +382,14 @@ function useRoadRoute(from, to) {
 
 export { useRoadRoute };
 
-export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick" }) {
+export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick", follow = false }) {
+  const { t } = useI18n();
   const box = useRef(null);
   const st = useRef({});
+  // Follow mode (driver): the map stays on the moving arrow; "Overview" shows the whole road.
+  const [chase, setChase] = useState(follow);
+  const chaseRef = useRef(follow);
+  chaseRef.current = chase;
   useEffect(() => {
     let dead = false;
     (async () => {
@@ -423,13 +428,21 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
         pts.push([driver.lat, driver.lng]);
       }
       if (pts.length === 0) return;
-      if (pts.length > 1) map.fitBounds(pts, { padding: [34, 34], maxZoom: 16 }); else map.setView(pts[0], 15);
+      if (chaseRef.current && driver) map.setView([driver.lat, driver.lng], Math.max(map.getZoom(), 16), { animate: true });
+      else if (pts.length > 1) map.fitBounds(pts, { padding: [34, 34], maxZoom: 16 }); else map.setView(pts[0], 15);
       setTimeout(() => map.invalidateSize(), 50);
     })();
     return () => { dead = true; };
-  }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10), chase]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
-  return <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4", margin: "10px 0" }} />;
+  return (
+    <div style={{ position: "relative", margin: "10px 0" }}>
+      <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />
+      {follow && driver && (
+        <button onClick={() => setChase((v) => !v)} style={{ position: "absolute", right: 10, top: 10, zIndex: 5, minHeight: 38, padding: "0 14px", borderRadius: 19, border: "none", background: "#111827", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>{chase ? t("rdv_overview") : t("rdv_follow")}</button>
+      )}
+    </div>
+  );
 }
 
 // The passenger's view: poll the matched driver every few seconds, work out
@@ -516,7 +529,7 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
   const km = here ? kmBetween(here, goal) : null;
   return (
     <div>
-      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} />
+      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow />
       {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}{rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}</div>}
     </div>
   );

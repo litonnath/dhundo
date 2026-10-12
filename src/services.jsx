@@ -39,6 +39,7 @@ import { StoreHome, OwnerFood, StoreSettings } from "./food.jsx";
 import { WorkerExtras } from "./workerextras.jsx";
 import { SupportButton } from "./support.jsx";
 import { usePayReturn, AddMoney } from "./payu.jsx";
+import { PayLinkSheet } from "./receipt.jsx";
 import { RatesCard } from "./rates.jsx";
 import { PaymentsPanel, EarningsPanel, BizDashboard, LearnPanel, RatingsCard } from "./bizpay.jsx";
 import { SchedulePanel, DocsPanel, BankPanel } from "./bizmore.jsx";
@@ -2980,6 +2981,7 @@ export default function ServicesPage({
   const signedIn = !!(user && user.id);
   const inbox = useInbox(api, signedIn);
   const [payRet, clearPayRet] = usePayReturn();
+  const [payRideId, setPayRideId] = useState(() => { try { const q = new URLSearchParams(window.location.search); const v = q.get("payride"); if (v) { q.delete("payride"); const rest = q.toString(); window.history.replaceState({}, "", window.location.pathname + (rest ? "?" + rest : "") + window.location.hash); } return v || null; } catch (_) { return null; } });
   const [payOrderId] = useState(() => { try { const q = new URLSearchParams(window.location.search); const v = q.get("payorder"); if (v) { q.delete("payorder"); const rest = q.toString(); window.history.replaceState({}, "", window.location.pathname + (rest ? "?" + rest : "") + window.location.hash); } return v || null; } catch (_) { return null; } });
   // What needs attention on the Orders tab: orders waiting for the restaurant or
   // shop, a delivery charge or pickup waiting for the customer to answer, a
@@ -3558,6 +3560,7 @@ export default function ServicesPage({
       )}
 
       <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
+      {payRideId && signedIn && <PayLinkSheet api={api} purpose="ride" refId={payRideId} onClose={() => setPayRideId(null)} />}
       {payRet && !payRet.ok && (
         <div role="status" style={{ position: "fixed", left: 12, right: 12, top: 12, zIndex: 700, maxWidth: 520, margin: "0 auto", padding: "12px 14px", borderRadius: 14, background: payRet.ok ? "#E7F5EC" : payRet.review ? "#FEF3C7" : "#FDECEC", border: `1px solid ${payRet.ok ? "#BEE3CB" : "#FCA5A5"}`, color: payRet.ok ? "#166534" : payRet.review ? "#92400E" : "#B91C1C", fontWeight: 800, fontSize: 14.5, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.15)" }}>
           <span style={{ flex: 1 }}>{payRet.ok ? t("po_back_ok") : payRet.review ? t("po_back_review") : t("po_back_fail")}</span>

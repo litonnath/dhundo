@@ -749,7 +749,7 @@ export default {
   ps_paid_online: "Paid online (confirmed)",
   ps_paid_confirmed: "Paid (confirmed by the driver)",
   ps_not_paid: "Not paid yet.",
-  ps_received: "Payment received",
+  ps_received: "Cash received",
   ps_fare: "Ride fare",
   ps_pay_now: "Pay your fare now",
   ps_fee: "Delivery partner fee",
@@ -1881,4 +1881,9 @@ export default {
   rdv_driver_coming: "Your driver is on the way",
   rdv_road_wait: "finding the road…",
   rdv_retry: "Try again",
+  ps_not_done: "Payment not done yet. The passenger can scan to pay in the app.",
+  rqr_hint_ride: "The passenger scans this with their phone, signs in and pays in the app. The money goes to Dhundo and reaches you when the ride is complete.",
+  plk_title: "Pay for your ride",
+  rdv_follow: "Follow me",
+  rdv_overview: "Whole road",
 };
