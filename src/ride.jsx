@@ -630,9 +630,9 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
         <>
           <Btn full disabled={busy === r.id} onClick={() => onMove(r, "done")}>{t("rdr_finish")}</Btn>
           <div style={{ fontSize: 12.5, color: T.inkSoft, textAlign: "center", margin: "6px 0 8px" }}>{t("rdv_auto")}</div>
-          <RideDriverPay api={api} rideId={r.id} />
         </>
       )}
+      <RideDriverPay api={api} rideId={r.id} />
     </div>
   );
 }
@@ -657,6 +657,7 @@ function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
         <PassengerLive api={api} ride={ride} started={started} height="48vh" />
         <RideCode api={api} rideId={ride.id} role="passenger" onState={setStarted} hideStarted />
         <ActionIcons phone={ride.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more} />
+        {Number(ride.fare_paise) >= 100 && <RidePassengerPay api={api} rideId={ride.id} />}
         {more && (
           <div style={{ background: "#F7F9FB", border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px" }}>
             <Timeline pick={ride.pick_text} drop={ride.drop_text} />
