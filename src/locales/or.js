@@ -1133,7 +1133,7 @@ export default {
   db_noloc: "Your place has no exact location on the map. Delivery riders may not see your orders until you pin it.",
   db_setloc: "Set location",
   fr_items: "items",
-  fr_misc: "Delivery fee",
+  fr_misc: "Platform fee",
   fr_small: "Small items",
   fr_medium: "Medium / bulky",
   fr_heavy: "Heavy",
@@ -1857,4 +1857,5 @@ export default {
   sp_rider_fee: "Delivery partner",
   pay_cod_settle: "You keep your delivery fee from this cash. The rest is taken from your wallet balance for the shop and Dhundo, so keep your wallet topped up.",
   wal_owe: "You owe Dhundo money from cash orders you collected. Add money to your wallet to clear it; new earnings also reduce it.",
+  fee_upto: "up to",
 };

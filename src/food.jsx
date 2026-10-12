@@ -654,6 +654,9 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const feeRs = mode === "delivery" ? (dq ? Math.round(dq.fee_paise / 100) : cardRow ? calcFare(cardRow, roadKm).rider : 30) : 0;
   const feeMinRs = dq ? Math.round(dq.fee_min_paise / 100) : feeRs, feeMaxRs = dq ? Math.round(dq.fee_max_paise / 100) : feeRs;
 
+  const feeP = mode === "delivery" ? feeMaxRs * 100 : 0;
+  const codP = payHow === "cod" && mode !== "pickup" ? 3000 : 0;
+  const toPayP = total + gstP + (mode !== "pickup" ? miscP + miscG : 0) + codP + feeP;
   const send = async () => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
     if (mode !== "pickup" && addrText.trim().length < 3) { setMsg(t("st_need_addr")); return; }
@@ -663,7 +666,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
         mode !== "pickup" ? addrText : null, addr && addr.lat, addr && addr.lng,
         (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note, payHow));
-      if (r && r.ok) { if (r.order_id && payHow === "online") setPayFor({ id: r.order_id, cents: total + gstP + miscP + miscG + (mode === "delivery" ? feeMaxRs * 100 : 0) }); else onDone(); }
+      if (r && r.ok) { if (r.order_id && payHow === "online") setPayFor({ id: r.order_id, cents: toPayP - codP }); else onDone(); }
       else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
@@ -708,11 +711,19 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             <span>{t("fr_gst")}</span><span>{rupees(gstP + miscG)}</span>
           </div>
         )}
-        {(gstP > 0 || mode !== "pickup") && (
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG + (payHow === "cod" && mode !== "pickup" ? 3000 : 0) + (mode === "delivery" ? feeMaxRs * 100 : 0)) / 100 * 100) / 100}</span>
+        {mode === "delivery" && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: T.inkSoft }}>
+            <span>{t("fee_line")}{feeMaxRs > feeMinRs ? ` (${t("fee_upto")})` : ""}</span><span>{rupees(feeP)}</span>
           </div>
         )}
+        {codP > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: "#B45309" }}>
+            <span>{t("cod_fee_line")}</span><span>{rupees(codP)}</span>
+          </div>
+        )}
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
+          <span>{t("st_topay")}</span><span>{rupees(toPayP)}</span>
+        </div>
         {mode === "delivery" && (
           <div style={{ margin: "0 0 12px", padding: "10px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 12, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14.5 }}>
@@ -756,7 +767,6 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         {mode === "delivery" && info && info.delivery_mins && (
           <p style={{ fontSize: 13.5, fontWeight: 700, color: T.brandDark, margin: "0 0 8px" }}>{String(t("st_mins")).replace("{n}", info.delivery_mins)}</p>
         )}
-        <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("st_pay_note")}</p>
         {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
         <div style={{ margin: "0 0 12px" }}>
           <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("pay_how")}</div>
@@ -768,7 +778,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             ))}
           </div>
         </div>
-        <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? `${t("st_place")} · ${rupees(total)}` : t("nav_signin")}</Btn>
+        <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? `${t("st_place")} · ${rupees(toPayP)}` : t("nav_signin")}</Btn>
       </div>
     </div>
   );
