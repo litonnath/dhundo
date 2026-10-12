@@ -1947,4 +1947,7 @@ export default {
   pc_started: "Trip started",
   pc_verify: "Start trip",
   rp_verify_first: "Start the trip with the customer's code first.",
+  pl_auto_share: "Your live location is shared automatically with the other person while the trip is on.",
+  due_title: "Payment due",
+  pd_pay: "Pay now",
 };

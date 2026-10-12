@@ -2,6 +2,7 @@
 // customer ("My bookings") and by the worker ("Requests from customers").
 // One card per request: who, what for, when, where, the rate card, the answer.
 import { PlanLive, WorkSiteMap } from "./planlive.jsx";
+import { LiveShare } from "./liveshare.jsx";
 import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -207,7 +208,8 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
               </div>
             )}
-            {!plan && site && live && asWorker && <div style={{ padding: "0 14px" }}><WorkSiteMap site={site} address={place} /></div>}
+            {!plan && site && live && asWorker && <div style={{ padding: "0 14px" }}><WorkSiteMap site={site} address={place} api={api} id={x.id} accepted={x.status === "accepted"} /></div>}
+            {!plan && !asWorker && x.status === "accepted" && <LiveShare api={api} kind="booking" id={x.id} active />}
             {!plan && !asWorker && (lo || hi || hr || dy || mo) && (
               <div style={{ margin: "6px 14px 10px", border: "1px solid #CFE0F7", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "8px 12px", background: "#E8F0FB", fontSize: 12.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#0B3A78" }}>{t(asWorker ? "mbk_card_you" : "mbk_card")}</div>

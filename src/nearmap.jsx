@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { T, CloseButton, useDismissable } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { useLivePeer, useLiveShare } from "./liveshare.jsx";
 import * as CFG from "./config.js";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
@@ -385,7 +386,7 @@ function useRoadRoute(from, to) {
 
 export { useRoadRoute };
 
-export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick", follow = false, fill = false }) {
+export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick", follow = false, fill = false, peer = null }) {
   const { t } = useI18n();
   const box = useRef(null);
   const st = useRef({});
@@ -430,13 +431,18 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
         if (route && route.length > 1) L.polyline(route, { color: "#1D4ED8", weight: 5, opacity: 0.85 }).addTo(layer);
         pts.push([driver.lat, driver.lng]);
       }
+      if (peer) {
+        L.marker([peer.lat, peer.lng], { zIndexOffset: 900, icon: L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17],
+          html: '<div style="width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #DC2626;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:18px">\u{1F642}</div>' }) }).addTo(layer);
+        pts.push([peer.lat, peer.lng]);
+      }
       if (pts.length === 0) return;
       if (chaseRef.current && driver) map.setView([driver.lat, driver.lng], Math.max(map.getZoom(), 16), { animate: true });
       else if (pts.length > 1) map.fitBounds(pts, { padding: [34, 34], maxZoom: 16 }); else map.setView(pts[0], 15);
       setTimeout(() => map.invalidateSize(), 50);
     })();
     return () => { dead = true; };
-  }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10), chase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10), chase, peer && peer.lat, peer && peer.lng]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
   return (
     <div style={fill ? { position: "absolute", inset: 0 } : { position: "relative", margin: "10px 0" }}>
@@ -474,7 +480,7 @@ export function PassengerLive({ api, ride, started = false, height = 230, fill =
       } catch (_) { /* next tick */ }
     };
     tick();
-    const id = setInterval(tick, 5000);
+    const id = setInterval(tick, 3000);
     return () => { live = false; clearInterval(id); };
   }, [api, ride.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const pick = typeof ride.pick_lat === "number" ? { lat: ride.pick_lat, lng: ride.pick_lng } : null;
@@ -496,7 +502,7 @@ export function PassengerLive({ api, ride, started = false, height = 230, fill =
 
 // The driver's view: own position and heading from the phone, sent every few
 // seconds while the ride is on, with the pickup in view.
-export function DriverLive({ api, ride, where = null, target = "pick", height = 230, onPos = null, fill = false, onInfo = null }) {
+export function DriverLive({ api, ride, where = null, target = "pick", height = 230, onPos = null, fill = false, onInfo = null, peer = null }) {
   const { t } = useI18n();
   const [me, setMe] = useState(null);
   const last = useRef(null);
@@ -515,7 +521,7 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
       if (heading === null && last.current && kmBetween(last.current, cur) > 0.01) heading = bearing(last.current, cur);
       if (!last.current || kmBetween(last.current, cur) > 0.01) last.current = cur;
       setMe((m) => ({ ...cur, heading: heading === null ? (m && m.heading) || 0 : heading }));
-      if (Date.now() - sent.current > 8000) {
+      if (Date.now() - sent.current > 4000) {
         sent.current = Date.now();
         api.setAvailability(true, { lat: cur.lat, lng: cur.lng, accuracy: g.coords.accuracy }, null).catch(() => {});
       }
@@ -534,7 +540,7 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
   if (!pick) return null;
   return (
     <div>
-      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow fill={fill} />
+      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow fill={fill} peer={peer} />
       {!fill && info && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{info}</div>}
     </div>
   );
@@ -544,6 +550,7 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
 // the rider moving between them, with plain words for where the rider is.
 export function DeliveryLive({ api, orderId, riderName, eat = true }) {
   const { t } = useI18n();
+  useLiveShare(api, "order", orderId, true);
   const ks = (key) => t(eat ? key : key + "_s");
   const [d, setD] = useState(null);
   const prev = useRef(null);
@@ -665,6 +672,7 @@ export function RiderJobMap({ api, job, where = null, onChanged = null, eat = tr
   const ks = (key) => t(eat ? key : key + "_s");
   const [pinMsg, setPinMsg] = useState("");
   const me = useJobPosition(api, where);
+  const peer = useLivePeer(api, "order", job.order_id, !!job.order_id && ["accepted", "picked_up"].includes(job.status));
   const shop = typeof job.pickup_lat === "number" ? { lat: job.pickup_lat, lng: job.pickup_lng } : null;
   const door = typeof job.drop_lat === "number" ? { lat: job.drop_lat, lng: job.drop_lng } : null;
   const picked = job.status === "picked_up";
@@ -698,7 +706,7 @@ export function RiderJobMap({ api, job, where = null, onChanged = null, eat = tr
   const missing = !picked && !shop ? "shop" : picked && !door ? "drop" : null;
   return (
     <div style={{ margin: "10px 0" }}>
-      <LiveRideMap pick={shop} drop={door} driver={me} route={route} delivery />
+      <LiveRideMap pick={shop} drop={door} driver={me} route={route} delivery peer={peer} />
       {missing && (
         <div style={{ background: "#FFF7E6", border: "1px solid #F5D58C", borderRadius: 12, padding: "10px 12px", margin: "8px 0" }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: "#8A5A00", marginBottom: 8 }}>{(missing === "shop" ? ks("rm_no_shop") : t("rm_no_drop"))}</div>

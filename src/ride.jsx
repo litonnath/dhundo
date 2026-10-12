@@ -15,6 +15,7 @@ import { FormSheet } from "./rates.jsx";
 import { RideCode } from "./ridechat.jsx";
 import { ActionIcons, ChatSheet, RideShell, RideBar } from "./ridedrive.jsx";
 import { RidePlanSheet } from "./rideplan.jsx";
+import { useLiveShare, useLivePeer } from "./liveshare.jsx";
 import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
@@ -611,6 +612,8 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
   const setMin = (v) => { setMinS(v); try { window.sessionStorage.setItem(minKey, v ? "1" : "0"); } catch (_) {} };
   const [info, setInfo] = useState("");
   const auto = useRef(false);
+  useLiveShare(api, "ride", r.id, true);
+  const peer = useLivePeer(api, "ride", r.id, true);
   const dropPt = typeof r.drop_lat === "number" ? { lat: r.drop_lat, lng: r.drop_lng } : null;
   const goal = started && dropPt ? dropPt : { lat: r.pick_lat, lng: r.pick_lng };
   const onPos = (here) => {
@@ -620,7 +623,7 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
     <>
       {min && <RideBar title={`${r.other_name} \u00B7 ${t(started ? "rdv_trip" : "rdv_to_pick")}`} sub={info} onOpen={() => setMin(false)} />}
       <RideShell hidden={min} onMin={() => setMin(true)}
-                 map={<DriverLive api={api} ride={r} where={where} target={started ? "drop" : "pick"} onPos={onPos} fill onInfo={setInfo} />}>
+                 map={<DriverLive api={api} ride={r} where={where} target={started ? "drop" : "pick"} onPos={onPos} fill onInfo={setInfo} peer={peer} />}>
         {full && typeof goal.lat === "number" && <RouteNav from={where && where.manual ? where : null} to={goal} title={started ? t("rdv_to_drop") : t("rdr_dir_pick")} onClose={() => setFull(false)} />}
         {chat && <ChatSheet api={api} rideId={r.id} role="driver" onClose={() => setChat(false)} />}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -659,6 +662,7 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
 // The passenger's view of an accepted ride: the same layout from the other side.
 function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
   const { t } = useI18n();
+  useLiveShare(api, "ride", ride.id, true);
   const [started, setStarted] = useState(false);
   const [chat, setChat] = useState(false);
   const [more, setMore] = useState(false);

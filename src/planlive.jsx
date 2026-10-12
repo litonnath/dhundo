@@ -6,6 +6,7 @@ import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { UberMap, useRoadRoute, kmBetween, RouteNav } from "./nearmap.jsx";
 import { searchAnywhere } from "./regions.js";
+import { useLivePeer, useLiveShare } from "./liveshare.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const fmt = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
@@ -26,9 +27,11 @@ export function RoutePreviewMap({ pick, drop, height = "34vh", info = false, lab
 
 // The work place of a hire booking, as the owner of the vehicle sees it: the pin, the road from where
 // he is now (his phone), the distance and the time, and the full-screen directions.
-export function WorkSiteMap({ site, address }) {
+export function WorkSiteMap({ site, address, api = null, id = null, accepted = false }) {
   const { t } = useI18n();
   const [me, setMe] = useState(null);
+  useLiveShare(api || {}, "booking", id, !!(api && id && accepted));
+  const peerW = useLivePeer(api || {}, "booking", id, !!(api && id && accepted));
   const [full, setFull] = useState(false);
   useEffect(() => {
     const geo = typeof navigator !== "undefined" && navigator.geolocation;
@@ -40,6 +43,7 @@ export function WorkSiteMap({ site, address }) {
   const rt = useRoadRoute(me, site);
   const markers = [{ id: "w", kind: "drop", lat: site.lat, lng: site.lng, label: t("pl_work_site") }];
   if (me) markers.push({ id: "me", kind: "me", lat: me.lat, lng: me.lng });
+  if (peerW) markers.push({ id: "peer", kind: "driver", online: true, emoji: "\u{1F642}", lat: peerW.lat, lng: peerW.lng, label: t("pl_customer") });
   return (
     <div style={{ padding: "4px 0 8px" }}>
       {full && <RouteNav from={me} to={site} title={t("rdv_to_drop")} onClose={() => setFull(false)} />}
@@ -102,10 +106,6 @@ export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = 
   const [pts, setPts] = useState([]);
   const [geo, setGeo] = useState({}); // addresses looked up when the booking carries no points
   const [nav, setNav] = useState(null);
-  const [on, setOn] = useState(false);
-  const [mine, setMine] = useState(null);
-  const [note, setNote] = useState("");
-  const sent = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -115,23 +115,11 @@ export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = 
     return () => { alive = false; clearInterval(timer); };
   }, [api, id]);
 
-  useEffect(() => {
-    if (!on || !accepted) return undefined;
-    const geo = typeof navigator !== "undefined" && navigator.geolocation;
-    if (!geo) return undefined;
-    const w = geo.watchPosition((g) => {
-      const cur = { lat: g.coords.latitude, lng: g.coords.longitude };
-      setMine(cur);
-      if (Date.now() - sent.current > 8000) {
-        sent.current = Date.now();
-        Promise.resolve(api.planLiveSet(id, cur.lat, cur.lng)).then((ok) => setNote(ok === false ? t("pl_not_yet") : "")).catch(() => {});
-      }
-    }, () => setNote(t("pl_no_gps")), { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
-    return () => geo.clearWatch(w);
-  }, [on, accepted, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mineP = useLiveShare(api, "booking", id, !!accepted);
+  const peerP = useLivePeer(api, "booking", id, !!accepted);
 
   const get = (k) => pts.find((p) => p.kind === k);
-  const sa = get("pick"), sb = get("drop"), other = get("other");
+  const sa = get("pick"), sb = get("drop"), other = peerP;
   // Older requests have no saved points: find the two addresses on the map instead.
   useEffect(() => {
     if ((sa && sb) || (!fromText && !toText)) return undefined;
@@ -141,7 +129,7 @@ export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = 
     return () => { alive = false; };
   }, [!!sa, !!sb, fromText, toText]); // eslint-disable-line react-hooks/exhaustive-deps
   const a = sa || (geo.a ? { lat: geo.a.lat, lng: geo.a.lng } : null), b = sb || (geo.b ? { lat: geo.b.lat, lng: geo.b.lng } : null);
-  const meP = mine || get("me");
+  const meP = mineP;
   const pick = a ? { lat: a.lat, lng: a.lng } : null, drop = b ? { lat: b.lat, lng: b.lng } : null;
   const rider = asWorker ? meP : other;
   const toPick = useRoadRoute(rider && pick ? { lat: rider.lat, lng: rider.lng } : null, pick);
@@ -177,13 +165,7 @@ export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = 
           {navRow(2, t("pl_go_dest"), toText, drop, pick)}
         </div>
       )}
-      {accepted && (
-        <div style={{ margin: "6px 0 2px" }}>
-          <Btn full kind={on ? "ghost" : "primary"} onClick={() => setOn((v) => !v)}>{on ? t("pl_stop") : t("pl_share")}</Btn>
-          {on && !other && <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>{t("pl_waiting_other")}</div>}
-          {note && <div style={{ fontSize: 13, color: "#B45309", fontWeight: 700, marginTop: 6 }}>{note}</div>}
-        </div>
-      )}
+      {accepted && <div style={{ fontSize: 12.5, color: T.inkSoft, margin: "6px 0 2px" }}>{t("pl_auto_share")}</div>}
     </div>
   );
 }
