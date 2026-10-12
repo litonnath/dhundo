@@ -868,6 +868,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
 
         {/* Below the balance and its caveat, above withdraw: this is the one
             thing on the screen a person can act on today. */}
+        {!state.loading && state.paise < 0 && <div style={{ marginBottom: 10 }}><Notice tone="bad">{t("wal_owe")}</Notice></div>}
         <InvitePanel api={api} />
 
         {/* ------------------------------------------------------ withdraw

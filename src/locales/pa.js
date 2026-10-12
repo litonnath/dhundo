@@ -1850,4 +1850,11 @@ export default {
   hp_cod_btn: "Cash on delivery instead ({n} extra)",
   hp_cancel: "Cancel order",
   cod_fee_line: "Cash on delivery fee",
+  fee_line: "Delivery partner fee",
+  fee_cod_note: "Cash on delivery: the rider collects the full amount in cash. Only the final fee for the distance is charged.",
+  fee_refund_note: "You pay the highest delivery fee up front. Once a rider accepts, the real fee for the distance is set and any difference is refunded to your wallet.",
+  fee_cart_note: "The delivery partner fee is part of your payment. If the real distance is shorter, the difference is refunded to your wallet after a rider accepts.",
+  sp_rider_fee: "Delivery partner",
+  pay_cod_settle: "You keep your delivery fee from this cash. The rest is taken from your wallet balance for the shop and Dhundo, so keep your wallet topped up.",
+  wal_owe: "You owe Dhundo money from cash orders you collected. Add money to your wallet to clear it; new earnings also reduce it.",
 };

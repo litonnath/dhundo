@@ -74,6 +74,7 @@ function Bill({ o, t, api, range = null }) {
   );
   const gstAll = b.gst + b.mGst; // one GST line: on the items and the app's delivery fee
   if (gstAll + b.delivery + b.misc + b.cod <= 0) return null;
+  const inc = !!o.ledger && o.mode === "delivery"; // the delivery partner fee is inside the total
   // The rider's fee is paid straight to the rider, never through the app.
   const taken = !!(range && range.rider_taken);
   const lo = range ? Number(range.fee_min_paise) || b.delivery : b.delivery, hi = range ? Number(range.fee_max_paise) || b.delivery : b.delivery;
@@ -82,8 +83,10 @@ function Bill({ o, t, api, range = null }) {
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
       {line("c", t("cod_fee_line"), b.cod)}
+      {inc && line("f", t("fee_line"), b.feeIn)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
-      {o.mode === "delivery" && (
+      {inc && <div style={{ margin: "6px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>{o.pay_method === "cod" ? t("fee_cod_note") : t("fee_refund_note")}</div>}
+      {o.mode === "delivery" && !inc && (
         <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>{t("st_fee_rider")}</span><span>{taken || hi <= lo ? rupees(b.delivery || lo) : `${rupees(lo)} \u2013 ${rupees(hi)}`}</span></div>
           <div style={{ marginTop: 3 }}>
@@ -660,7 +663,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
         mode !== "pickup" ? addrText : null, addr && addr.lat, addr && addr.lng,
         (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note, payHow));
-      if (r && r.ok) { if (r.order_id && payHow === "online") setPayFor({ id: r.order_id, cents: total + gstP + miscP + miscG }); else onDone(); }
+      if (r && r.ok) { if (r.order_id && payHow === "online") setPayFor({ id: r.order_id, cents: total + gstP + miscP + miscG + (mode === "delivery" ? feeMaxRs * 100 : 0) }); else onDone(); }
       else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
@@ -707,7 +710,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG + (payHow === "cod" && mode !== "pickup" ? 3000 : 0)) / 100 * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG + (payHow === "cod" && mode !== "pickup" ? 3000 : 0) + (mode === "delivery" ? feeMaxRs * 100 : 0)) / 100 * 100) / 100}</span>
           </div>
         )}
         {mode === "delivery" && (
@@ -715,7 +718,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 14.5 }}>
               <span>{t("st_fee_rider")}</span><span>{dq && feeMaxRs > feeMinRs ? `\u20B9${feeMinRs} \u2013 \u20B9${feeMaxRs}` : `~\u20B9${feeRs}`}</span>
             </div>
-            <div style={{ marginTop: 3 }}>{t("dq_direct")}</div>
+            <div style={{ marginTop: 3 }}>{t("fee_cart_note")}</div>
             {dq && Number(dq.drop_km) > 0 && <div style={{ marginTop: 3 }}>{String(t(eat ? "dq_dist2" : "dq_dist2_s")).replace("{b}", dq.drop_km)}{!dq.rider_found ? ` \u00B7 ${t("dq_norider2")}` : ""}</div>}
           </div>
         )}
@@ -844,7 +847,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
             {o.pay_hold ? <HoldPay api={api} orderId={o.id} cents={orderBill(o).total} shop={o.other_name} onDone={load} /> : <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} eat={eatIds[o.worker_id] !== false} />}
-            {o.mode === "delivery" && o.rider_name && o.delivery_fee_paise > 0 && !["cancelled", "rejected"].includes(o.status) && <FeeCustomerPay api={api} orderId={o.id} />}
+            {o.mode === "delivery" && !o.ledger && o.rider_name && o.delivery_fee_paise > 0 && !["cancelled", "rejected"].includes(o.status) && <FeeCustomerPay api={api} orderId={o.id} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
             {!o.pay_hold && !["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />

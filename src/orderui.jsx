@@ -151,8 +151,9 @@ export function SplitBox({ o, t, who = "all", eat = true }) {
       {row("shop", t(eat ? "sp_shop" : "sp_shop_s"), sp.shop)}
       {row("platform", t("sp_platform"), sp.platform)}
       {sp.gst > 0 && row("gst", t("sp_gst"), sp.gst)}
-      <div style={{ borderTop: "1px solid #EEF0F4", marginTop: 4, paddingTop: 4 }}>{row("total", t("sp_total"), sp.total, true)}</div>
-      {sp.rider > 0 && <div style={{ marginTop: 6 }}>{row("rider", t("sp_rider_direct"), sp.rider)}</div>}
+      {o.ledger && sp.rider > 0 && row("rider", t("sp_rider_fee"), sp.rider)}
+      <div style={{ borderTop: "1px solid #EEF0F4", marginTop: 4, paddingTop: 4 }}>{row("total", t("sp_total"), sp.total + (o.ledger ? sp.rider : 0), true)}</div>
+      {!o.ledger && sp.rider > 0 && <div style={{ marginTop: 6 }}>{row("rider", t("sp_rider_direct"), sp.rider)}</div>}
     </div>
   );
 }
