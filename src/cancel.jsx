@@ -38,7 +38,7 @@ export function CancelButton({ role, label, onConfirm, style }) {
         : m === "not_allowed" ? t("cn_err_not_yours")
         : e && e.code ? m
         : /could not find the function|schema cache|does not exist|404/i.test(m) ? t("cn_err_update")
-        : t("e_save"));
+        : t("e_save") + (m && !/^Request failed/.test(m) ? ` (${m.slice(0, 140)})` : ""));
     }
     setBusy(false);
   };

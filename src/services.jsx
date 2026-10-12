@@ -1458,8 +1458,7 @@ function ListingForm({ api, trades, user, isAdmin, onDone, onNext, onBack, place
     setErr(null);
     setPicked((p) => {
       if (p.includes(slug)) return p.filter((x) => x !== slug);
-      if (p.length >= 6) { setErr(t("p_max_trades")); return p; }
-      return [...p, slug];
+      return [slug]; // one work per login: picking another replaces it
     });
   };
 
