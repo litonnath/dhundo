@@ -68,9 +68,8 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     }).catch(() => setRated({}));
   };
   useEffect(loadRated, [doneIds]); // eslint-disable-line react-hooks/exhaustive-deps
-  // A finished booking stays in Active until it has been rated.
-  const unrated = (x) => x.status === "completed" && rated && !rated[x.id];
-  const list = mine.filter((x) => (view === "past" ? (["declined", "cancelled"].includes(x.status) || (x.status === "completed" && !unrated(x))) : (["requested", "accepted"].includes(x.status) || unrated(x))));
+  // A finished booking moves to Past at once; it can still be rated there.
+  const list = mine.filter((x) => (view === "past" ? ["declined", "cancelled", "completed"].includes(x.status) : ["requested", "accepted"].includes(x.status)));
   const noteBox = notices.length > 0 && (
     <div>
       {notices.map((n) => (
