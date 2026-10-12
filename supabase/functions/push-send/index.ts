@@ -30,6 +30,7 @@ const T: Record<string, Row> = {
   order_quote_ok: { en: "The customer accepted your delivery charge", bn: "গ্রাহক আপনার ডেলিভারি চার্জ গ্রহণ করেছেন", hi: "ग्राहक ने आपका डिलीवरी शुल्क मान लिया", as: "গ্ৰাহকে আপোনাৰ ডেলিভাৰী মাচুল গ্ৰহণ কৰিলে", gu: "ગ્રાહકે તમારો ડિલિવરી ચાર્જ સ્વીકાર્યો", kn: "ಗ್ರಾಹಕರು ನಿಮ್ಮ ಡೆಲಿವರಿ ಶುಲ್ಕ ಒಪ್ಪಿದ್ದಾರೆ", ml: "ഉപഭോക്താവ് നിങ്ങളുടെ ഡെലിവറി ചാർജ് സ്വീകരിച്ചു", mr: "ग्राहकाने तुमचे डिलिव्हरी शुल्क मान्य केले", or: "ଗ୍ରାହକ ଆପଣଙ୍କ ଡେଲିଭରି ଶୁଳ୍କ ମାନିଲେ", pa: "ਗਾਹਕ ਨੇ ਤੁਹਾਡਾ ਡਿਲੀਵਰੀ ਖਰਚਾ ਮੰਨ ਲਿਆ", ta: "வாடிக்கையாளர் உங்கள் டெலிவரி கட்டணத்தை ஏற்றார்", te: "కస్టమర్ మీ డెలివరీ ఛార్జీని అంగీకరించారు" },
   job_new: { en: "New delivery job near you", bn: "কাছে নতুন ডেলিভারি কাজ", hi: "पास में नया डिलीवरी काम", as: "ওচৰত নতুন ডেলিভাৰীৰ কাম", gu: "નજીક નવું ડિલિવરી કામ", kn: "ಹತ್ತಿರ ಹೊಸ ಡೆಲಿವರಿ ಕೆಲಸ", ml: "അടുത്ത് പുതിയ ഡെലിവറി ജോലി", mr: "जवळ नवीन डिलिव्हरी काम", or: "ପାଖରେ ନୂଆ ଡେଲିଭରି କାମ", pa: "ਨੇੜੇ ਨਵਾਂ ਡਿਲੀਵਰੀ ਕੰਮ", ta: "அருகில் புதிய டெலிவரி வேலை", te: "దగ్గరలో కొత్త డెలివరీ పని" },
   ride_new: { en: "New ride request near you", bn: "কাছে নতুন রাইডের অনুরোধ", hi: "पास में नई राइड रिक्वेस्ट", as: "ওচৰত নতুন ৰাইডৰ অনুৰোধ", gu: "નજીક નવી રાઇડ વિનંતી", kn: "ಹತ್ತಿರ ಹೊಸ ರೈಡ್ ವಿನಂತಿ", ml: "അടുത്ത് പുതിയ റൈഡ് അഭ്യർത്ഥന", mr: "जवळ नवीन राइड विनंती", or: "ପାଖରେ ନୂଆ ରାଇଡ୍ ଅନୁରୋଧ", pa: "ਨੇੜੇ ਨਵੀਂ ਰਾਈਡ ਬੇਨਤੀ", ta: "அருகில் புதிய சவாரி கோரிக்கை", te: "దగ్గరలో కొత్త రైడ్ అభ్యర్థన" },
+  pay_received: { en: "Payment received", bn: "পেমেন্ট এসেছে", hi: "भुगतान मिल गया" },
   ride_accepted: { en: "A driver accepted your ride", bn: "একজন চালক আপনার রাইড নিয়েছেন", hi: "एक ड्राइवर ने आपकी राइड स्वीकार की", as: "এজন চালকে আপোনাৰ ৰাইড লৈছে", gu: "એક ડ્રાઇવરે તમારી રાઇડ સ્વીકારી", kn: "ಒಬ್ಬ ಚಾಲಕ ನಿಮ್ಮ ರೈಡ್ ಒಪ್ಪಿದ್ದಾರೆ", ml: "ഒരു ഡ്രൈവർ നിങ്ങളുടെ റൈഡ് സ്വീകരിച്ചു", mr: "एका चालकाने तुमची राइड स्वीकारली", or: "ଜଣେ ଚାଳକ ଆପଣଙ୍କ ରାଇଡ୍ ଗ୍ରହଣ କଲେ", pa: "ਇੱਕ ਡਰਾਈਵਰ ਨੇ ਤੁਹਾਡੀ ਰਾਈਡ ਮਨਜ਼ੂਰ ਕੀਤੀ", ta: "ஒரு ஓட்டுநர் உங்கள் சவாரியை ஏற்றார்", te: "ఒక డ్రైవర్ మీ రైడ్ అంగీకరించారు" },
 };
 const OPEN: Row = { en: "Tap to open Dhundo", bn: "Dhundo খুলতে ট্যাপ করুন", hi: "Dhundo खोलने के लिए टैप करें", as: "Dhundo খুলিবলৈ টেপ কৰক", gu: "Dhundo ખોલવા ટૅપ કરો", kn: "Dhundo ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ", ml: "Dhundo തുറക്കാൻ ടാപ്പ് ചെയ്യുക", mr: "Dhundo उघडण्यासाठी टॅप करा", or: "Dhundo ଖୋଲିବାକୁ ଟାପ୍ କରନ୍ତୁ", pa: "Dhundo ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ", ta: "Dhundo ஐத் திறக்கத் தட்டவும்", te: "Dhundo తెరవడానికి ట్యాప్ చేయండి" };
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     // words, and the ride id makes each request its own notification, so
     // several waiting at once stack instead of replacing one another.
     const ride = rec.kind === "ride_new" && rec.extra ? String(rec.extra).split("|") : null;
-    const text = rec.kind === "order_new" && rec.extra ? `₹${rec.extra} · ${OPEN[lang]}`
+    const text = (rec.kind === "order_new" || rec.kind === "pay_received") && rec.extra ? `₹${rec.extra} · ${OPEN[lang]}`
       : (rec.kind === "ride_msg" || rec.kind === "job_msg" || rec.kind === "item_msg" || rec.kind === "item_req") && rec.extra ? String(rec.extra)
       : ride && ride[1] ? `${ride[1]} km · ${OPEN[lang]}` : OPEN[lang];
     const urgent = rec.kind === "ride_new" || rec.kind === "job_new" || rec.kind === "order_new";

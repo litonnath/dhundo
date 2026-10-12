@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every new SQL file (180 to 227) in the right order against your database.
+# Runs every new SQL file (180 to 228) in the right order against your database.
 # Needs psql. Get the connection string in Supabase > Project Settings > Database >
 # Connection string (URI), and put your database password in it. Type it here, never in chat:
 #   export DATABASE_URL='postgresql://postgres:YOURPASSWORD@db.nowhtdsuestyduzqtcks.supabase.co:5432/postgres'
@@ -21,7 +21,7 @@ FILES="180_menu_photos 181_no_rider_fallback_1 181_no_rider_fallback_2 182_deliv
 219_booking_pay_2 219_booking_pay_3 220_payments_received 221_admin_refunds_1 221_admin_refunds_2
 222_withdraw_1 222_withdraw_2 223_pay_guard_1 223_pay_guard_2
 224_online_first_1 224_online_first_2 224_online_first_3 224_online_first_4 224_online_first_5
-225_fee_in_pay_1 225_fee_in_pay_2 225_fee_in_pay_3 225_fee_in_pay_4 225_fee_in_pay_5 225_fee_in_pay_6 225_fee_in_pay_7 225_fee_in_pay_8 226_receipt 227_hold_until_done_1 227_hold_until_done_2 227_hold_until_done_3"
+225_fee_in_pay_1 225_fee_in_pay_2 225_fee_in_pay_3 225_fee_in_pay_4 225_fee_in_pay_5 225_fee_in_pay_6 225_fee_in_pay_7 225_fee_in_pay_8 226_receipt 227_hold_until_done_1 227_hold_until_done_2 227_hold_until_done_3 228_hold_release_1 228_hold_release_2 228_hold_release_3"
 START="${START:-180}"; go=0
 for f in $FILES; do
   n="${f%%_*}"

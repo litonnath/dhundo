@@ -84,8 +84,16 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
   const [code, setCode] = useState({});
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState({});
+  const [paidMap, setPaidMap] = useState({}); // a paid second hand order cannot be cancelled
   const load = useCallback(async () => {
-    try { setRows(many(await api.myItemOrders()).filter((o) => !view || (view === "active") === ["requested", "accepted"].includes(o.status))); } catch (_) { setRows((r) => r || []); }
+    try {
+      const list = many(await api.myItemOrders()).filter((o) => !view || (view === "active") === ["requested", "accepted"].includes(o.status));
+      setRows(list);
+      if (list.length && api.payFlags) {
+        const fl = many(await api.payFlags("item", list.map((o) => o.id)).catch(() => []));
+        setPaidMap(fl.reduce((m, f) => { m[f.id] = !!f.paid; return m; }, {}));
+      }
+    } catch (_) { setRows((r) => r || []); }
   }, [api, view]);
   useEffect(() => { load(); const id = setInterval(load, 8000); return () => clearInterval(id); }, [load]);
   const act = async (o, action, feeRs) => {
@@ -139,7 +147,7 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
                 )}
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn disabled={busy === o.id} onClick={() => act(o, "accept", o.mode === "delivery" ? Number(fee[o.id] || 0) : null)}>{t("mb_accept")}</Btn>
-                  <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "decline")}>{t("mb_decline")}</Btn>
+                  {!paidMap[o.id] && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "decline")}>{t("mb_decline")}</Btn>}
                 </div>
               </div>
             )}
@@ -167,8 +175,8 @@ export function ItemOrdersList({ api, onHire, view = null, title = null }) {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
                 {o.role === "buyer" && o.mode === "delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "switch_pickup")}>{t("mb_pick_myself")}</Btn>}
                 {o.role === "buyer" && onHire && <Btn kind="ghost" onClick={onHire}>{t("mb_hire")}</Btn>}
-                {o.role === "buyer" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "cancel")}>{t("mb_cancelled")}</Btn>}
-                {o.role === "seller" && o.status === "accepted" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "decline")}>{t("mb_decline")}</Btn>}
+                {o.role === "buyer" && !paidMap[o.id] && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "cancel")}>{t("mb_cancelled")}</Btn>}
+                {o.role === "seller" && o.status === "accepted" && !paidMap[o.id] && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "decline")}>{t("mb_decline")}</Btn>}
               </div>
             )}
           </div>
