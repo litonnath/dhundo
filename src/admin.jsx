@@ -207,12 +207,13 @@ function Payments({ api }) {
   const [rows, err, load] = useList(() => api.adminPayments(), [api]);
   const [refunds, , reloadRefunds] = useList(() => api.adminRefundsList("to_pay"), [api]);
   const [refunding, setRefunding] = useState(null);
+  const [reqs, , reloadReqs] = useList(() => api.adminRefundRequests("pending"), [api]);
   const paid = (rows || []).filter((r) => r.status === "paid");
   const sum = (a) => a.reduce((n, r) => n + Number(r.amount_paise || 0), 0);
   const day = new Date(); day.setHours(0, 0, 0, 0);
   const today = paid.filter((r) => r.paid_at && new Date(r.paid_at) >= day);
   const when = (iso) => (iso ? new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "\u2014");
-  const label = { order: "Order", ride: "Ride", item: "Item", topup: "Wallet top-up" };
+  const label = { order: "Order", ride: "Ride", item: "Item", booking: "Booking", topup: "Wallet top-up" };
   return (
     <div>
       <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Online payments</h2>
@@ -235,6 +236,17 @@ function Payments({ api }) {
                <span key="s" style={{ fontWeight: 800, color: r.refunded_at ? "#B45309" : r.status === "paid" ? "#157A43" : T.inkSoft }}>{r.refunded_at ? "Refunded" : r.status === "paid" ? "Paid " + when(r.paid_at) : r.status}{r.issue && !r.refunded_at ? <><br /><span style={{ color: "#B91C1C" }}>Needs refund: {r.issue}</span></> : null}</span>,
                <span key="g" style={{ fontSize: 12, color: T.inkSoft, overflowWrap: "anywhere" }}>{r.gateway_id || r.txn}</span>,
                r.status === "paid" && !r.refunded_at ? <Btn key="rf" kind="ghost" onClick={() => setRefunding(r)}>Refund</Btn> : null,
+             ])} />
+      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 6px" }}>Refund requests to approve</h3>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>A cancelled or unfinished paid order, ride, booking or item waits here. Nothing is refunded until you approve it. Approving sends the money to the person's wallet and takes back any partner earning. Rejecting keeps the money with Dhundo.</div>
+      <Table head={["When", "Person", "For", "Amount", "Why", ""]} empty="No refund requests."
+             rows={reqs && reqs.map((r) => [
+               when(r.created_at), <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>, label[r.purpose] || r.purpose,
+               <b key="a">{rs(r.amount_paise)}</b>, r.reason || "\u2014",
+               <span key="b" style={{ display: "flex", gap: 6 }}>
+                 <Btn kind="ghost" onClick={async () => { try { await api.adminRefundDecide(r.id, true); } catch (_) {} reloadReqs(); load(); }}>Approve</Btn>
+                 <Btn kind="ghost" onClick={async () => { try { await api.adminRefundDecide(r.id, false); } catch (_) {} reloadReqs(); }}>Reject</Btn>
+               </span>,
              ])} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 6px" }}>Refunds to pay out</h3>
       <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>Refunds sent to a UPI id. Pay each one from your UPI or bank app, then mark it paid. Refunds to the wallet are already done.</div>

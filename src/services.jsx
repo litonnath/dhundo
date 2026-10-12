@@ -532,6 +532,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingSetPrice: (id, rupees) => rpc("services_booking_set_price", { p_id: id, p_rupees: rupees }, true),
     paymentsReceived: () => rpc("services_my_payments_received", {}, true),
     adminRefund: (o) => rpc("services_admin_refund", { p_account: o.account, p_rupees: o.rupees, p_dest: o.dest, p_reason: o.reason, p_payment: o.payment || null, p_ticket: o.ticket || null, p_upi: o.upi || null }, true),
+    adminRefundRequests: (status) => rpc("services_admin_refund_requests", { p_status: status === undefined ? "pending" : status }, true),
+    adminRefundDecide: (id, approve) => rpc("services_admin_refund_decide", { p_id: id, p_approve: !!approve }, true),
     adminRefundsList: (status) => rpc("services_admin_refunds_list", { p_status: status || "to_pay" }, true),
     adminRefundPaid: (id) => rpc("services_admin_refund_paid", { p_id: id }, true),
     myBookings: () => rpc("services_my_bookings", {}, true),

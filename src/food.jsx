@@ -876,6 +876,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               </div>
             )}
             {o.paid && o.pay_method === "upi" && <Receipt api={api} purpose="order" refId={o.id} />}
+            {o.paid && o.pay_method === "upi" && ["cancelled", "rejected"].includes(o.status) && <div style={{ margin: "6px 0" }}><Notice tone="info">{t("rf_pending")}</Notice></div>}
             <Fold title={t("ob_bill")} right={rupees(orderBill(o).total)}>
               <div style={{ fontSize: 14, fontWeight: 600, margin: "2px 0" }}>{t("st_total")}: {rupees(o.total_paise)}</div>
               <Bill o={o} t={t} api={api} range={feeRange[o.id]} />

@@ -1867,4 +1867,5 @@ export default {
   rc_ref: "Reference",
   rqr_btn: "Customer pays by UPI instead",
   rqr_hint: "The customer scans this with their phone, signs in and pays in the app. The money goes to Dhundo and is shared with the shop and you after delivery.",
+  rf_pending: "Refund: Dhundo checks it and, once approved, sends it to your wallet.",
 };
