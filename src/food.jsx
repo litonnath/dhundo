@@ -855,11 +855,11 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
-            {o.pay_hold ? <HoldPay api={api} orderId={o.id} cents={orderBill(o).total} shop={o.other_name} onDone={load} /> : <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />}
+            {o.pay_hold && !["delivered", "cancelled", "rejected"].includes(o.status) ? <HoldPay api={api} orderId={o.id} cents={orderBill(o).total} shop={o.other_name} onDone={load} /> : <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && !o.ledger && o.rider_name && o.delivery_fee_paise > 0 && !["cancelled", "rejected"].includes(o.status) && <FeeCustomerPay api={api} orderId={o.id} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
-            {!o.pay_hold && !["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
+            {!(o.pay_hold && !["delivered", "cancelled", "rejected"].includes(o.status)) && !["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />
             {!o.pay_hold && !["rejected", "cancelled"].includes(o.status) && (
               <div style={{ margin: "8px 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
