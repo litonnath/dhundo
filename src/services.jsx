@@ -3602,7 +3602,7 @@ export default function ServicesPage({
       )}
 
       <SupportButton api={api} signedIn={signedIn} onSignIn={onSignIn} />
-      {signedIn && <Popups api={api} />}
+      {signedIn && <Popups api={api} bookings={inbox.items} />}
       {signedIn && !isAdmin && <PaymentDue api={api} bookings={inbox.items} />}
       {payRideId && signedIn && <PayLinkSheet api={api} purpose="ride" refId={payRideId} onClose={() => setPayRideId(null)} />}
       {payRet && !payRet.ok && (
