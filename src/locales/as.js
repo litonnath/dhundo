@@ -1891,4 +1891,5 @@ export default {
   rdv_dir: "Directions",
   hr_personal: "Bike taxi, cab and auto can also be hired just for you, by the hour, for a day (8 hours) or for a month. The driver gets your request as a booking and accepts it.",
   hr_month: "1 month",
+  or_hire_bk: "Hire bookings",
 };

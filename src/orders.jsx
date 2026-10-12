@@ -21,7 +21,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   const [part, setPart] = useState(() => {
     let want = null;
     try { want = window.localStorage.getItem("dhundo_orders_tab"); if (want) window.localStorage.removeItem("dhundo_orders_tab"); } catch (_) {}
-    return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? "bookings" : null;
+    return want === "work" && (role || isWorker) ? "work" : want === "mine" ? "mine" : want === "items" ? "items" : want === "rides" ? "rides" : want === "bookings" ? (role === "ride" && bizMode ? "wbook" : "bookings") : null;
   });
   const workKey = isWorker ? "or_requests" : role === "owner" ? "or_received" : role === "delivery" ? "or_jobs" : "or_rides";
   const custTiles = [["mine", "bag", t("or_mine"), 0], ["bookings", "user", t("mbk_title"), 0], ["rides", "drivers", t("rh_title"), 0]];
@@ -29,9 +29,9 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   // A business account sees only its own work (and its buy and sell requests):
   // what a customer orders or books lives in the customer view.
   const groups = showWork
-    ? [{ title: null, tiles: [["work", "bag", t(workKey), badge], itemTile] }]
+    ? [{ title: null, tiles: [["work", "bag", t(workKey), badge]].concat(role === "ride" ? [["wbook", "user", t("or_hire_bk"), 0]] : [], [itemTile]) }]
     : [{ title: null, tiles: [custTiles[0], custTiles[1], itemTile, custTiles[2]] }];
-  const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "rides" ? t("rh_title") : t("nav_activity");
+  const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "wbook" ? t("or_hire_bk") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (
     <div style={{ background: BLUE_WASH, minHeight: "70vh" }}>
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "14px 16px 24px" }}>
@@ -84,6 +84,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
           )}
           {part === "work" && !isWorker && view === "past" && (role === "ride" ? <RideHistory api={api} /> : role === "owner" ? <OwnerHistory api={api} /> : role === "delivery" ? <RiderHistory api={api} /> : <div style={{ margin: "14px 0", color: T.inkSoft, fontSize: 14 }}>{t("st_noorders")}</div>)}
           {part === "mine" && <MyOrdersList api={api} view={view} showEmpty />}
+          {part === "wbook" && <MyBookings asWorker notices={notices} onNoticeDismiss={onNoticeDismiss} api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "bookings" && <MyBookings notices={notices} onNoticeDismiss={onNoticeDismiss} api={api} items={bookings} view={view} onChat={onChat} onChanged={onBookingsChanged} />}
           {part === "items" && <ItemOrdersList api={api} onHire={onHire} view={view} />}
         </>
