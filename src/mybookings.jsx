@@ -126,7 +126,12 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
     setBusy(null); onChanged && onChanged();
   };
   const remove = async (x) => { setBusy(x.id); try { await api.bookingRemove(x.id); } catch (_) {} setBusy(null); setSure(null); onChanged && onChanged(); };
-  const complete = async (x) => { setBusy(x.id); try { await api.bookingComplete(x.id); } catch (_) {} setBusy(null); onChanged && onChanged(); };
+  const [cmsg, setCmsg] = useState(null);
+  const complete = async (x) => {
+    setBusy(x.id); setCmsg(null);
+    try { const r = await api.bookingComplete(x.id); const y = Array.isArray(r) ? r[0] : r; if (y && y.ok === false && y.reason === "verify_first") setCmsg({ id: x.id, msg: t("rp_verify_first") }); } catch (_) {}
+    setBusy(null); onChanged && onChanged();
+  };
   const sendReport = async () => {
     if (!rep || !rep.reason) return;
     setRep({ ...rep, state: "busy" });
@@ -227,6 +232,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
             {live && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
                 {asWorker && x.status === "accepted" && <button disabled={busy === x.id} onClick={() => complete(x)} style={pill("#15803D", "#fff", { flex: "1 1 150px" })}>{plan ? t("rp_done") : t("mbk_mark_done")}</button>}
+                {cmsg && cmsg.id === x.id && <div role="alert" style={{ flex: "1 1 100%", color: "#B91C1C", fontSize: 13.5, fontWeight: 700 }}>{cmsg.msg}</div>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
                 {!(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}

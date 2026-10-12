@@ -49,6 +49,7 @@ Payments and wallet:
 31. `232_vehicle_class_1.sql`, `232_vehicle_class_2.sql` (car, taxi and cab are one category)
 32. `233_ride_plan_1.sql`, `233_ride_plan_2.sql` (scheduled rides: pickup and drop time, once / daily / weekly; the driver receives a booking)
 33. `234_plan_live_1.sql`, `234_plan_live_2.sql` (map and live location for scheduled rides; "Ride completed" alert). Redeploy `push-send` again.
+34. `235_plan_code_1.sql`, `235_plan_code_2.sql` (a four digit trip code for scheduled rides)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

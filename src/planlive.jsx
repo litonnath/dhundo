@@ -55,6 +55,48 @@ export function WorkSiteMap({ site, address }) {
   );
 }
 
+
+// The trip code: the customer shows it, the rider types it in to start the trip.
+function PlanCode({ api, id, asWorker }) {
+  const { t } = useI18n();
+  const [st, setSt] = useState(null);
+  const [val, setVal] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = async () => { try { setSt(many(await api.planCode(id))[0] || null); } catch (_) { /* next tick */ } };
+  useEffect(() => { load(); const timer = setInterval(() => { if (!document.hidden) load(); }, 5000); return () => clearInterval(timer); }, [api, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return null;
+  const box = { borderRadius: 14, padding: "12px 14px", margin: "8px 0" };
+  if (!st.valid_today && !st.any_started) return <div style={{ ...box, background: "#F3F6FA", border: `1px solid ${T.line}`, fontSize: 13.5, color: T.inkSoft }}>{t("pc_on_day")}</div>;
+  if (st.started) return <div style={{ ...box, background: "#ECFDF3", border: "1px solid #A7E3BE", fontSize: 14.5, fontWeight: 800, color: "#0F6B33" }}>{"\u2713 "}{t("pc_started")}</div>;
+  if (!st.valid_today) return null;
+  if (!asWorker) {
+    return (
+      <div style={{ ...box, background: "#F3F6FA", border: `1px solid ${T.line}`, textAlign: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.inkSoft }}>{t("rv_title")}</div>
+        <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: 10, color: T.ink, margin: "4px 0 2px" }}>{st.code || "\u2026"}</div>
+        <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45 }}>{t("rv_hint")}</div>
+      </div>
+    );
+  }
+  const verify = async () => {
+    setBusy(true); setMsg("");
+    try { const r = many(await api.planVerify(id, val))[0]; if (r && r.ok) { setVal(""); await load(); } else setMsg(t("rv_wrong")); } catch (_) { setMsg(t("rv_wrong")); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ ...box, background: "#FFF7E6", border: "1px solid #F3D48A" }}>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#7A4A00", marginBottom: 8 }}>{t("rv_enter")}</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input style={{ flex: 1, minHeight: 48, borderRadius: 12, border: `1.5px solid ${T.line}`, textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 8, fontFamily: "inherit" }} inputMode="numeric" maxLength={4} value={val}
+               placeholder={"\u2022\u2022\u2022\u2022"} aria-label={t("rv_enter")} onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))} />
+        <Btn disabled={busy || val.length !== 4} onClick={verify}>{t("pc_verify")}</Btn>
+      </div>
+      {msg && <div style={{ fontSize: 13, fontWeight: 700, color: "#B91C1C", marginTop: 8 }}>{msg}</div>}
+    </div>
+  );
+}
+
 export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = "" }) {
   const { t } = useI18n();
   const [pts, setPts] = useState([]);
@@ -125,6 +167,7 @@ export function PlanLive({ api, id, accepted, asWorker, fromText = "", toText = 
   );
   return (
     <div style={{ padding: "4px 14px 8px" }}>
+      {accepted && <PlanCode api={api} id={id} asWorker={asWorker} />}
       {nav && <RouteNav from={nav.from} to={nav.to} title={nav.title} onClose={() => setNav(null)} />}
       <UberMap markers={markers} lines={lines} height="34vh" fitKey={`${!!meP}${!!other}${!!trip}`} />
       {away != null && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "6px 0 2px" }}>{String(t("pl_rider_away")).replace("{n}", fmt(away))}</div>}

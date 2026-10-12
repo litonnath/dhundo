@@ -1943,4 +1943,8 @@ export default {
   hr_work_place: "Work place",
   pl_go_pickup: "Go to the pickup",
   pl_go_dest: "Go to the destination",
+  pc_on_day: "The trip code appears here on the day of the trip.",
+  pc_started: "Trip started",
+  pc_verify: "Start trip",
+  rp_verify_first: "Start the trip with the customer's code first.",
 };

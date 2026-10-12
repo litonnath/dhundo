@@ -475,6 +475,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     bookingRequest: (worker, startIso, minutes, note) =>
       rpc("services_booking_request", { p_worker: worker, p_start: startIso, p_minutes: minutes, p_note: note || null }, true),
     ridePlanRequest: (o) => rpc("services_ride_plan_request", { p_worker: o.worker, p_start: o.start, p_minutes: o.minutes, p_repeat: o.repeat, p_until: o.until || null, p_pick: o.pick, p_drop: o.drop, p_km: o.km, p_note: o.note || null, p_pick_lat: o.pickLat == null ? null : o.pickLat, p_pick_lng: o.pickLng == null ? null : o.pickLng, p_drop_lat: o.dropLat == null ? null : o.dropLat, p_drop_lng: o.dropLng == null ? null : o.dropLng }, true),
+    planCode: (id) => rpc("services_plan_code", { p_booking: id }, true),
+    planVerify: (id, code) => rpc("services_plan_verify", { p_booking: id, p_code: code }, true),
     planLiveSet: (id, lat, lng) => rpc("services_plan_live_set", { p_booking: id, p_lat: lat, p_lng: lng }, true),
     planLiveGet: (id) => rpc("services_plan_live_get", { p_booking: id }, true),
     bookingAnswer: (id, accept) => rpc("services_booking_answer", { p_id: id, p_accept: !!accept }, true),
