@@ -4,17 +4,54 @@
 import React, { useEffect, useRef, useState } from "react";
 import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
-import { UberMap, useRoadRoute, kmBetween } from "./nearmap.jsx";
+import { UberMap, useRoadRoute, kmBetween, RouteNav } from "./nearmap.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const fmt = (km) => (km < 1 ? `${Math.max(50, Math.round(km * 10) * 100)} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
 
 // The road for a pickup and a destination, used both here and in the booking sheet.
-export function RoutePreviewMap({ pick, drop, height = "34vh" }) {
+export function RoutePreviewMap({ pick, drop, height = "34vh", info = false, labels = null }) {
+  const { t } = useI18n();
   const rt = useRoadRoute(pick, drop);
   if (!pick || !drop) return null;
-  const markers = [{ id: "a", kind: "pickup", lat: pick.lat, lng: pick.lng }, { id: "b", kind: "drop", lat: drop.lat, lng: drop.lng }];
-  return <UberMap markers={markers} lines={rt ? [{ pts: rt.pts }] : []} height={height} fitKey={rt ? "r" : "l"} />;
+  const markers = [{ id: "a", kind: "pickup", lat: pick.lat, lng: pick.lng, label: labels ? labels[0] : "" }, { id: "b", kind: "drop", lat: drop.lat, lng: drop.lng, label: labels ? labels[1] : "" }];
+  return (
+    <div>
+      <UberMap markers={markers} lines={rt ? [{ pts: rt.pts }] : []} height={height} fitKey={rt ? "r" : "l"} />
+      {info && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "6px 0 2px" }}>{rt ? `${rt.km < 10 ? rt.km.toFixed(1) : Math.round(rt.km)} km ${t("pl_by_road")} \u00B7 ${rt.min} ${t("nav_min")}` : t("rdv_road_wait")}</div>}
+    </div>
+  );
+}
+
+// The work place of a hire booking, as the owner of the vehicle sees it: the pin, the road from where
+// he is now (his phone), the distance and the time, and the full-screen directions.
+export function WorkSiteMap({ site, address }) {
+  const { t } = useI18n();
+  const [me, setMe] = useState(null);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    const geo = typeof navigator !== "undefined" && navigator.geolocation;
+    if (!geo) return undefined;
+    let dead = false;
+    geo.getCurrentPosition((g) => { if (!dead) setMe({ lat: g.coords.latitude, lng: g.coords.longitude }); }, () => {}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+    return () => { dead = true; };
+  }, []);
+  const rt = useRoadRoute(me, site);
+  const markers = [{ id: "w", kind: "drop", lat: site.lat, lng: site.lng, label: t("pl_work_site") }];
+  if (me) markers.push({ id: "me", kind: "me", lat: me.lat, lng: me.lng });
+  return (
+    <div style={{ padding: "4px 0 8px" }}>
+      {full && <RouteNav from={me} to={site} title={t("rdv_to_drop")} onClose={() => setFull(false)} />}
+      <UberMap markers={markers} lines={rt ? [{ pts: rt.pts }] : []} height="30vh" fitKey={`${!!me}${!!rt}`} />
+      <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: "6px 0 2px" }}>
+        {rt ? `${rt.km < 10 ? rt.km.toFixed(1) : Math.round(rt.km)} km ${t("pl_from_you")} \u00B7 ${rt.min} ${t("nav_min")}` : me ? t("rdv_road_wait") : t("pl_finding_you")}
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+        <Btn kind="ghost" onClick={() => setFull(true)}>{t("rdv_dir")}</Btn>
+        <a href={`https://www.google.com/maps/dir/?api=1&destination=${site.lat},${site.lng}&travelmode=driving`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 16px", borderRadius: 22, background: "#0B3A78", color: "#fff", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>{t("pl_gmaps")}</a>
+      </div>
+    </div>
+  );
 }
 
 export function PlanLive({ api, id, accepted, asWorker }) {

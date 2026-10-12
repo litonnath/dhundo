@@ -400,11 +400,12 @@ export function BookingSheet({ api, row, onClose, place, preset = null }) {
     setBusy(true); setMsg(null);
     // The owner reads this as one line, so it is kept to plain English.
     const units = { rt_u_hour: "hour", rt_u_day: "day", rt_u_week: "week", rt_u_month: "month", rt_u_trip: "trip", rt_u_km: "km", rt_u_job: "job" };
+    const geoTag = where && typeof where.lat === "number" && typeof where.lng === "number" ? ` [@${where.lat.toFixed(5)},${where.lng.toFixed(5)}]` : "";
     const text = [
       rate ? `Rate: ${rate.label} ${rateText(rate, (k) => units[k])}` : "",
       pay ? `Offer: \u20B9${pay}` : "",
       placeText ? `At: ${placeText}` : "",
-    ].filter(Boolean).join(" \u00b7 ").slice(0, 300);
+    ].filter(Boolean).join(" \u00b7 ").slice(0, 300 - geoTag.length) + geoTag;
     try {
       const r = one(await api.bookingRequest(row.id, startDate.toISOString(), total, text));
       if (r && r.ok) setSent(true);

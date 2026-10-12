@@ -11,6 +11,7 @@ import { fmtLength } from "./hub.jsx";
 import { useI18n } from "./i18n.jsx";
 import { BookingSheet } from "./hub.jsx";
 import { kmBetween, vehicleEmoji, vehicleClass } from "./nearmap.jsx";
+import { RoutePreviewMap } from "./planlive.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] : r);
@@ -25,6 +26,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   const [to, setTo] = useState(todayStr);
   const days = Math.min(365, Math.max(1, Math.round((new Date(to + "T00:00:00") - new Date(from + "T00:00:00")) / 86400000) + 1)) || 1;
   const [preset, setPreset] = useState(null);
+  const [mapFor, setMapFor] = useState(null);
   const [rows, setRows] = useState(null);
   const [info, setInfo] = useState({});
   const [book, setBook] = useState(null);
@@ -70,6 +72,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
             daily: dy ? Number(dy.rupees) : null,
             perKm: km ? Number(km.rupees) : (Number(pr.per_km_rupees) > 0 ? Number(pr.per_km_rupees) : null),
             away: hm && typeof hm.lat === "number" ? kmBetween(pick, hm) : (r.distance_km != null ? Number(r.distance_km) : null),
+            home: hm && typeof hm.lat === "number" ? { lat: hm.lat, lng: hm.lng } : null,
             where: (hm && hm.address) || r.locality || "",
             online: on.has(r.id),
           };
@@ -164,6 +167,12 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
                 </div>
               ) : null;
             })()}
+            {d.home && (
+              <div style={{ marginTop: 10 }}>
+                <button onClick={() => setMapFor(mapFor === r.id ? null : r.id)} style={{ background: "none", border: "none", color: T.brandDark, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", padding: 0, minHeight: 36 }}>{mapFor === r.id ? t("hr_map_hide") : t("hr_map_show")}</button>
+                {mapFor === r.id && <RoutePreviewMap pick={d.home} drop={{ lat: pick.lat, lng: pick.lng }} info labels={[t("hr_vehicle_base"), t("hr_work_place")]} />}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Btn kind="call" disabled={busy === r.id} onClick={() => call(r)}>{t("fk_call")}</Btn>
               <Btn onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } if (byDays) { const st = new Date(from + "T09:00:00"); setPreset({ start: st.getTime() < Date.now() ? new Date(Date.now() + 10 * 60000) : st, mins: days * 1440 }); } else setPreset(null); setBook(r); }}>{mine.some((m) => m.worker_id === r.id) ? t("hq_again") : t("hr_book")}</Btn>

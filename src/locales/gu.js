@@ -1932,4 +1932,13 @@ export default {
   pl_rider_away: "The rider is {n} from the pickup",
   pl_customer: "Customer",
   pl_rider: "Rider",
+  pl_by_road: "by road",
+  pl_from_you: "from you",
+  pl_finding_you: "Finding your location…",
+  pl_gmaps: "Open in Google Maps",
+  pl_work_site: "Work place",
+  hr_map_show: "Show on map: distance to the work place",
+  hr_map_hide: "Hide map",
+  hr_vehicle_base: "Vehicle",
+  hr_work_place: "Work place",
 };

@@ -1,7 +1,7 @@
 // Bookings: a worker asked to come (cook, plumber and so on). Used by the
 // customer ("My bookings") and by the worker ("Requests from customers").
 // One card per request: who, what for, when, where, the rate card, the answer.
-import { PlanLive } from "./planlive.jsx";
+import { PlanLive, WorkSiteMap } from "./planlive.jsx";
 import React, { useState, useEffect } from "react";
 import { T, Icon } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
@@ -174,8 +174,10 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
         const fullTxt = dy ? money(dy) : hr ? money(hr * 8) : span(lo, hi, 480);
         const estTxt = (hr && m) ? money(Math.round((hr * m) / 60)) : (dy && m) ? r10((dy * m) / 480) : span(lo, hi, m);
         const live = ["requested", "accepted"].includes(x.status);
-        const place = x.note ? String(x.note).replace(/^At:\s*/i, "") : "";
-        const plan = parsePlan(x.note);
+        const geoM = /\s*\[@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\]\s*$/.exec(String(x.note || ""));
+        const site = geoM ? { lat: Number(geoM[1]), lng: Number(geoM[2]) } : null;
+        const place = x.note ? String(x.note).replace(/\s*\[@[^\]]*\]\s*$/, "").replace(/^At:\s*/i, "") : "";
+        const plan = parsePlan(String(x.note || "").replace(/\s*\[@[^\]]*\]\s*$/, ""));
         return (
           <div key={x.id} style={{ background: "#fff", border: "1px solid #D6E3F5", borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(11,58,120,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 14px 12px", background: "linear-gradient(135deg,#EEF4FD,#F8FAFE)" }}>
@@ -208,6 +210,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
               </div>
             )}
+            {!plan && site && live && asWorker && <div style={{ padding: "0 14px" }}><WorkSiteMap site={site} address={place} /></div>}
             {!plan && !asWorker && (lo || hi || hr || dy || mo) && (
               <div style={{ margin: "6px 14px 10px", border: "1px solid #CFE0F7", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "8px 12px", background: "#E8F0FB", fontSize: 12.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#0B3A78" }}>{t(asWorker ? "mbk_card_you" : "mbk_card")}</div>

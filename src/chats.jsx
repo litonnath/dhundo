@@ -107,7 +107,7 @@ export function ChatsPage({ items, onOpen, onHome, alerts = 0, onRequests = null
                       {x.trade_name && <span style={{ display: "block", fontSize: 12.5, fontWeight: 800, color: T.brandDark, marginTop: 1 }}>{t("ch_for")}: {x.trade_name}</span>}
                       <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
                         <span style={{ flex: 1, fontSize: 13.5, color: x.unread ? T.ink : T.inkSoft, fontWeight: x.unread ? 700 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {x.last_body ? `${x.last_mine ? `${t("ch_you")}: ` : ""}${x.last_body}` : (x.note || t("ch_req_sent"))}
+                          {x.last_body ? `${x.last_mine ? `${t("ch_you")}: ` : ""}${x.last_body}` : (String(x.note || "").replace(/\s*\[@[^\]]*\]\s*$/, "") || t("ch_req_sent"))}
                         </span>
                         {x.unread > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, background: "#1FA85A", color: "#fff", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>{x.unread}</span>}
                       </span>
@@ -190,7 +190,7 @@ export function ChatScreen({ api, item, onClose, onChanged }) {
         <div style={{ background: T.white, borderBottom: `1px solid ${T.line}`, padding: "8px 14px", fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5 }}>
           {item.trade_name && <><b style={{ color: T.ink }}>{t("ch_for")}: {item.trade_name}</b><br /></>}
           {item.start_at && <b style={{ color: T.ink }}>{when(item.start_at, true)}{item.duration_mins ? ` · ${fmtLength(item.duration_mins, t)}` : ""}</b>}
-          {item.note ? <><br />{item.note}</> : null}
+          {item.note ? <><br />{String(item.note).replace(/\s*\[@[^\]]*\]\s*$/, "")}</> : null}
         </div>
         <div ref={box} style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
           {msgs.length === 0 && <div style={{ textAlign: "center", color: T.inkFaint, fontSize: 14, marginTop: 28 }}>{t("ch_empty")}</div>}
@@ -280,7 +280,7 @@ export function NotificationsSheet({ api, items, jobs, rides = [], onRides, onCl
                 <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>
                   {x.start_at ? when(x.start_at, true) : ""}{x.duration_mins ? ` · ${fmtLength(x.duration_mins, t)}` : ""}
                 </span>
-                {x.note && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{x.note}</span>}
+                {x.note && <span style={{ display: "block", fontSize: 12.5, color: T.inkSoft, marginTop: 2 }}>{String(x.note).replace(/\s*\[@[^\]]*\]\s*$/, "")}</span>}
                 {["declined", "cancelled"].includes(x.status) && x.closes_at && (
                   <span style={{ display: "block", fontSize: 12, color: T.inkFaint, marginTop: 2 }}>{String(t("ch_left")).replace("{n}", Math.max(1, Math.ceil((new Date(x.closes_at) - Date.now()) / 3600000)))}</span>
                 )}
