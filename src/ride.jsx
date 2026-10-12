@@ -606,7 +606,9 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
   const [chat, setChat] = useState(false);
   const [more, setMore] = useState(false);
   const [full, setFull] = useState(false);
-  const [min, setMin] = useState(false);
+  const minKey = `dh_ride_min_${r.id}`;
+  const [min, setMinS] = useState(() => { try { return window.sessionStorage.getItem(minKey) === "1"; } catch (_) { return false; } });
+  const setMin = (v) => { setMinS(v); try { window.sessionStorage.setItem(minKey, v ? "1" : "0"); } catch (_) {} };
   const [info, setInfo] = useState("");
   const auto = useRef(false);
   const dropPt = typeof r.drop_lat === "number" ? { lat: r.drop_lat, lng: r.drop_lng } : null;
@@ -660,7 +662,9 @@ function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
   const [started, setStarted] = useState(false);
   const [chat, setChat] = useState(false);
   const [more, setMore] = useState(false);
-  const [min, setMin] = useState(false);
+  const minKey = `dh_ride_min_${ride.id}`;
+  const [min, setMinS] = useState(() => { try { return window.sessionStorage.getItem(minKey) === "1"; } catch (_) { return false; } });
+  const setMin = (v) => { setMinS(v); try { window.sessionStorage.setItem(minKey, v ? "1" : "0"); } catch (_) {} };
   const [info, setInfo] = useState("");
   return (
     <>

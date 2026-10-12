@@ -51,6 +51,27 @@ function ReschedPanel({ api, x, resched, setResched, busy, rmsg, setRmsg, onSave
   );
 }
 
+// A scheduled ride request carries its details in the note; show them as a clean card.
+const PLAN_RE = /^Scheduled rides\. From: (.*?) To: (.*?)\. Pickup (.*?), drop by (.*?)\. (One trip|Every day until .*?|Every week until .*?)\. (\d+) trip\(s\) x Rs (\d+) = Rs (\d+)\.(?: (.*))?$/s;
+const parsePlan = (note) => { const m = PLAN_RE.exec(String(note || "")); return m ? { from: m[1], to: m[2], pick: m[3], drop: m[4], rep: m[5], trips: m[6], fare: m[7], total: m[8], extra: m[9] || "" } : null; };
+function PlanBox({ plan, startAt, t }) {
+  const dot = (shape, color) => <span style={{ width: 11, height: 11, borderRadius: shape === "dot" ? "50%" : 3, background: color, flexShrink: 0, marginTop: 5 }} />;
+  const chip = (txt) => <span style={{ fontSize: 13, fontWeight: 800, color: "#0B3A78", background: "#EAF1FB", borderRadius: 14, padding: "5px 11px" }}>{txt}</span>;
+  const rep = plan.rep.startsWith("Every day") ? `${t("rp_daily")} \u00B7 ${t("rp_until")} ${plan.rep.replace(/^Every day until /, "")}` : plan.rep.startsWith("Every week") ? `${t("rp_weekly")} \u00B7 ${t("rp_until")} ${plan.rep.replace(/^Every week until /, "")}` : t("rp_once");
+  const first = startAt ? new Date(startAt).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) : "";
+  return (
+    <div style={{ padding: "8px 14px 4px" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6 }}>{dot("dot", "#16A34A")}<span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.35, overflowWrap: "anywhere" }}>{plan.from}</span></div>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>{dot("sq", "#DC2626")}<span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, lineHeight: 1.35, overflowWrap: "anywhere" }}>{plan.to}</span></div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        {chip(`${plan.pick} \u2192 ${plan.drop}`)}{chip(rep)}{first ? chip(`${t("rp_first")}: ${first}`) : null}
+      </div>
+      <div style={{ fontSize: 14.5, color: T.ink, marginBottom: 4 }}>{plan.trips} {t("rp_trips")} {"\u00D7"} {"\u20B9"}{plan.fare} = <b>{"\u20B9"}{plan.total}</b></div>
+      {plan.extra ? <div style={{ fontSize: 13.5, color: T.inkSoft, overflowWrap: "anywhere" }}>{plan.extra}</div> : null}
+    </div>
+  );
+}
+
 export function MyBookings({ api, items, view, onChat, onChanged, asWorker = false, notices = [], onNoticeDismiss = null }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(null);
@@ -60,6 +81,14 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const [rep, setRep] = useState(null); // { id, reason, note, state }
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
   const doneIds = mine.filter((x) => x.status === "completed").map((x) => x.id).join(",");
+  const [wsum, setWsum] = useState({});
+  const wids = asWorker ? "" : Array.from(new Set(mine.map((x) => x.worker_id).filter(Boolean))).join(",");
+  useEffect(() => {
+    if (!wids || !api.ratingSummary) return;
+    let alive = true;
+    Promise.resolve(api.ratingSummary(wids.split(","))).then((r) => { const m = {}; (Array.isArray(r) ? r : []).forEach((x) => { m[x.worker_id] = x; }); if (alive) setWsum(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, [wids]); // eslint-disable-line react-hooks/exhaustive-deps
   const [rated, setRated] = useState(null);
   const loadRated = () => {
     if (!doneIds || !api.bookingRated) { setRated({}); return; }
@@ -136,6 +165,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
         const estTxt = (hr && m) ? money(Math.round((hr * m) / 60)) : (dy && m) ? r10((dy * m) / 480) : span(lo, hi, m);
         const live = ["requested", "accepted"].includes(x.status);
         const place = x.note ? String(x.note).replace(/^At:\s*/i, "") : "";
+        const plan = parsePlan(x.note);
         return (
           <div key={x.id} style={{ background: "#fff", border: "1px solid #D6E3F5", borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(11,58,120,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 14px 12px", background: "linear-gradient(135deg,#EEF4FD,#F8FAFE)" }}>
@@ -143,6 +173,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 18, fontWeight: 800, color: "#0B3A78", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.other_name || x.trade_name}</span>
                 {x.trade_name && <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: T.inkSoft, marginTop: 2 }}>{x.trade_name}</span>}
+                {!asWorker && wsum[x.worker_id] && wsum[x.worker_id].n > 0 && <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#B7791F", marginTop: 2 }}>{"\u2605"} {Number(wsum[x.worker_id].avg_stars).toFixed(1)} <span style={{ color: T.inkSoft, fontWeight: 600 }}>({wsum[x.worker_id].n})</span></span>}
               </span>
               <span style={{ fontSize: 12.5, fontWeight: 800, padding: "5px 11px", borderRadius: 14, color: fg, background: bg, whiteSpace: "nowrap" }}>{label[x.status] || x.status}</span>
             </div>
@@ -161,11 +192,13 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 </div>
               ) : null;
             })()}
-            <div style={{ padding: "6px 14px 4px" }}>
-              {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
-              {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
-            </div>
-            {!asWorker && (lo || hi || hr || dy || mo) && (
+            {plan ? <PlanBox plan={plan} startAt={x.start_at} t={t} /> : (
+              <div style={{ padding: "6px 14px 4px" }}>
+                {field("clock", String(t("mbk_when")).replace(/[:：]$/, ""), x.start_at ? `${stamp(x.start_at)}${m ? ` · ${mins(m)}` : ""}` : "")}
+                {field("pin", String(t("mbk_where")).replace(/[:：]$/, ""), place)}
+              </div>
+            )}
+            {!plan && !asWorker && (lo || hi || hr || dy || mo) && (
               <div style={{ margin: "6px 14px 10px", border: "1px solid #CFE0F7", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "8px 12px", background: "#E8F0FB", fontSize: 12.5, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#0B3A78" }}>{t(asWorker ? "mbk_card_you" : "mbk_card")}</div>
                 {[[t("mbk_1h"), hourTxt], [t("mbk_half"), halfTxt], [t("mbk_full"), fullTxt]].concat(mo ? [[t("mbk_month"), money(mo)]] : []).map(([k, v]) => (

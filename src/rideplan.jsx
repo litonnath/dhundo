@@ -29,6 +29,7 @@ export function RidePlanSheet({ api, pick, drop, km, vehicle, place, signedIn, o
   const card = useRateCard(api);
   const [drivers, setDrivers] = useState(null);
   const [sel, setSel] = useState(null);
+  const [sums, setSums] = useState({});
   const [repeat, setRepeat] = useState("daily");
   const [from, setFrom] = useState(() => ymd(new Date()));
   const [until, setUntil] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 29); return ymd(d); });
@@ -47,6 +48,7 @@ export function RidePlanSheet({ api, pick, drop, km, vehicle, place, signedIn, o
         const all = many(await api.browse({ group: "Drivers", lat: pick.lat, lng: pick.lng, radiusKm: 30, limit: 30, state: place && place.state }));
         const list = all.filter((r) => vehicleClass(r.trade_slug) === vehicleClass(vehicle)).slice(0, 15);
         if (live) { setDrivers(list); if (list[0]) setSel(list[0].id); }
+        if (list.length && api.ratingSummary) { const m = {}; many(await api.ratingSummary(list.map((d) => d.id)).catch(() => [])).forEach((x) => { m[x.worker_id] = x; }); if (live) setSums(m); }
       } catch (_) { if (live) setDrivers([]); }
     })();
     return () => { live = false; };
@@ -99,7 +101,7 @@ export function RidePlanSheet({ api, pick, drop, km, vehicle, place, signedIn, o
           {drivers && drivers.length === 0 && <div style={{ fontSize: 14, color: T.inkFaint, marginBottom: 8 }}>{t("hr_none")}</div>}
           {(drivers || []).map((d) => (
             <button key={d.id} onClick={() => setSel(d.id)} aria-pressed={sel === d.id} style={{ display: "flex", width: "100%", alignItems: "center", gap: 10, minHeight: 50, padding: "8px 12px", marginBottom: 6, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left", border: `2px solid ${sel === d.id ? T.brandDark : T.line}`, background: sel === d.id ? T.brandSoft : T.white }}>
-              <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: T.ink }}>{d.display_name}<span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: T.inkSoft }}>{d.trade_name}</span></span>
+              <span style={{ flex: 1, fontSize: 15, fontWeight: 800, color: T.ink }}>{d.display_name}<span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: T.inkSoft }}>{d.trade_name}</span>{sums[d.id] && sums[d.id].n > 0 ? <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#B7791F" }}>{"\u2605"} {Number(sums[d.id].avg_stars).toFixed(1)} <span style={{ color: T.inkSoft, fontWeight: 600 }}>({sums[d.id].n})</span></span> : <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: T.inkFaint }}>{t("rp_new_driver")}</span>}</span>
               {d.distance_km != null && <span style={{ fontSize: 13, fontWeight: 800, color: T.brandDark }}>{Number(d.distance_km).toFixed(1)} km</span>}
             </button>
           ))}

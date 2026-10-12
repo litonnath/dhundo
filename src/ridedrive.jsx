@@ -54,7 +54,7 @@ export function RideShell({ hidden, onMin, map, children }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 560, background: "#E8EEF4", display: hidden ? "none" : "block" }}>
       {map}
-      <button onClick={onMin} style={{ position: "absolute", left: 12, top: "calc(12px + env(safe-area-inset-top))", zIndex: 6, minHeight: 44, padding: "0 16px 0 12px", borderRadius: 22, border: "none", background: "#fff", color: T.ink, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,.25)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <button onClick={() => { onMin(); try { window.dispatchEvent(new Event("dhundo:home")); } catch (_) {} }} style={{ position: "absolute", left: 12, top: "calc(12px + env(safe-area-inset-top))", zIndex: 6, minHeight: 44, padding: "0 16px 0 12px", borderRadius: 22, border: "none", background: "#fff", color: T.ink, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,.25)", display: "inline-flex", alignItems: "center", gap: 6 }}>
         <span aria-hidden="true">{"\u2039"}</span>{t("rdv_home")}
       </button>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6, background: "#fff", borderRadius: "22px 22px 0 0", boxShadow: "0 -6px 24px rgba(15,23,42,.22)", padding: "12px 14px calc(14px + env(safe-area-inset-bottom))", maxHeight: "62dvh", overflowY: "auto", boxSizing: "border-box", maxWidth: 640, margin: "0 auto" }}>

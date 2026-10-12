@@ -2989,6 +2989,12 @@ export default function ServicesPage({
   // second hand request waiting for the seller.
   const [ordersBadge, setOrdersBadge] = useState(0);
   const [ordersKey, setOrdersKey] = useState(0);
+  const [homeKey, setHomeKey] = useState(0); // bumping it returns the home screen to its start
+  useEffect(() => {
+    const go = () => { setOfferPick(false); setHomeKey((k) => k + 1); setTab("browse"); };
+    window.addEventListener("dhundo:home", go);
+    return () => window.removeEventListener("dhundo:home", go);
+  }, []);
   const [liveNow, setLiveNow] = useState([]);
   const [bizOpen, setBizOpen] = useState(null);
   const [myStatus, setMyStatus] = useState(null);
@@ -3027,6 +3033,11 @@ export default function ServicesPage({
           .forEach((x) => now.push({ icon: "bag", title: x.other_name, sub: t("st_status_" + x.status), go: "mine" }));
         (Array.isArray(it) ? it : []).filter((x) => x.role === "buyer" && ["requested", "accepted"].includes(x.status)).slice(0, 2)
           .forEach((x) => now.push({ icon: "tag", title: t("mb_mine"), sub: x.status === "accepted" ? t("mb_accepted") : t("mb_wait"), go: "items" }));
+        try {
+          const rd = await (api.myRide ? api.myRide() : []);
+          (Array.isArray(rd) ? rd : rd ? [rd] : []).filter((x) => x.role === "passenger" && ["open", "accepted"].includes(x.status)).slice(0, 1)
+            .forEach((x) => now.push({ icon: "drivers", title: t("rd_title"), sub: x.status === "accepted" ? t("rd_found") : t("rd_searching"), go: "ride" }));
+        } catch (_) { /* no ride */ }
         if (live) { setOrdersBadge(a + b); setLiveNow(now); }
       } catch (_) { /* next tick */ }
     };
@@ -3270,7 +3281,7 @@ export default function ServicesPage({
           }} />
       )}
       {tab === "browse" && !offerPick && (
-        <Browse
+        <Browse key={homeKey}
           api={api} trades={trades} user={user} isAdmin={isAdmin}
           onSignIn={onSignIn}
           // Somebody who already listed and taps "List yourself" in the empty
@@ -3302,7 +3313,7 @@ export default function ServicesPage({
                 const total = 7 + (gaps.includes("id_doc") ? 0 : 0);
                 return { pct: Math.max(10, Math.round(100 * (1 - need.length / Math.max(total, need.length)))), missing: need, noPin: myRow.loc_source !== undefined && !["device", "picked"].includes(myRow.loc_source || "") };
               })()} onProfile={() => setTab("mine")} onWallet={() => setWalletOpen(true)} onOrders={() => openOrders(isRiderHome || isOwnerHome ? "work" : "mine")} onItems={() => openOrders("items")} walletPaise={walletPaise} />, status: myStatus, owner: isOwnerHome, online: avail.online, busy: avail.busy || !avail.loaded, toggle: () => (avail.online ? avail.goOffline() : avail.goOnline(4)), orders: ordersBadge, onOrders: () => openOrders(""), onListing: () => setTab("mine"), onSell: () => (isOwnerHome ? openBiz(myDriverKind === "hire" ? "rates" : "menu") : setTab("sell")), onDash: () => (isOwnerHome || (myDriverKind !== "delivery" && myDriverKind !== "travel") ? openBiz(null) : setTab("work")), error: avail.error } : null}
-          liveNow={liveNow} onLive={(sub) => openOrders(sub)}
+          liveNow={liveNow} onLive={(sub) => { if (sub === "ride") { try { window.localStorage.setItem("dhundo_open_section", "ride"); } catch (_) {} setHomeKey((k) => k + 1); setTab("browse"); } else openOrders(sub); }}
           onBook={(row) => { if (!signedIn) { onSignIn && onSignIn(); return; } setBookRow(row); }}
         />
       )}

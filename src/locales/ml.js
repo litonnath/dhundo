@@ -1919,4 +1919,6 @@ export default {
   rp_send: "Send request to the driver",
   rp_sent: "Request sent: {n} trip(s), {a} in all. The driver will accept or decline.",
   rp_open: "You already have an open request with this driver.",
+  rp_first: "First trip",
+  rp_new_driver: "New driver",
 };
