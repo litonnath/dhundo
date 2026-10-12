@@ -1384,6 +1384,7 @@ export function LocationPill({ place, onOpen, compact }) {
   const area = (place && place.area) || "";
   return (
     <button
+      className="dh-loc"
       onClick={onOpen}
       style={{
         display: "flex", alignItems: "center", gap: 7,
@@ -1431,7 +1432,7 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
       backdropFilter: "saturate(180%) blur(14px)", WebkitBackdropFilter: "saturate(180%) blur(14px)",
       position: "sticky", top: 0, zIndex: 50,
     }}>
-      <div style={{
+      <div className="dh-hdr" style={{
         maxWidth: 1180, margin: "0 auto", padding: "8px 14px",
         display: "flex", alignItems: "center", gap: 8, minWidth: 0,
       }}>
@@ -1443,7 +1444,8 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
         >
           <DhundoLogo size={31} />
         </button>
-        <span style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
+        <span className="dh-hdr-div" style={{ width: 1, height: 26, background: T.line, flexShrink: 0 }} />
+        <span className="dh-hdr-sp" style={{ display: "none" }} />
         <LocationPill place={place} onOpen={onOpenLocation} />
         <span className="dh-deskbar" style={{ display: "none", flex: 1, justifyContent: "center", gap: 6 }}>
           {[["browse", t("nav_home")], ["orders", t("nav_activity")], ...(showBiz ? [["bizpage", t("hm_mybiz")]] : []), ["chats", t("ch_tab")], ["account", t("nav_account")]].map(([k, label]) => {

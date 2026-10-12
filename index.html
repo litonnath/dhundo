@@ -38,6 +38,17 @@
       @media (max-width:899px){nav[aria-label="Dhundo"]{border-radius:20px 20px 0 0;backdrop-filter:blur(10px)}}
     </style>
     <style>
+      /* Narrow phones: the top bar takes two rows (logo, language, wallet and
+         notifications on the first; the place on its own full-width row), so
+         nothing is squeezed. */
+      @media (max-width:560px){
+        .dh-hdr{flex-wrap:wrap !important;row-gap:2px !important}
+        .dh-hdr-div{display:none !important}
+        .dh-hdr-sp{display:block !important;flex:1 1 0 !important;min-width:0 !important}
+        .dh-hdr .dh-loc{order:9 !important;flex:1 1 100% !important;max-width:none !important;min-height:40px !important}
+      }
+    </style>
+    <style>
       /* Map layers keep their own stacking order, so a map never draws over a
          pop-up sheet that opens above it. */
       .leaflet-container{isolation:isolate;z-index:0}
