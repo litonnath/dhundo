@@ -43,7 +43,8 @@ export function orderBill(o) {
   const delivery = n(o.delivery_fee_paise), dGst = n(o.delivery_gst_paise);
   const misc = n(o.misc_fee_paise), mGst = n(o.misc_gst_paise);
   // The delivery partner fee is paid straight to the rider, so it is not in total.
-  return { items, gst, delivery, dGst, misc, mGst, total: items + gst + dGst + misc + mGst };
+  const cod = n(o.cod_fee_paise); // cash-on-delivery fee (Dhundo's), 0 when paid online
+  return { items, gst, delivery, dGst, misc, mGst, cod, total: items + gst + dGst + misc + mGst + cod };
 }
 
 // Dhundo's registered details, for the bill. Empty until the admin saves them.

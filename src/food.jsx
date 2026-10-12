@@ -73,7 +73,7 @@ function Bill({ o, t, api, range = null }) {
     <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, color: T.inkSoft }}><span>{label}</span><span>{rupees(v)}</span></div>
   );
   const gstAll = b.gst + b.mGst; // one GST line: on the items and the app's delivery fee
-  if (gstAll + b.delivery + b.misc <= 0) return null;
+  if (gstAll + b.delivery + b.misc + b.cod <= 0) return null;
   // The rider's fee is paid straight to the rider, never through the app.
   const taken = !!(range && range.rider_taken);
   const lo = range ? Number(range.fee_min_paise) || b.delivery : b.delivery, hi = range ? Number(range.fee_max_paise) || b.delivery : b.delivery;
@@ -81,6 +81,7 @@ function Bill({ o, t, api, range = null }) {
     <div style={{ margin: "4px 0 2px" }}>
       {line("m", t("fr_misc"), b.misc)}
       {line("g", t("fr_gst"), gstAll)}
+      {line("c", t("cod_fee_line"), b.cod)}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 800, color: T.ink, marginTop: 2 }}><span>{t("st_topay")}</span><span>{rupees(b.total)}</span></div>
       {o.mode === "delivery" && (
         <div style={{ margin: "8px 0 0", padding: "9px 12px", background: "#F2FAF5", border: "1px solid #BEE3CB", borderRadius: 10, fontSize: 13.5, color: "#166534", lineHeight: 1.5 }}>
@@ -624,7 +625,8 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
   const [note, setNote] = useState("");
   const [needBy, setNeedBy] = useState("");
   const [shopPay, setShopPay] = useState(null);
-  const [payHow, setPayHow] = useState("cod");
+  const [payHow, setPayHow] = useState("online");
+  const [payFor, setPayFor] = useState(null); // an order placed and waiting for its payment
   useEffect(() => { let alive = true; Promise.resolve(api.storePay ? api.storePay(row.id) : null).then((r) => { const x = Array.isArray(r) ? r[0] : r; if (alive && x) { setShopPay(x); if (x.accepts_cash === false && x.accepts_upi) setPayHow("upi"); } }).catch(() => {}); return () => { alive = false; }; }, [api, row.id]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -657,13 +659,22 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
     try {
       const r = one(await api.orderPlace(row.id, lines.map((m) => ({ id: m.id, qty: cart[m.id] })), mode,
         mode !== "pickup" ? addrText : null, addr && addr.lat, addr && addr.lng,
-        (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note));
-      if (r && r.ok) { if (r.order_id && payHow !== "cod" && api.orderPay) { try { await api.orderPay(r.order_id, payHow); } catch (_) {} } onDone(); }
+        (needBy ? `Needed by ${new Date(needBy).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}${note ? " · " : ""}` : "") + note, payHow));
+      if (r && r.ok) { if (r.order_id && payHow === "online") setPayFor({ id: r.order_id, cents: total + gstP + miscP + miscG }); else onDone(); }
       else setMsg(r && r.reason === "too_big" ? t("sh_too_big") : r && r.reason === "closed" ? t("st_closed_err") : r && r.reason === "sign_in_required" ? t("e_signin") : t("e_save"));
     } catch (e) { setMsg((e && e.message) || t("e_save")); }
     setBusy(false);
   };
 
+  if (payFor) {
+    return (
+      <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 530, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 560, padding: "18px 18px calc(20px + env(safe-area-inset-bottom))", boxSizing: "border-box" }}>
+          <HoldPay api={api} orderId={payFor.id} cents={payFor.cents} shop={row.business_name || row.full_name} onDone={onDone} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
          style={{ position: "fixed", inset: 0, zIndex: 530, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -696,7 +707,7 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         {(gstP > 0 || mode !== "pickup") && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, margin: "0 0 12px" }}>
-            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG) / 100 * 100) / 100}</span>
+            <span>{t("st_topay")}</span><span>{"\u20B9"}{Math.round((total + gstP + miscP + miscG + (payHow === "cod" && mode !== "pickup" ? 3000 : 0)) / 100 * 100) / 100}</span>
           </div>
         )}
         {mode === "delivery" && (
@@ -744,18 +755,37 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
         )}
         <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 12px" }}>{t("st_pay_note")}</p>
         {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
-        {shopPay && shopPay.accepts_upi && (shopPay.accepts_cash !== false) && (
-          <div style={{ margin: "0 0 12px" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("pay_how")}</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[["cod", t("pay_cod")], ["upi", "UPI"]].map(([k, label]) => (
-                <button key={k} onClick={() => setPayHow(k)} aria-pressed={payHow === k} style={{ flex: 1, minHeight: 48, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 15, border: `2px solid ${payHow === k ? T.brandDark : T.line}`, background: payHow === k ? T.brandSoft : "#fff", color: T.ink }}>{label}</button>
-              ))}
-            </div>
-            {payHow === "upi" && shopPay.upi_id && <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>{t("pay_upi_hint")} <b>{shopPay.upi_id}</b></div>}
+        <div style={{ margin: "0 0 12px" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: T.inkSoft, marginBottom: 6 }}>{t("pay_how")}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["online", t("hp_online"), t("hp_online_sub")], ["cod", t("pay_cod"), mode !== "pickup" ? String(t("hp_cod_sub")).replace("{n}", "\u20B930") : ""]].map(([k, label, sub]) => (
+              <button key={k} onClick={() => setPayHow(k)} aria-pressed={payHow === k} style={{ flex: 1, minHeight: 56, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 15, padding: "6px 8px", border: `2px solid ${payHow === k ? T.brandDark : T.line}`, background: payHow === k ? T.brandSoft : "#fff", color: T.ink }}>
+                {label}{sub ? <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: k === "online" ? "#166534" : "#B45309", marginTop: 2 }}>{sub}</span> : null}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
         <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? `${t("st_place")} · ${rupees(total)}` : t("nav_signin")}</Btn>
+      </div>
+    </div>
+  );
+}
+
+// An order that is waiting for its payment. The restaurant sees it only after
+// the payment succeeds (or after the person picks cash on delivery).
+export function HoldPay({ api, orderId, cents, shop, onDone }) {
+  const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
+  const run = async (fn) => { setBusy(true); try { await fn(); } catch (_) { /* the list reloads */ } setBusy(false); onDone && onDone(); };
+  return (
+    <div style={{ background: "#EEF6FF", border: "1px solid #BFD9F5", borderRadius: 14, padding: "14px 14px", margin: "8px 0" }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{String(t("hp_title")).replace("{shop}", shop || "")}</div>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.5, margin: "4px 0 10px" }}>{t("hp_body")}</div>
+      {cents > 0 && <div style={{ fontSize: 20, fontWeight: 800, margin: "0 0 10px" }}>{rupees(cents)}</div>}
+      <PayOnline api={api} purpose="order" refId={orderId} full onPaid={() => onDone && onDone()} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+        <Btn kind="ghost" disabled={busy} onClick={() => run(() => api.orderPay(orderId, "cod"))}>{String(t("hp_cod_btn")).replace("{n}", "\u20B930")}</Btn>
+        <Btn kind="ghost" disabled={busy} onClick={() => run(() => api.orderCancel(orderId, "Changed my mind"))}>{t("hp_cancel")}</Btn>
       </div>
     </div>
   );
@@ -812,13 +842,13 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
           <div key={o.id} style={cardStyle}>
             <OrderHeader name={o.other_name} amount={orderBill(o).total}
                          sub={`${dateTime(o.created_at)} \u00B7 ${modeLabel(o.mode, t)}`} />
-            <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />
+            {o.pay_hold ? <HoldPay api={api} orderId={o.id} cents={orderBill(o).total} shop={o.other_name} onDone={load} /> : <CustomerBanner o={o} t={t} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && o.rider_name && ["accepted", "picked_up"].includes(o.job_status) && <DeliveryLive api={api} orderId={o.id} riderName={o.rider_name} eat={eatIds[o.worker_id] !== false} />}
             {o.mode === "delivery" && o.rider_name && o.delivery_fee_paise > 0 && !["cancelled", "rejected"].includes(o.status) && <FeeCustomerPay api={api} orderId={o.id} />}
             {o.mode === "delivery" && typeof o.cust_lat !== "number" && ["placed", "accepted", "ready"].includes(o.status) && <PinDoor api={api} orderId={o.id} place={null} onDone={load} />}
-            {!["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
+            {!o.pay_hold && !["delivered", "cancelled", "rejected"].includes(o.status) && <OrderTrack o={o} />}
             <ItemsBox lines={o.lines} />
-            {!["rejected", "cancelled"].includes(o.status) && (
+            {!o.pay_hold && !["rejected", "cancelled"].includes(o.status) && (
               <div style={{ margin: "8px 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
                 {!o.paid && !["delivered", "cancelled", "rejected"].includes(o.status) && <PayOnline api={api} purpose="order" refId={o.id} onPaid={load} />}

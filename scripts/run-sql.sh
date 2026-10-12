@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every new SQL file (180 to 223) in the right order against your database.
+# Runs every new SQL file (180 to 224) in the right order against your database.
 # Needs psql. Get the connection string in Supabase > Project Settings > Database >
 # Connection string (URI), and put your database password in it. Type it here, never in chat:
 #   export DATABASE_URL='postgresql://postgres:YOURPASSWORD@db.nowhtdsuestyduzqtcks.supabase.co:5432/postgres'
@@ -19,7 +19,8 @@ FILES="180_menu_photos 181_no_rider_fallback_1 181_no_rider_fallback_2 182_deliv
 210_worker_kinds 211_pickup_collected 212_support_1 212_support_2 212_support_3 213_payments_1 213_payments_2
 214_earnings 215_wallet_1 215_wallet_2 216_refunds 217_admin_payments 218_pay_flags 219_booking_pay_1
 219_booking_pay_2 219_booking_pay_3 220_payments_received 221_admin_refunds_1 221_admin_refunds_2
-222_withdraw_1 222_withdraw_2 223_pay_guard_1 223_pay_guard_2"
+222_withdraw_1 222_withdraw_2 223_pay_guard_1 223_pay_guard_2
+224_online_first_1 224_online_first_2 224_online_first_3 224_online_first_4 224_online_first_5"
 START="${START:-180}"; go=0
 for f in $FILES; do
   n="${f%%_*}"

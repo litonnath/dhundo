@@ -438,7 +438,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     pushUnsubscribe: (endpoint) => rpc("services_push_unsubscribe", { p_endpoint: endpoint }, true),
     menuDelete: (id) => rpc("services_menu_delete", { p_id: id }, true),
     setAccepting: (on) => rpc("services_set_accepting", { p_on: !!on }, true),
-    orderPlace: (workerId, lines, mode, address, lat, lng, note) => rpc("services_order_place", {
+    orderPlace: (workerId, lines, mode, address, lat, lng, note, pay) => rpc("services_order_place", {
+      p_pay: pay === "online" ? "online" : "cod",
       p_worker: workerId, p_lines: lines, p_mode: mode, p_address: address || null,
       p_lat: typeof lat === "number" ? lat : null, p_lng: typeof lng === "number" ? lng : null, p_note: note || null,
     }, true),

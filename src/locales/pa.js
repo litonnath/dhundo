@@ -1842,4 +1842,12 @@ export default {
   wal_wd_big: "That is more than your balance.",
   wal_wd_bank_hold: "For your safety, new bank details can be used after 24 hours. Please try again tomorrow.",
   po_back_review: "Payment received, but it could not be applied (already paid or a different amount). Dhundo will check and refund you.",
+  hp_online: "Pay online now",
+  hp_online_sub: "UPI · QR · card · wallet",
+  hp_cod_sub: "{n} extra",
+  hp_title: "Pay to send your order to {shop}",
+  hp_body: "The restaurant sees your order only after the payment succeeds. Cash on delivery costs extra, so paying online is cheaper.",
+  hp_cod_btn: "Cash on delivery instead ({n} extra)",
+  hp_cancel: "Cancel order",
+  cod_fee_line: "Cash on delivery fee",
 };
