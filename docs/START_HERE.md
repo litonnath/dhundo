@@ -51,6 +51,7 @@ Payments and wallet:
 33. `234_plan_live_1.sql`, `234_plan_live_2.sql` (map and live location for scheduled rides; "Ride completed" alert). Redeploy `push-send` again.
 34. `235_plan_code_1.sql`, `235_plan_code_2.sql` (a four digit trip code for scheduled rides)
 35. `236_live_share.sql` (automatic live location for both sides of rides, deliveries and bookings)
+36. `237_plan_no_auto_complete.sql` (a scheduled ride is completed only by the rider)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 
