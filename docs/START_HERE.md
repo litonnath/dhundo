@@ -43,6 +43,7 @@ Payments and wallet:
 25. `226_receipt.sql` (payment receipt on the order)
 26. `227_hold_until_done_1.sql` to `_3.sql` (order money is held until delivery; cancelling refunds the customer and nobody is credited)
 27. `228_hold_release_1.sql` to `_3.sql` (rides and bookings are paid out when finished; a paid second hand item cannot be cancelled; "payment received" alerts). Redeploy `push-send`: `supabase functions deploy push-send --project-ref nowhtdsuestyduzqtcks`
+28. `229_item_release_1.sql`, `229_item_release_2.sql` (a second hand item is paid out when handed over)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 
