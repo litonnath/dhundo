@@ -29,7 +29,7 @@ export function OrdersPage({ api, role, online, where, trades, onHire, badge = 0
   // A business account sees only its own work (and its buy and sell requests):
   // what a customer orders or books lives in the customer view.
   const groups = showWork
-    ? [{ title: null, tiles: [["work", "bag", t(workKey), badge]].concat([itemTile]) }]
+    ? [{ title: null, tiles: [["work", "bag", t(workKey), badge]].concat(role === "ride" ? [["wbook", "user", t("or_hire_bk"), 0]] : [], [itemTile]) }]
     : [{ title: null, tiles: [custTiles[0], custTiles[1], itemTile, custTiles[2]] }];
   const title = part === "work" ? t(workKey) : part === "mine" ? t("or_mine") : part === "items" ? t("mb_mine") : part === "bookings" ? t("mbk_title") : part === "wbook" ? t("or_hire_bk") : part === "rides" ? t("rh_title") : t("nav_activity");
   return (

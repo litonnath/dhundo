@@ -47,6 +47,7 @@ Payments and wallet:
 29. `230_refund_queue_1.sql` to `_3.sql` (refunds wait for the admin to approve them: Admin > Payments > Refund requests). Redeploy `push-send` again.
 30. `231_rider_cancel.sql` (a rider can always give a job back), `231_one_work.sql` (one work per login)
 31. `232_vehicle_class_1.sql`, `232_vehicle_class_2.sql` (car, taxi and cab are one category)
+32. `233_ride_plan_1.sql`, `233_ride_plan_2.sql` (scheduled rides: pickup and drop time, once / daily / weekly; the driver receives a booking)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

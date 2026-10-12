@@ -14,6 +14,7 @@ import { AlertsCard } from "./alerts.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideCode } from "./ridechat.jsx";
 import { ActionIcons, ChatSheet, RideShell, RideBar } from "./ridedrive.jsx";
+import { RidePlanSheet } from "./rideplan.jsx";
 import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
@@ -71,6 +72,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   const wasActive = useRef(false);
   const lastRide = useRef(null);
   const [trip, setTrip] = useState(null);
+  const [planOpen, setPlanOpen] = useState(false);
   // Distance from the chosen pickup to the destination, for the fare.
   useEffect(() => {
     let live = true;
@@ -391,6 +393,10 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
       )}
       {msg && <div style={{ marginBottom: 10 }}><Notice tone="bad">{msg}</Notice></div>}
       <Btn full disabled={busy} onClick={send}>{busy ? "…" : signedIn ? t(hire ? "rd_hire_find" : "rd_find") : t("nav_signin")}</Btn>
+      {est != null && trip && pick && drop && typeof pick.lat === "number" && typeof drop.lat === "number" && (
+        <button onClick={() => { if (!signedIn) { onSignIn && onSignIn(); return; } setPlanOpen(true); }} style={{ display: "block", width: "100%", minHeight: 48, marginTop: 10, borderRadius: 14, border: `1.5px solid ${T.brandDark}`, background: T.white, color: T.brandDark, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>{t("rp_open_btn")}</button>
+      )}
+      {planOpen && <RidePlanSheet api={api} pick={pick} drop={drop} km={trip && trip.km} vehicle={vehicle} place={place} signedIn={signedIn} onSignIn={onSignIn} onClose={() => setPlanOpen(false)} />}
         </>
       )}
       </>)}
