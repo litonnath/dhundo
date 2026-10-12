@@ -382,7 +382,7 @@ function useRoadRoute(from, to) {
 
 export { useRoadRoute };
 
-export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick", follow = false }) {
+export function LiveRideMap({ pick, drop, driver, route = null, delivery = false, height = 230, toward = "pick", follow = false, fill = false }) {
   const { t } = useI18n();
   const box = useRef(null);
   const st = useRef({});
@@ -436,10 +436,10 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
   }, [pick && pick.lat, pick && pick.lng, drop && drop.lat, route && route.length, driver && driver.lat, driver && driver.lng, driver && Math.round((driver.heading || 0) / 10), chase]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (st.current.map) { st.current.map.remove(); st.current = {}; } }, []);
   return (
-    <div style={{ position: "relative", margin: "10px 0" }}>
-      <div ref={box} style={{ height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />
+    <div style={fill ? { position: "absolute", inset: 0 } : { position: "relative", margin: "10px 0" }}>
+      <div ref={box} style={fill ? { height: "100%", background: "#E8EEF4" } : { height, borderRadius: 14, overflow: "hidden", border: `1px solid ${T.line}`, background: "#E8EEF4" }} />
       {follow && driver && (
-        <button onClick={() => setChase((v) => !v)} style={{ position: "absolute", right: 10, top: 10, zIndex: 5, minHeight: 38, padding: "0 14px", borderRadius: 19, border: "none", background: "#111827", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>{chase ? t("rdv_overview") : t("rdv_follow")}</button>
+        <button onClick={() => setChase((v) => !v)} style={{ position: "absolute", right: 10, top: fill ? 64 : 10, zIndex: 5, minHeight: 38, padding: "0 14px", borderRadius: 19, border: "none", background: "#111827", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,.3)" }}>{chase ? t("rdv_overview") : t("rdv_follow")}</button>
       )}
     </div>
   );
@@ -447,7 +447,7 @@ export function LiveRideMap({ pick, drop, driver, route = null, delivery = false
 
 // The passenger's view: poll the matched driver every few seconds, work out
 // which way he is heading from his last two fixes.
-export function PassengerLive({ api, ride, started = false, height = 230 }) {
+export function PassengerLive({ api, ride, started = false, height = 230, fill = false, onInfo = null }) {
   const { t } = useI18n();
   const [drv, setDrv] = useState(null);
   const prev = useRef(null);
@@ -480,20 +480,20 @@ export function PassengerLive({ api, ride, started = false, height = 230 }) {
   const rt = useRoadRoute(drv, target);
   if (!pick) return null;
   const km = drv ? kmBetween(drv, target) : null;
+  const info = started ? (drv && km != null ? String(t("rdv_trip_left")).replace("{n}", fmtKm(km)).replace("{m}", rt ? rt.min : "?") : "")
+    : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait");
+  useEffect(() => { if (onInfo) onInfo(info); }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
-      <LiveRideMap pick={pick} drop={dropPt} driver={drv} route={rt ? rt.pts : null} height={height} toward={started ? "drop" : "pick"} />
-      <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>
-        {started ? (drv && km != null ? String(t("rdv_trip_left")).replace("{n}", fmtKm(km)).replace("{m}", rt ? rt.min : "?") : "")
-          : drv && km != null && km < 0.12 ? t("rd_live_arrived") : drv ? `${String(t("rd_live_dist")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}${toward === true ? ` \u00B7 ${t("rd_live_toward")}` : toward === false ? ` \u00B7 ${t("rd_live_away")}` : ""}` : t("rd_live_wait")}
-      </div>
+      <LiveRideMap pick={pick} drop={dropPt} driver={drv} route={rt ? rt.pts : null} height={height} toward={started ? "drop" : "pick"} fill={fill} />
+      {!fill && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 6 }}>{info}</div>}
     </div>
   );
 }
 
 // The driver's view: own position and heading from the phone, sent every few
 // seconds while the ride is on, with the pickup in view.
-export function DriverLive({ api, ride, where = null, target = "pick", height = 230, onPos = null }) {
+export function DriverLive({ api, ride, where = null, target = "pick", height = 230, onPos = null, fill = false, onInfo = null }) {
   const { t } = useI18n();
   const [me, setMe] = useState(null);
   const last = useRef(null);
@@ -527,10 +527,12 @@ export function DriverLive({ api, ride, where = null, target = "pick", height = 
   useEffect(() => { if (here && onPos) onPos(here); }, [here && here.lat, here && here.lng]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!pick) return null;
   const km = here ? kmBetween(here, goal) : null;
+  const info = here ? `${String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}${rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}` : "";
+  useEffect(() => { if (onInfo) onInfo(info); }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div>
-      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow />
-      {here && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{String(t(target === "drop" ? "rdv_drop_in" : "rd_pick_in")).replace("{n}", rt ? fmtKm(rt.km) : fmtKm(km))}{rt ? ` \u00B7 ${rt.min} ${t("nav_min")}` : ` \u00B7 ${t("rdv_road_wait")}`}</div>}
+      <LiveRideMap pick={pick} drop={dropPt} driver={here} route={rt ? rt.pts : null} height={height} toward={target} follow fill={fill} />
+      {!fill && info && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{info}</div>}
     </div>
   );
 }

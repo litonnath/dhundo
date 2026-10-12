@@ -1886,4 +1886,7 @@ export default {
   plk_title: "Pay for your ride",
   rdv_follow: "Follow me",
   rdv_overview: "Whole road",
+  rdv_home: "Home",
+  rdv_open: "Open",
+  rdv_dir: "Directions",
 };

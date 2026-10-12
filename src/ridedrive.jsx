@@ -45,3 +45,35 @@ export function ChatSheet({ api, rideId, role, onClose }) {
     </div>
   );
 }
+
+// The live ride fills the whole screen like a taxi app: the map behind, a sheet at
+// the bottom with the details and buttons. "Home" folds it into a small bar (the
+// ride and the driver's position sharing keep running behind it).
+export function RideShell({ hidden, onMin, map, children }) {
+  const { t } = useI18n();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 560, background: "#E8EEF4", display: hidden ? "none" : "block" }}>
+      {map}
+      <button onClick={onMin} style={{ position: "absolute", left: 12, top: "calc(12px + env(safe-area-inset-top))", zIndex: 6, minHeight: 44, padding: "0 16px 0 12px", borderRadius: 22, border: "none", background: "#fff", color: T.ink, fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(0,0,0,.25)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span aria-hidden="true">{"\u2039"}</span>{t("rdv_home")}
+      </button>
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6, background: "#fff", borderRadius: "22px 22px 0 0", boxShadow: "0 -6px 24px rgba(15,23,42,.22)", padding: "12px 14px calc(14px + env(safe-area-inset-bottom))", maxHeight: "62dvh", overflowY: "auto", boxSizing: "border-box", maxWidth: 640, margin: "0 auto" }}>
+        <div aria-hidden="true" style={{ width: 44, height: 5, borderRadius: 3, background: "#D1D5DB", margin: "0 auto 8px" }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function RideBar({ title, sub, onOpen }) {
+  const { t } = useI18n();
+  return (
+    <button onClick={onOpen} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", minHeight: 62, padding: "10px 14px", margin: "6px 0 12px", borderRadius: 14, border: "2px solid #16A34A", background: "#F0FAF4", cursor: "pointer", fontFamily: "inherit" }}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: T.ink }}>{title}</span>
+        <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#157A43" }}>{sub}</span>
+      </span>
+      <span style={{ fontWeight: 800, color: "#157A43" }}>{t("rdv_open")}</span>
+    </button>
+  );
+}

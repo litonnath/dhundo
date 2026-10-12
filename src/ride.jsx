@@ -13,7 +13,7 @@ import { useI18n } from "./i18n.jsx";
 import { AlertsCard } from "./alerts.jsx";
 import { FormSheet } from "./rates.jsx";
 import { RideCode } from "./ridechat.jsx";
-import { ActionIcons, ChatSheet } from "./ridedrive.jsx";
+import { ActionIcons, ChatSheet, RideShell, RideBar } from "./ridedrive.jsx";
 import { HireNearby } from "./hire.jsx";
 import { SetupCard } from "./food.jsx";
 import { vehicleLabel, tradeIcon, vividFor } from "./start.jsx";
@@ -598,6 +598,8 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
   const [chat, setChat] = useState(false);
   const [more, setMore] = useState(false);
   const [full, setFull] = useState(false);
+  const [min, setMin] = useState(false);
+  const [info, setInfo] = useState("");
   const auto = useRef(false);
   const dropPt = typeof r.drop_lat === "number" ? { lat: r.drop_lat, lng: r.drop_lng } : null;
   const goal = started && dropPt ? dropPt : { lat: r.pick_lat, lng: r.pick_lng };
@@ -605,35 +607,42 @@ function DriverRideView({ api, ride: r, where, busy, onMove }) {
     if (started && dropPt && !auto.current && kmBetween(here, dropPt) < 0.1) { auto.current = true; onMove(r, "done"); }
   };
   return (
-    <div style={{ ...card, border: `2px solid ${T.green}`, padding: "12px 12px 14px" }}>
-      {full && typeof goal.lat === "number" && <RouteNav from={where && where.manual ? where : null} to={goal} title={started ? t("rdv_to_drop") : t("rdr_dir_pick")} onClose={() => setFull(false)} />}
-      {chat && <ChatSheet api={api} rideId={r.id} role="driver" onClose={() => setChat(false)} />}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.other_name}</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: started ? "#B45309" : T.green }}>{started ? t("rdv_trip") : t("rdv_to_pick")}</div>
+    <>
+      {min && <RideBar title={`${r.other_name} \u00B7 ${t(started ? "rdv_trip" : "rdv_to_pick")}`} sub={info} onOpen={() => setMin(false)} />}
+      <RideShell hidden={min} onMin={() => setMin(true)}
+                 map={<DriverLive api={api} ride={r} where={where} target={started ? "drop" : "pick"} onPos={onPos} fill onInfo={setInfo} />}>
+        {full && typeof goal.lat === "number" && <RouteNav from={where && where.manual ? where : null} to={goal} title={started ? t("rdv_to_drop") : t("rdr_dir_pick")} onClose={() => setFull(false)} />}
+        {chat && <ChatSheet api={api} rideId={r.id} role="driver" onClose={() => setChat(false)} />}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.other_name}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: started ? "#B45309" : T.green }}>{started ? t("rdv_trip") : t("rdv_to_pick")}</div>
+          </div>
+          {r.fare_paise != null && <span style={{ fontSize: 20, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(r.fare_paise / 100)}</span>}
         </div>
-        {r.fare_paise != null && <span style={{ fontSize: 20, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(r.fare_paise / 100)}</span>}
-      </div>
-      <DriverLive api={api} ride={r} where={where} target={started ? "drop" : "pick"} height="52vh" onPos={onPos} />
-      <button onClick={() => setFull(true)} style={{ ...linkBtn(T.brandDark), border: "none", cursor: "pointer", fontFamily: "inherit", width: "100%", minHeight: 42, padding: "6px 14px", fontSize: 14 }}>{t("rdv_full")}</button>
-      <ActionIcons phone={r.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more} />
-      {more && (
-        <div style={{ background: "#F7F9FB", border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", marginBottom: 10 }}>
-          <Route pick={r.pick_text} drop={r.drop_text} />
-          <div style={{ fontSize: 13.5, color: T.ink, fontWeight: 700 }}>{r.fare_paise != null ? String(t("rdr_fare")).replace("{n}", Math.round(r.fare_paise / 100)) : t("rdr_nofare")}</div>
-          {!started && <div style={{ marginTop: 8 }}><Btn kind="ghost" disabled={busy === r.id} onClick={() => onMove(r, "release")}>{t("rdr_release")}</Btn></div>}
-        </div>
-      )}
-      <RideCode api={api} rideId={r.id} role="driver" onState={setStarted} hideStarted />
-      {started && (
-        <>
-          <Btn full disabled={busy === r.id} onClick={() => onMove(r, "done")}>{t("rdr_finish")}</Btn>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, textAlign: "center", margin: "6px 0 8px" }}>{t("rdv_auto")}</div>
-        </>
-      )}
-      <RideDriverPay api={api} rideId={r.id} />
-    </div>
+        {info && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginTop: 4 }}>{info}</div>}
+        <ActionIcons phone={r.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more}
+                     extra={<div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 64 }}>
+                       <button onClick={() => setFull(true)} aria-label={t("rdv_full")} style={{ width: 54, height: 54, borderRadius: "50%", border: "none", background: "#111827", color: "#fff", cursor: "pointer", fontSize: 22, boxShadow: "0 3px 10px rgba(15,23,42,0.18)" }}>{"\u2197"}</button>
+                       <span style={{ fontSize: 12, fontWeight: 700, color: T.inkSoft }}>{t("rdv_dir")}</span>
+                     </div>} />
+        {more && (
+          <div style={{ background: "#F7F9FB", border: `1px solid ${T.line}`, borderRadius: 14, padding: "10px 12px", marginBottom: 10 }}>
+            <Route pick={r.pick_text} drop={r.drop_text} />
+            <div style={{ fontSize: 13.5, color: T.ink, fontWeight: 700 }}>{r.fare_paise != null ? String(t("rdr_fare")).replace("{n}", Math.round(r.fare_paise / 100)) : t("rdr_nofare")}</div>
+            {!started && <div style={{ marginTop: 8 }}><Btn kind="ghost" disabled={busy === r.id} onClick={() => onMove(r, "release")}>{t("rdr_release")}</Btn></div>}
+          </div>
+        )}
+        <RideCode api={api} rideId={r.id} role="driver" onState={setStarted} hideStarted />
+        {started && (
+          <>
+            <Btn full disabled={busy === r.id} onClick={() => onMove(r, "done")}>{t("rdr_finish")}</Btn>
+            <div style={{ fontSize: 12.5, color: T.inkSoft, textAlign: "center", margin: "6px 0 8px" }}>{t("rdv_auto")}</div>
+          </>
+        )}
+        <RideDriverPay api={api} rideId={r.id} />
+      </RideShell>
+    </>
   );
 }
 
@@ -643,18 +652,22 @@ function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
   const [started, setStarted] = useState(false);
   const [chat, setChat] = useState(false);
   const [more, setMore] = useState(false);
+  const [min, setMin] = useState(false);
+  const [info, setInfo] = useState("");
   return (
-    <div>
-      {chat && <ChatSheet api={api} rideId={ride.id} role="passenger" onClose={() => setChat(false)} />}
-      <div style={{ ...card, padding: "12px 12px 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+    <>
+      {min && <RideBar title={`${ride.other_name} \u00B7 ${t(started ? "rdv_trip" : "rdv_driver_coming")}`} sub={info} onOpen={() => setMin(false)} />}
+      <RideShell hidden={min} onMin={() => setMin(true)}
+                 map={<PassengerLive api={api} ride={ride} started={started} fill onInfo={setInfo} />}>
+        {chat && <ChatSheet api={api} rideId={ride.id} role="passenger" onClose={() => setChat(false)} />}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>{ride.other_name}</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: started ? "#B45309" : T.green }}>{started ? t("rdv_trip") : t("rdv_driver_coming")}{ride.other_vehicle ? ` \u00B7 ${ride.other_vehicle}` : ""}</div>
           </div>
           {ride.fare_paise != null && <span style={{ fontSize: 20, fontWeight: 800, color: T.ink }}>{"\u20B9"}{Math.round(ride.fare_paise / 100)}</span>}
         </div>
-        <PassengerLive api={api} ride={ride} started={started} height="48vh" />
+        {info && <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginTop: 4 }}>{info}</div>}
         <RideCode api={api} rideId={ride.id} role="passenger" onState={setStarted} hideStarted />
         <ActionIcons phone={ride.other_phone} onChat={() => setChat(true)} onDetails={() => setMore((v) => !v)} detailsOpen={more} />
         {Number(ride.fare_paise) >= 100 && <RidePassengerPay api={api} rideId={ride.id} />}
@@ -668,8 +681,8 @@ function PassengerRideView({ api, ride, vTrade, lang, busy, onCancel }) {
             {!started && <Btn kind="ghost" full disabled={busy} onClick={onCancel} style={{ color: "#B91C1C", borderColor: "#FCA5A5" }}>{t("rd_cancel")}</Btn>}
           </div>
         )}
-      </div>
-    </div>
+      </RideShell>
+    </>
   );
 }
 
