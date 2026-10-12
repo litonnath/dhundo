@@ -86,6 +86,7 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
   return (
     <div style={{ marginTop: 6 }}>
       <h2 style={{ fontSize: 17, fontWeight: 800, color: T.ink, margin: "6px 0 8px" }}>{t("hr_title")}</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.55, margin: "0 0 10px" }}>{t("hr_personal")}</div>
       {signedIn && (
         <button onClick={() => { loadMine(); setHistOpen(true); }} style={{ display: "block", width: "100%", minHeight: 46, margin: "0 0 12px", borderRadius: 12, border: `1.5px solid ${T.line}`, background: T.white, color: T.ink, fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>
           {t("hq_title")}{mine.length ? ` (${mine.length})` : ""}
@@ -93,10 +94,10 @@ export function HireNearby({ api, pick, vehicle, vehicles, place, signedIn, onSi
       )}
       <div style={{ fontSize: 13, fontWeight: 700, color: T.inkSoft, marginBottom: 6 }}>{t("hr_hours")}</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        {[1, 2, 4, 8].map((h) => (
-          <button key={h} onClick={() => setHours(h)} aria-pressed={hours === h} style={{ minWidth: 58, minHeight: 42, borderRadius: 21, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, border: `1.5px solid ${hours === h ? T.brandDark : T.line}`, background: hours === h ? T.brandSoft : T.white, color: hours === h ? T.brandDeep : T.ink }}>{String(t("hr_h")).replace("{n}", h)}</button>
+        {[1, 2, 4, 8, 240].map((h) => (
+          <button key={h} onClick={() => setHours(h)} aria-pressed={hours === h} style={{ minWidth: 58, minHeight: 42, borderRadius: 21, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, border: `1.5px solid ${hours === h ? T.brandDark : T.line}`, background: hours === h ? T.brandSoft : T.white, color: hours === h ? T.brandDeep : T.ink }}>{h === 240 ? t("hr_month") : String(t("hr_h")).replace("{n}", h)}</button>
         ))}
-        <input style={{ ...input, width: 84, marginBottom: 0, textAlign: "center" }} inputMode="numeric" maxLength={3} value={[1, 2, 4, 8].includes(hours) ? "" : String(hours)} placeholder={t("hr_other")} aria-label={t("hr_other")}
+        <input style={{ ...input, width: 84, marginBottom: 0, textAlign: "center" }} inputMode="numeric" maxLength={3} value={[1, 2, 4, 8, 240].includes(hours) ? "" : String(hours)} placeholder={t("hr_other")} aria-label={t("hr_other")}
                onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, "")); if (n >= 1 && n <= 240) setHours(n); }} />
       </div>
       {msg && <div style={{ marginBottom: 8 }}><Notice tone="bad">{msg}</Notice></div>}

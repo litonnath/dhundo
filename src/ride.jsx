@@ -49,7 +49,9 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
   // A plain "car" is not a separate choice, and there is no "any".
   const rank = (x) => { const k = `${x.slug} ${x.name_en || ""}`.toLowerCase(); return /bike|moto|scooter/.test(k) ? 0 : /taxi|cab/.test(k) ? 1 : 2; };
   const isPlainCar = (x) => { const k = `${x.slug || ""} ${x.name_en || ""}`; return /\bcar\b/i.test(k) && !/taxi|cab/i.test(k); };
-  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? !isTravel(x) : isTravel(x) && !isPlainCar(x)))
+  // Hiring covers every vehicle, bike taxi, cab and auto too: hired personally by the
+  // hour, the day or the month, the driver receives it as a booking.
+  const vehicles = allVeh.filter((x) => !isDelivery(x) && (hire ? true : isTravel(x) && !isPlainCar(x)))
     .sort((a, b) => (hire ? 0 : rank(a) - rank(b)));
   const geo = useMyLocation();
   const [pick, setPick] = useState(() => (place && typeof place.lat === "number" ? place : null));
