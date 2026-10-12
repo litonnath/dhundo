@@ -41,6 +41,7 @@ Payments and wallet:
 23. `224_online_first_1.sql` to `224_online_first_5.sql` (pay first, then the restaurant sees the order; cash on delivery costs Rs 30 extra)
 24. `225_fee_in_pay_1.sql` to `225_fee_in_pay_8.sql` (delivery partner fee inside the payment, refund of the difference, cash settlement between rider, shop and Dhundo)
 25. `226_receipt.sql` (payment receipt on the order)
+26. `227_hold_until_done_1.sql` to `_3.sql` (order money is held until delivery; cancelling refunds the customer and nobody is credited)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 
