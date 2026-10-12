@@ -1962,4 +1962,5 @@ export default {
   pp_cash_ok: "Cash payment confirmed",
   pp_cash_in: "Cash payment received",
   pp_ok: "OK",
+  fee_refundable: "Refundable: you pay up to {a} now. Once the real fee for the distance is set (as low as {b}), the rest is refunded to your wallet.",
 };

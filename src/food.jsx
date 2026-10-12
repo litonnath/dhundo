@@ -717,6 +717,11 @@ function CartSheet({ api, row, eat, kind, info, onHire, lines, cart, setQty, tot
             <span>{t("fee_line")}{feeMaxRs > feeMinRs ? ` (${t("fee_upto")})` : ""}</span><span>{rupees(feeP)}</span>
           </div>
         )}
+        {mode === "delivery" && payHow === "online" && feeMaxRs > feeMinRs && (
+          <div style={{ margin: "-2px 0 8px", padding: "6px 10px", borderRadius: 10, background: "#ECFDF3", border: "1px solid #A7E3BE", fontSize: 12.5, fontWeight: 700, color: "#166534", lineHeight: 1.45 }}>
+            {String(t("fee_refundable")).replace("{a}", rupees(feeP)).replace("{b}", rupees(feeMinRs * 100))}
+          </div>
+        )}
         {codP > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5, fontWeight: 700, margin: "-4px 0 6px", color: "#B45309" }}>
             <span>{t("cod_fee_line")}</span><span>{rupees(codP)}</span>
