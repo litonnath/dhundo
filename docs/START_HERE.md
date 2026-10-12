@@ -52,6 +52,7 @@ Payments and wallet:
 34. `235_plan_code_1.sql`, `235_plan_code_2.sql` (a four digit trip code for scheduled rides)
 35. `236_live_share.sql` (automatic live location for both sides of rides, deliveries and bookings)
 36. `237_plan_no_auto_complete.sql` (a scheduled ride is completed only by the rider)
+37. `238_block_while_due.sql` (no new ride, booking, order or item while a finished ride or booking is unpaid)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

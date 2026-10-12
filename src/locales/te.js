@@ -1950,4 +1950,5 @@ export default {
   pl_auto_share: "Your live location is shared automatically with the other person while the trip is on.",
   due_title: "Payment due",
   pd_pay: "Pay now",
+  due_block: "You have a finished ride or booking that is not paid yet. Please pay it first, then you can book again.",
 };

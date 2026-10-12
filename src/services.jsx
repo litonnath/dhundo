@@ -98,6 +98,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
       if (res.status === 429 || msg === "rate_limited") {
         const e = new Error(tNow("rl_msg")); e.code = "rate_limited"; throw e;
       }
+      if (msg === "payment_due") {
+        const e = new Error(tNow("due_block")); e.code = "payment_due"; throw e;
+      }
       if (msg === "consent_required") {
         const e = new Error(tNow("cs_server")); e.code = "consent_required"; e.purpose = data && data.hint; throw e;
       }
