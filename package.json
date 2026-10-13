@@ -10,7 +10,8 @@
     "deploy": "vite build && rsync -a --delete dist/ /var/www/services/ && chmod -R a+rX /var/www/services"
   },
   "dependencies": {
-    "firebase": "^13.0.0",
+    "@firebase/app": "^0.16.2",
+    "@firebase/auth": "^1.13.6",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",

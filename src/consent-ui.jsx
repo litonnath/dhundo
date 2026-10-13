@@ -227,6 +227,7 @@ export function PrivacyLink() {
           color: T.inkFaint, fontSize: 13, fontWeight: 600, textDecoration: "underline",
           minHeight: 40, padding: "6px 10px",
         }}>{t("cs_priv_t")}</button>
+        <a href="/terms" style={{ color: T.inkFaint, fontSize: 13, fontWeight: 600, textDecoration: "underline", padding: "6px 10px" }}>Terms</a>
       </div>
       {open && <PrivacySheet onClose={() => setOpen(false)} />}
     </>

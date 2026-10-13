@@ -35,6 +35,7 @@ import { registerServiceWorker } from "./device.jsx";
 import { DhundoLogo } from "./brand.jsx";
 import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
 import { NoticePage, NoticeSheet } from "./privacy.jsx";
+import { TermsPage } from "./terms.jsx";
 import { ConsentProvider } from "./consent-ui.jsx";
 import { useConsent } from "./consent-core.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
@@ -548,9 +549,13 @@ const onPrivacyPage = (() => {
   try { return window.location.pathname.replace(/\/+$/, "") === "/privacy"; } catch (_) { return false; }
 })();
 
+const onTermsPage = (() => {
+  try { return window.location.pathname.replace(/\/+$/, "") === "/terms"; } catch (_) { return false; }
+})();
+
 createRoot(document.getElementById("root")).render(
   <I18nProvider>
-    {onPrivacyPage ? <NoticePage /> : <App />}
+    {onPrivacyPage ? <NoticePage /> : onTermsPage ? <TermsPage /> : <App />}
   </I18nProvider>
 );
 

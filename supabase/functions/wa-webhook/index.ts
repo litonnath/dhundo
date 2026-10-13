@@ -26,7 +26,10 @@ Deno.serve(async (req) => {
   if (req.method !== "POST" || !appSecret) return new Response("no", { status: 403 });
   const raw = await req.text();
   const sent = (req.headers.get("x-hub-signature-256") || "").replace("sha256=", "");
-  if (!sent || sent !== await hmacHex(appSecret, raw)) return new Response("bad signature", { status: 403 });
+  const want = await hmacHex(appSecret, raw);
+  let diff = sent.length ^ want.length;                       // compare without stopping at the first difference
+  for (let i = 0; i < want.length; i++) diff |= (sent.charCodeAt(i) || 0) ^ want.charCodeAt(i);
+  if (!sent || diff !== 0) return new Response("bad signature", { status: 403 });
 
   let body: any = {};
   try { body = JSON.parse(raw); } catch (_) { return new Response("ok"); }

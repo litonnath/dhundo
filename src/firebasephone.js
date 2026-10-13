@@ -11,7 +11,7 @@ let state = null;   // { auth, verifier, authMod, confirmation, fresh }
 // "Send code" does not wait for the downloads.
 export async function fbWarm(box) {
   if (!firebaseConfigured() || !box) return;
-  const [{ initializeApp, getApps }, authMod] = await Promise.all([import("firebase/app"), import("firebase/auth")]);
+  const [{ initializeApp, getApps }, authMod] = await Promise.all([import("@firebase/app"), import("@firebase/auth")]);
   const app = getApps().length ? getApps()[0] : initializeApp(CONF.FIREBASE_CONFIG);
   const auth = authMod.getAuth(app);
   auth.useDeviceLanguage();
