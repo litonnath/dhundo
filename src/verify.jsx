@@ -47,7 +47,10 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
       try { await api.claimRewards(); } catch (_) { /* the wallet shows what arrived */ }
       setBusy(false);
       onDone && onDone();
-    } catch (_) { setBusy(false); setErr(t("pv_bad")); }
+    } catch (e) {
+      const c = String((e && e.code) || (e && e.message) || "");
+      setBusy(false); setErr(`${t("pv_bad")}${c ? ` (${c})` : ""}`);
+    }
   };
 
   const e164 = () => {
