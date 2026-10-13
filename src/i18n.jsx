@@ -483,7 +483,7 @@ const STRINGS = {
     req_tag: "Required",
     e_id_required: "Add your ID photo before you continue. Without it the listing cannot be saved.",
     pv_title: "Check your phone",
-    pv_body: "We send a 6-digit code on WhatsApp to this number. Enter it to prove the number is yours. You do this once.",
+    pv_body: "We send a 6-digit code by SMS to this number. Enter it to prove the number is yours. You do this once.",
     pv_send: "Send code",
     pv_code_ph: "6-digit code",
     pv_verify: "Check",

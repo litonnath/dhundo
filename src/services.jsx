@@ -556,6 +556,16 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
     phoneVerified: () => rpc("services_phone_verified", {}, true),
     claimRewards: () => rpc("services_claim_rewards", {}, true),
+    confirmFirebasePhone: async (idToken) => {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/phone-firebase`, {
+          method: "POST", headers: await authHeaders(), body: JSON.stringify({ idToken }),
+        });
+        let j = {};
+        try { j = await res.json(); } catch (_) { /* no body */ }
+        return { ok: res.ok && j.ok !== false, status: res.status, reason: j.reason || "" };
+      } catch (_) { return { ok: false, status: 0 }; }
+    },
     startPhoneClaim: async () => {
       try {
         const res = await fetch(`${supabaseUrl}/functions/v1/phone-otp`, {

@@ -8,14 +8,47 @@
 import React, { useState, useEffect } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
+import { firebaseConfigured, fbSendCode, fbConfirmCode } from "./firebasephone.js";
 import { mfaVerifiedFactor, mfaEnroll, mfaChallengeVerify } from "./auth.jsx";
 
 export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
+  const fb = firebaseConfigured();
   const [claim, setClaim] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [wait, setWait] = useState(0);
+  const box = React.useRef(null);
+
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const id = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(id);
+  }, [wait]);
+
+  const fbSend = async () => {
+    setBusy(true); setErr("");
+    try { await fbSendCode(e164(), box.current); setSent(true); setWait(45); }
+    catch (e) {
+      const c = String((e && e.code) || (e && e.message) || "");
+      setErr(/too-many/.test(c) ? t("e_rate") : `${t("pv_unavail")}${c ? ` (${c})` : ""}`);
+    }
+    setBusy(false);
+  };
+  const fbVerify = async () => {
+    setBusy(true); setErr("");
+    try {
+      const token = await fbConfirmCode(code.trim());
+      const r = await api.confirmFirebasePhone(token);
+      if (!r.ok) { setBusy(false); setErr(`${t("pv_bad")}${r.reason ? ` (${r.reason})` : ""}`); return; }
+      try { await api.claimRewards(); } catch (_) { /* the wallet shows what arrived */ }
+      setBusy(false);
+      onDone && onDone();
+    } catch (_) { setBusy(false); setErr(t("pv_bad")); }
+  };
 
   const e164 = () => {
     const d = String(phone || "").replace(/\D/g, "");
@@ -32,7 +65,7 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
 
   // Once the message has been sent, ask every few seconds whether it arrived.
   useEffect(() => {
-    if (!claim) return undefined;
+    if (fb || !claim) return undefined;
     let alive = true;
     const id = setInterval(async () => {
       if (!(await api.phoneClaimDone()) || !alive) return;
@@ -55,10 +88,28 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
           <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0, color: T.ink }}>{t("pv_title")}</h1>
           <CloseButton onClick={onClose} />
         </div>
-        <p style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.6 }}>{t("pv_wa_body")}</p>
+        <p style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.6 }}>{fb ? t("pv_body") : t("pv_wa_body")}</p>
         <div style={{ fontWeight: 800, fontSize: 15, color: T.ink, marginBottom: 10 }}>{e164()}</div>
         {err && <div style={{ marginBottom: 10 }}><Notice tone="bad">{err}</Notice></div>}
-        {!claim ? (
+        <div ref={box} />
+        {fb ? (
+          !sent ? (
+            <Btn full disabled={busy} onClick={fbSend}>{busy ? "…" : t("pv_send")}</Btn>
+          ) : (
+            <>
+              <Notice tone="info">{t("pv_sent")}</Notice>
+              <input style={{ ...input, marginTop: 10, marginBottom: 10, letterSpacing: 6, fontSize: 20, textAlign: "center" }}
+                     inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
+                     placeholder={t("pv_code_ph")} aria-label={t("pv_code_ph")}
+                     onChange={(e) => { setErr(""); setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }} />
+              <Btn full disabled={busy || code.length < 6} onClick={fbVerify}>{busy ? "…" : t("pv_verify")}</Btn>
+              <button disabled={wait > 0 || busy} onClick={fbSend} style={{
+                background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5,
+                minHeight: 44, cursor: wait > 0 ? "default" : "pointer", fontFamily: "inherit", marginTop: 4,
+              }}>{wait > 0 ? `${t("pv_send")} (${wait})` : t("pv_send")}</button>
+            </>
+          )
+        ) : !claim ? (
           <Btn full disabled={busy} onClick={start}>{busy ? "…" : t("pv_wa_open")}</Btn>
         ) : (
           <>

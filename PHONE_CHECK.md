@@ -34,3 +34,15 @@ One WhatsApp message per person, once (plus resends), about Rs 0.115 each.
    `https://<ref>.supabase.co/functions/v1/wa-webhook`, Verify token = WA_VERIFY_TOKEN, click Verify and save.
    Then under Webhook fields subscribe to `messages`.
 5. In the app the person taps Open WhatsApp, presses send on the ready message, and is verified within seconds.
+
+## Firebase Phone Auth (SMS from Google, no DLT) -- the code arrives and the person types it
+1. console.firebase.google.com: Add project (Dhundo). Build, Authentication, Get started, Sign-in method: enable **Phone**.
+2. Authentication, Settings, Authorized domains: add `services.shortlistone.com`.
+3. Project settings (gear), General, Your apps: add a **Web** app. Copy its config (apiKey, authDomain, projectId, appId).
+4. India SMS may need billing: Project settings, Usage and billing, upgrade to the pay-as-you-go (Blaze) plan; set a budget alert.
+   (Test with a "Phone numbers for testing" entry under Authentication, Sign-in method, Phone: no SMS is sent or charged.)
+5. In `src/config.js` add:
+   `export const FIREBASE_CONFIG = { apiKey: "...", authDomain: "...", projectId: "...", appId: "..." };`
+6. Supabase: `supabase secrets set --project-ref <ref> FIREBASE_API_KEY=<the same apiKey>` and
+   `supabase functions deploy phone-firebase --project-ref <ref>`.
+7. Publish the app. When FIREBASE_CONFIG is present the sheet sends an SMS and asks for the code; without it the app uses the WhatsApp-message way.
