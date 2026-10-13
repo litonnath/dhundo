@@ -57,12 +57,18 @@ Deno.serve(async (req) => {
         ] },
       }),
     });
-    if (!r.ok) return reply({ ok: false, reason: "send_failed" }, 502);
-    await admin.from("services_phone_otps").upsert({
+    if (!r.ok) {
+      let detail = "";
+      try { const j = await r.json(); detail = String(j?.error?.message || ""); } catch (_) { /* no body */ }
+      console.error("whatsapp send failed", r.status, detail);
+      return reply({ ok: false, reason: "send_failed", detail }, 502);
+    }
+    const { error: saveErr } = await admin.from("services_phone_otps").upsert({
       auth_user_id: uid, phone: e164, code_hash: await sha(`${secret}:${uid}:${code}`),
       expires_at: new Date(Date.now() + 10 * 60_000).toISOString(), tries: 0,
       sent_at: new Date().toISOString(), sent_today: count + 1, day: today,
     });
+    if (saveErr) { console.error("save code failed", saveErr.message); return reply({ ok: false, reason: "db_error", detail: saveErr.message }, 500); }
     return reply({ ok: true });
   }
 

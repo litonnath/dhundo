@@ -35,7 +35,7 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
     const r = await api.sendPhoneCode(e164());
     setBusy(false);
     if (r.ok) { setSent(true); setWait(45); }
-    else setErr(r.status === 429 ? t("e_rate") : t("pv_unavail"));
+    else setErr(r.status === 429 ? t("e_rate") : `${t("pv_unavail")}${r.reason ? ` (${r.reason}${r.detail ? ": " + r.detail : ""})` : ""}`);
   };
   const verify = async () => {
     setBusy(true); setErr("");

@@ -561,7 +561,9 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         const res = await fetch(`${supabaseUrl}/functions/v1/phone-otp`, {
           method: "POST", headers: await authHeaders(), body: JSON.stringify({ action: "send" }),
         });
-        return { ok: res.ok, status: res.status };
+        let j = {};
+        try { j = await res.json(); } catch (_) { /* no body */ }
+        return { ok: res.ok, status: res.status, reason: j.reason || "", detail: j.detail || "" };
       } catch (_) { return { ok: false, status: 0 }; }
     },
     verifyPhoneCode: async (phone, token) => {
