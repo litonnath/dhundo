@@ -741,6 +741,8 @@ export default {
   pv_wa_msg: "Dhundo verify",
   pv_sending: "Sending the code…",
   pv_checking: "Checking…",
+  au_age: "I am 18 years old or older.",
+  au_age_need: "You must be 18 or older to create an account.",
   wal_received: "Payments received",
   wal_in_wallet: "Added to your wallet",
   wal_direct: "Paid to you directly",

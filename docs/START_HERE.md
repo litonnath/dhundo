@@ -56,6 +56,7 @@ Payments and wallet:
 38. `239_popups_1.sql`, `_2.sql`, `_3.sql` (a message pops up for the customer and the provider when a ride, order or booking is completed or a payment goes through)
 39. `240_phone_otp.sql` (phone check by WhatsApp code). Then deploy `supabase functions deploy phone-otp` and set the secrets in PHONE_CHECK.md.
 40. `241_phone_claim.sql` (phone check: the person sends us a WhatsApp message, no template). Deploy `phone-otp` again and `wa-webhook` with `--no-verify-jwt`. See PHONE_CHECK.md.
+41. `242_privacy_purge.sql` (nightly clean-up of old logs and unused phone-check rows; turn on pg_cron first under Database, Extensions)
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

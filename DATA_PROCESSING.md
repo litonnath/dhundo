@@ -10,6 +10,10 @@ Tick each when done.
 | Contabo (server) | The app files, nginx logs with visitor IP addresses | contabo.com, data processing agreement in the customer panel | [ ] |
 | Google (Maps tiles, address lookup, place search) | Map positions and typed search words, the visitor IP address | Google Cloud, Cloud Data Processing Addendum, accepted in the console | [ ] |
 | Esri (satellite pictures) | Map tile requests with the visitor IP address | Esri terms of use | [ ] |
+| PayU | Name, phone, email and the amount of each online payment | payu.in, merchant terms and privacy policy | [ ] |
+| Google Firebase (phone check by SMS) | The phone number and the code sent to it | firebase.google.com/terms/data-processing-terms | [ ] |
+| Meta WhatsApp Cloud API (phone check by message) | The phone number of the sender and the message with the code | facebook.com/legal/terms/dataprocessing | [ ] |
+| OSRM routing servers | Pickup and drop positions for road routes | project-osrm.org usage policy (use your own server or proxy for live traffic) | [ ] |
 | OpenStreetMap services (Photon, Nominatim, Overpass) | Map positions and search words, sent through your server proxy where set up | Their usage policies. No contract: use the proxy (geo-proxy.sh) so visitors addresses do not reach them | [ ] |
 
 After signing, write the region of each into the privacy notice if you want to name it. If a service is

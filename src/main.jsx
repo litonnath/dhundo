@@ -160,6 +160,7 @@ function AuthPanel({ onDone, onClose }) {
   const [code, setCode] = useState(() => pendingCode() || "");
   const consent = useConsent();
   const [agree, setAgree] = useState(false);
+  const [adult, setAdult] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState(false);
   // Set when this person has an authenticator app set up (admins): the PIN
@@ -187,6 +188,7 @@ function AuthPanel({ onDone, onClose }) {
 
     // Storing a name, a number and a PIN needs a yes first. Recorded on this
     // device now and in the database as soon as the account exists.
+    if (signup && !adult) return setErr(t("au_age_need"));
     if (signup && !agree) return setErr(t("cs_agree_need"));
     if (!signup) {
       const wait = lockLeft();
@@ -388,6 +390,11 @@ function AuthPanel({ onDone, onClose }) {
 
         {signup && (
           <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "flex", gap: 11, alignItems: "flex-start", cursor: "pointer", marginBottom: 12 }}>
+              <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)}
+                     disabled={busy} style={{ width: 22, height: 22, marginTop: 1, flexShrink: 0 }} />
+              <span style={{ fontSize: 13.5, color: INK, lineHeight: 1.55 }}>{t("au_age")}</span>
+            </label>
             <label style={{ display: "flex", gap: 11, alignItems: "flex-start", cursor: "pointer" }}>
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
                      disabled={busy} style={{ width: 22, height: 22, marginTop: 1, flexShrink: 0 }} />
