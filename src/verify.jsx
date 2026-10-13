@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from "react";
 import { T, Btn, CloseButton, useDismissable, input, Notice } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
-import { firebaseConfigured, fbSendCode, fbConfirmCode } from "./firebasephone.js";
+import { firebaseConfigured, fbWarm, fbSendCode, fbConfirmCode } from "./firebasephone.js";
 import { mfaVerifiedFactor, mfaEnroll, mfaChallengeVerify } from "./auth.jsx";
 
 export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
@@ -28,6 +28,8 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
     const id = setTimeout(() => setWait((w) => w - 1), 1000);
     return () => clearTimeout(id);
   }, [wait]);
+
+  useEffect(() => { if (fb) fbWarm(box.current).catch(() => {}); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const fbSend = async () => {
     setBusy(true); setErr("");
@@ -97,7 +99,7 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
         <div ref={box} />
         {fb ? (
           !sent ? (
-            <Btn full disabled={busy} onClick={fbSend}>{busy ? "…" : t("pv_send")}</Btn>
+            <Btn full disabled={busy} onClick={fbSend}>{busy ? t("pv_sending") : t("pv_send")}</Btn>
           ) : (
             <>
               <Notice tone="info">{t("pv_sent")}</Notice>
@@ -105,7 +107,7 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
                      inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
                      placeholder={t("pv_code_ph")} aria-label={t("pv_code_ph")}
                      onChange={(e) => { setErr(""); setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }} />
-              <Btn full disabled={busy || code.length < 6} onClick={fbVerify}>{busy ? "…" : t("pv_verify")}</Btn>
+              <Btn full disabled={busy || code.length < 6} onClick={fbVerify}>{busy ? t("pv_checking") : t("pv_verify")}</Btn>
               <button disabled={wait > 0 || busy} onClick={fbSend} style={{
                 background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5,
                 minHeight: 44, cursor: wait > 0 ? "default" : "pointer", fontFamily: "inherit", marginTop: 4,

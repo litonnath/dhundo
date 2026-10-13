@@ -739,6 +739,8 @@ export default {
   pv_wa_open: "Open WhatsApp",
   pv_wa_wait: "Waiting for your message… press send in WhatsApp, then come back here.",
   pv_wa_msg: "Dhundo verify",
+  pv_sending: "Sending the code…",
+  pv_checking: "Checking…",
   wal_received: "Payments received",
   wal_in_wallet: "Added to your wallet",
   wal_direct: "Paid to you directly",
