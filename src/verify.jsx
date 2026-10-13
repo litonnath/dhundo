@@ -13,38 +13,37 @@ import { mfaVerifiedFactor, mfaEnroll, mfaChallengeVerify } from "./auth.jsx";
 export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
   const { t } = useI18n();
   useDismissable(true, onClose);
-  const [sent, setSent] = useState(false);
-  const [code, setCode] = useState("");
+  const [claim, setClaim] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [wait, setWait] = useState(0);
-
-  useEffect(() => {
-    if (wait <= 0) return undefined;
-    const id = setTimeout(() => setWait((w) => w - 1), 1000);
-    return () => clearTimeout(id);
-  }, [wait]);
 
   const e164 = () => {
     const d = String(phone || "").replace(/\D/g, "");
     return `+${d.length === 10 ? "91" + d : d}`;
   };
 
-  const send = async () => {
+  const start = async () => {
     setBusy(true); setErr("");
-    const r = await api.sendPhoneCode(e164());
+    const r = await api.startPhoneClaim();
     setBusy(false);
-    if (r.ok) { setSent(true); setWait(45); }
+    if (r.ok && r.code && r.number) setClaim(r);
     else setErr(r.status === 429 ? t("e_rate") : `${t("pv_unavail")}${r.reason ? ` (${r.reason}${r.detail ? ": " + r.detail : ""})` : ""}`);
   };
-  const verify = async () => {
-    setBusy(true); setErr("");
-    const r = await api.verifyPhoneCode(e164(), code.trim());
-    if (!r.ok) { setBusy(false); setErr(t("pv_bad")); return; }
-    try { await api.claimRewards(); } catch (_) { /* the wallet shows what arrived */ }
-    setBusy(false);
-    onDone && onDone();
-  };
+
+  // Once the message has been sent, ask every few seconds whether it arrived.
+  useEffect(() => {
+    if (!claim) return undefined;
+    let alive = true;
+    const id = setInterval(async () => {
+      if (!(await api.phoneClaimDone()) || !alive) return;
+      clearInterval(id);
+      try { await api.claimRewards(); } catch (_) { /* the wallet shows what arrived */ }
+      if (alive) onDone && onDone();
+    }, 3000);
+    return () => { alive = false; clearInterval(id); };
+  }, [claim]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const link = claim ? `https://wa.me/${claim.number}?text=${encodeURIComponent(`${t("pv_wa_msg")} ${claim.code}`)}` : "";
 
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -56,23 +55,18 @@ export function PhoneVerifySheet({ api, phone, onClose, onDone }) {
           <h1 style={{ flex: 1, fontSize: 19, fontWeight: 800, margin: 0, color: T.ink }}>{t("pv_title")}</h1>
           <CloseButton onClick={onClose} />
         </div>
-        <p style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.6 }}>{t("pv_body")}</p>
+        <p style={{ fontSize: 14, color: T.inkSoft, lineHeight: 1.6 }}>{t("pv_wa_body")}</p>
         <div style={{ fontWeight: 800, fontSize: 15, color: T.ink, marginBottom: 10 }}>{e164()}</div>
         {err && <div style={{ marginBottom: 10 }}><Notice tone="bad">{err}</Notice></div>}
-        {!sent ? (
-          <Btn full disabled={busy} onClick={send}>{busy ? "…" : t("pv_send")}</Btn>
+        {!claim ? (
+          <Btn full disabled={busy} onClick={start}>{busy ? "…" : t("pv_wa_open")}</Btn>
         ) : (
           <>
-            <Notice tone="info">{t("pv_sent")}</Notice>
-            <input style={{ ...input, marginTop: 10, marginBottom: 10, letterSpacing: 6, fontSize: 20, textAlign: "center" }}
-                   inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
-                   placeholder={t("pv_code_ph")} aria-label={t("pv_code_ph")}
-                   onChange={(e) => { setErr(""); setCode(e.target.value.replace(/\D/g, "").slice(0, 6)); }} />
-            <Btn full disabled={busy || code.length < 6} onClick={verify}>{busy ? "…" : t("pv_verify")}</Btn>
-            <button disabled={wait > 0 || busy} onClick={send} style={{
-              background: "none", border: "none", color: T.brandDark, fontWeight: 700, fontSize: 13.5,
-              minHeight: 44, cursor: wait > 0 ? "default" : "pointer", fontFamily: "inherit", marginTop: 4,
-            }}>{wait > 0 ? `${t("pv_send")} (${wait})` : t("pv_send")}</button>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 6, textAlign: "center", color: T.ink, margin: "6px 0 12px" }}>{claim.code}</div>
+            <a href={link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+              <Btn full>{t("pv_wa_open")}</Btn>
+            </a>
+            <div style={{ marginTop: 10 }}><Notice tone="info">{t("pv_wa_wait")}</Notice></div>
           </>
         )}
       </div>

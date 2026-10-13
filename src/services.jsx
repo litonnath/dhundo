@@ -556,6 +556,25 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     accessToken: async () => (getAccessToken ? getAccessToken() : null),
     phoneVerified: () => rpc("services_phone_verified", {}, true),
     claimRewards: () => rpc("services_claim_rewards", {}, true),
+    startPhoneClaim: async () => {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/phone-otp`, {
+          method: "POST", headers: await authHeaders(), body: JSON.stringify({ action: "start" }),
+        });
+        let j = {};
+        try { j = await res.json(); } catch (_) { /* no body */ }
+        return { ok: res.ok && j.ok !== false, status: res.status, code: j.code || "", number: j.number || "", reason: j.reason || "", detail: j.detail || "" };
+      } catch (_) { return { ok: false, status: 0 }; }
+    },
+    phoneClaimDone: async () => {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/phone-otp`, {
+          method: "POST", headers: await authHeaders(), body: JSON.stringify({ action: "status" }),
+        });
+        const j = await res.json();
+        return !!(j && j.verified);
+      } catch (_) { return false; }
+    },
     sendPhoneCode: async () => {
       try {
         const res = await fetch(`${supabaseUrl}/functions/v1/phone-otp`, {

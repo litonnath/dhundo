@@ -25,7 +25,6 @@ const sha = async (t: string) =>
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (!waToken || !waPhone || !waTpl || !secret) return reply({ ok: false, reason: "not_configured" }, 503);
   const auth = req.headers.get("Authorization") || "";
   const asUser = createClient(url, anon, { global: { headers: { Authorization: auth } } });
   const { data: u } = await asUser.auth.getUser();
@@ -38,6 +37,29 @@ Deno.serve(async (req) => {
   const e164 = digits.length === 10 ? "91" + digits : digits;
   let body: { action?: string; code?: string } = {};
   try { body = await req.json(); } catch (_) { /* empty */ }
+
+  if (body.action === "start") {
+    const bizNumber = (Deno.env.get("WA_BUSINESS_NUMBER") || "").replace(/\D/g, "");
+    if (!bizNumber) return reply({ ok: false, reason: "not_configured" }, 503);
+    const { data: old } = await admin.from("services_phone_claims").select("*").eq("auth_user_id", uid).maybeSingle();
+    const today = new Date().toISOString().slice(0, 10);
+    const count = old && old.day === today ? old.made_today : 0;
+    if (count >= 10) return reply({ ok: false, reason: "limit" }, 429);
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+    const { error } = await admin.from("services_phone_claims").upsert({
+      auth_user_id: uid, phone: e164, code, expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+      made_at: new Date().toISOString(), made_today: count + 1, day: today,
+    });
+    if (error) { console.error("claim save failed", error.message); return reply({ ok: false, reason: "db_error", detail: error.message }, 500); }
+    return reply({ ok: true, code, number: bizNumber });
+  }
+
+  if (body.action === "status") {
+    const { data: au } = await admin.auth.admin.getUserById(uid);
+    return reply({ ok: true, verified: !!au?.user?.phone_confirmed_at });
+  }
+
+  if (!waToken || !waPhone || !waTpl || !secret) return reply({ ok: false, reason: "not_configured" }, 503);
 
   if (body.action === "send") {
     const { data: old } = await admin.from("services_phone_otps").select("*").eq("auth_user_id", uid).maybeSingle();

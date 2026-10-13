@@ -23,3 +23,14 @@ Limits built in: one code per 40 seconds, 5 per day, 5 wrong tries, valid 10 min
 
 ## Cost
 One WhatsApp message per person, once (plus resends), about Rs 0.115 each.
+
+## Without a template (the person messages us) -- no approval wait, no cost
+1. Run sql/241_phone_claim.sql.
+2. Secrets: `supabase secrets set --project-ref <ref> WA_BUSINESS_NUMBER=919560677568 WA_VERIFY_TOKEN=<text you choose> WA_APP_SECRET=<Meta app secret>`
+   (Meta app secret: developers.facebook.com, your app, App settings, Basic, App secret, Show.)
+3. `supabase functions deploy phone-otp --project-ref <ref>` and
+   `supabase functions deploy wa-webhook --project-ref <ref> --no-verify-jwt`.
+4. Meta: your app, WhatsApp, Configuration, Webhook: Callback URL
+   `https://<ref>.supabase.co/functions/v1/wa-webhook`, Verify token = WA_VERIFY_TOKEN, click Verify and save.
+   Then under Webhook fields subscribe to `messages`.
+5. In the app the person taps Open WhatsApp, presses send on the ready message, and is verified within seconds.

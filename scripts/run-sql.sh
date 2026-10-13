@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every new SQL file (180 to 240) in the right order against your database.
+# Runs every new SQL file (180 to 241) in the right order against your database.
 # Needs psql. Get the connection string in Supabase > Project Settings > Database >
 # Connection string (URI), and put your database password in it. Type it here, never in chat:
 #   export DATABASE_URL='postgresql://postgres:YOURPASSWORD@db.nowhtdsuestyduzqtcks.supabase.co:5432/postgres'
@@ -21,7 +21,7 @@ FILES="180_menu_photos 181_no_rider_fallback_1 181_no_rider_fallback_2 182_deliv
 219_booking_pay_2 219_booking_pay_3 220_payments_received 221_admin_refunds_1 221_admin_refunds_2
 222_withdraw_1 222_withdraw_2 223_pay_guard_1 223_pay_guard_2
 224_online_first_1 224_online_first_2 224_online_first_3 224_online_first_4 224_online_first_5
-225_fee_in_pay_1 225_fee_in_pay_2 225_fee_in_pay_3 225_fee_in_pay_4 225_fee_in_pay_5 225_fee_in_pay_6 225_fee_in_pay_7 225_fee_in_pay_8 226_receipt 227_hold_until_done_1 227_hold_until_done_2 227_hold_until_done_3 228_hold_release_1 228_hold_release_2 228_hold_release_3 229_item_release_1 229_item_release_2 230_refund_queue_1 230_refund_queue_2 230_refund_queue_3 231_rider_cancel 231_one_work 232_vehicle_class_1 232_vehicle_class_2 233_ride_plan_1 233_ride_plan_2 234_plan_live_1 234_plan_live_2 235_plan_code_1 235_plan_code_2 236_live_share 237_plan_no_auto_complete 238_block_while_due 239_popups_1 239_popups_2 239_popups_3 240_phone_otp"
+225_fee_in_pay_1 225_fee_in_pay_2 225_fee_in_pay_3 225_fee_in_pay_4 225_fee_in_pay_5 225_fee_in_pay_6 225_fee_in_pay_7 225_fee_in_pay_8 226_receipt 227_hold_until_done_1 227_hold_until_done_2 227_hold_until_done_3 228_hold_release_1 228_hold_release_2 228_hold_release_3 229_item_release_1 229_item_release_2 230_refund_queue_1 230_refund_queue_2 230_refund_queue_3 231_rider_cancel 231_one_work 232_vehicle_class_1 232_vehicle_class_2 233_ride_plan_1 233_ride_plan_2 234_plan_live_1 234_plan_live_2 235_plan_code_1 235_plan_code_2 236_live_share 237_plan_no_auto_complete 238_block_while_due 239_popups_1 239_popups_2 239_popups_3 240_phone_otp 241_phone_claim"
 START="${START:-180}"; go=0
 for f in $FILES; do
   n="${f%%_*}"
