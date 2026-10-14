@@ -58,6 +58,7 @@ Payments and wallet:
 40. `241_phone_claim.sql` (phone check: the person sends us a WhatsApp message, no template). Deploy `phone-otp` again and `wa-webhook` with `--no-verify-jwt`. See PHONE_CHECK.md.
 41. `242_privacy_purge.sql` (nightly clean-up of old logs and unused phone-check rows; turn on pg_cron first under Database, Extensions)
 42. `243_money_guards_1.sql`, `_2.sql`, `_3.sql` (stops a wallet payment and a withdrawal from spending the same money, and stops the same payment being refunded twice)
+43. `244_hire_trip_code_1.sql`, `_2.sql` (a driver hired by the hour or day gets the same start code as a scheduled ride, so "Mark done" no longer fails with "start the trip with the customer's code first")
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

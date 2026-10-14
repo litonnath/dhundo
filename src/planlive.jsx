@@ -61,7 +61,7 @@ export function WorkSiteMap({ site, address, api = null, id = null, accepted = f
 
 
 // The trip code: the customer shows it, the rider types it in to start the trip.
-function PlanCode({ api, id, asWorker }) {
+export function PlanCode({ api, id, asWorker }) {
   const { t } = useI18n();
   const [st, setSt] = useState(null);
   const [val, setVal] = useState("");
