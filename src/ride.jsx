@@ -785,6 +785,7 @@ export function RideRequests({ api, online, trades = [], where = null }) {
     try {
       const x = one(await api.rideUpdate(r.id, action));
       if (action === "done" && x && x.ok) setDoneRide(r);
+      if (action === "release" && x && x.ok === false && x.reason === "prepaid_locked") setMsg(t("pl_locked"));
     } catch (_) {}
     setBusy(null); load();
   };

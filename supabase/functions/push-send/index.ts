@@ -33,6 +33,9 @@ const T: Record<string, Row> = {
   refund_done: { en: "Your refund was approved and sent to your wallet", bn: "আপনার রিফান্ড অনুমোদিত হয়েছে এবং ওয়ালেটে গেছে", hi: "आपका रिफंड मंज़ूर होकर वॉलेट में भेज दिया गया" },
   plan_done: { en: "Ride completed", bn: "রাইড সম্পূর্ণ হয়েছে", hi: "राइड पूरी हुई" },
   booking_done: { en: "Your booking was completed", bn: "আপনার বুকিং সম্পূর্ণ হয়েছে", hi: "आपकी बुकिंग पूरी हुई" },
+  booking_quoted: { en: "The provider sent a price. Open to agree", bn: "সেবাদাতা দাম পাঠিয়েছেন। রাজি হতে খুলুন", hi: "सेवा देने वाले ने कीमत भेजी है। सहमत होने के लिए खोलें" },
+  booking_price_ok: { en: "The customer agreed to your price. You can accept now", bn: "গ্রাহক আপনার দামে রাজি। এখন গ্রহণ করতে পারেন", hi: "ग्राहक आपकी कीमत से सहमत है। अब स्वीकार कर सकते हैं" },
+  booking_price_no: { en: "The customer did not agree to the price. Send a new price", bn: "গ্রাহক দামে রাজি হননি। নতুন দাম পাঠান", hi: "ग्राहक कीमत से सहमत नहीं हुआ। नई कीमत भेजें" },
   pay_received: { en: "Payment received", bn: "পেমেন্ট এসেছে", hi: "भुगतान मिल गया" },
   ride_accepted: { en: "A driver accepted your ride", bn: "একজন চালক আপনার রাইড নিয়েছেন", hi: "एक ड्राइवर ने आपकी राइड स्वीकार की", as: "এজন চালকে আপোনাৰ ৰাইড লৈছে", gu: "એક ડ્રાઇવરે તમારી રાઇડ સ્વીકારી", kn: "ಒಬ್ಬ ಚಾಲಕ ನಿಮ್ಮ ರೈಡ್ ಒಪ್ಪಿದ್ದಾರೆ", ml: "ഒരു ഡ്രൈവർ നിങ്ങളുടെ റൈഡ് സ്വീകരിച്ചു", mr: "एका चालकाने तुमची राइड स्वीकारली", or: "ଜଣେ ଚାଳକ ଆପଣଙ୍କ ରାଇଡ୍ ଗ୍ରହଣ କଲେ", pa: "ਇੱਕ ਡਰਾਈਵਰ ਨੇ ਤੁਹਾਡੀ ਰਾਈਡ ਮਨਜ਼ੂਰ ਕੀਤੀ", ta: "ஒரு ஓட்டுநர் உங்கள் சவாரியை ஏற்றார்", te: "ఒక డ్రైవర్ మీ రైడ్ అంగీకరించారు" },
 };

@@ -146,7 +146,10 @@ export function RiderJobs({ api, online, where = null }) {
           <Fold title={t("jb_msgs")}>
             <RideChat api={api} rideId={j.id} role="rider" kind="job" />
           </Fold>
-          {j.status !== "picked_up" && (
+          {j.status !== "picked_up" && j.paid && j.pay_method === "upi" && (
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 13, fontWeight: 700, color: "#8A5A00" }}>{t("pl_locked")}</div>
+          )}
+          {j.status !== "picked_up" && !(j.paid && j.pay_method === "upi") && (
             <div style={{ textAlign: "center", marginTop: 4 }}>
               <CancelButton role="rider" label={t("cn_rider_give_back")} onConfirm={async (reason) => { const r = await api.jobRiderCancel(j.id, reason); load(); return r; }} />
             </div>

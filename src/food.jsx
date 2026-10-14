@@ -1283,7 +1283,7 @@ export function OwnerOrders({ api, onHire }) {
           <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
             {o.status === "placed" && <>
               <Btn disabled={busy === o.id} onClick={() => act(o, "accept")}>{t("ow_accept")}</Btn>
-              <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+              {!(o.paid && o.pay_method === "upi") && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>}
               {o.mode === "shop_delivery" && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "refuse_delivery")}>{t("ow_refuse")}</Btn>}
             </>}
             {o.status === "confirmed" && (
@@ -1300,14 +1300,14 @@ export function OwnerOrders({ api, onHire }) {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {onHire && <Btn kind="ghost" onClick={onHire}>{t("ow_hire")}</Btn>}
                   <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "refuse_delivery")}>{t("ow_refuse")}</Btn>
-                  <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+                  {!(o.paid && o.pay_method === "upi") && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>}
                 </div>
               </div>
             )}
             {o.status === "quoted" && o.mode === "pickup" && <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("st_nodeliver_msg")}</div>}
             {o.status === "quoted" && o.mode !== "pickup" && <>
               <div style={{ width: "100%", fontSize: 13.5, fontWeight: 700, color: "#B45309" }}>{t("ow_quote_wait")} ({rupees(o.delivery_fee_paise)})</div>
-              <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>
+              {!(o.paid && o.pay_method === "upi") && <Btn kind="ghost" disabled={busy === o.id} onClick={() => act(o, "reject")}>{t("ow_reject")}</Btn>}
             </>}
             {["accepted", "ready"].includes(o.status) && ["delivery", "shop_delivery"].includes(o.mode) && (
               <div style={{ width: "100%" }}>

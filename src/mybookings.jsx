@@ -86,6 +86,27 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   const mine = (items || []).filter((x) => x.role === (asWorker ? "worker" : "customer"));
   const doneIds = mine.filter((x) => x.status === "completed").map((x) => x.id).join(",");
   const [wsum, setWsum] = useState({});
+  // The price a provider names before accepting, and whether the customer has agreed.
+  const [qt, setQt] = useState({});
+  const [qFail, setQFail] = useState(false);
+  const [qin, setQin] = useState({});
+  const [qerr, setQerr] = useState(null);
+  const reqIds = mine.filter((x) => x.status === "requested").map((x) => x.id).join(",");
+  const pullQuotes = async () => {
+    if (!reqIds || !api.bookingQuotes) return;
+    try {
+      const rows = await api.bookingQuotes(reqIds.split(","));
+      const o = {};
+      (Array.isArray(rows) ? rows : []).forEach((r) => { o[r.id] = r; });
+      setQt(o); setQFail(false);
+    } catch (_) { setQFail(true); }   // SQL 246 not run yet: do not block the buttons
+  };
+  useEffect(() => {
+    if (!reqIds) return undefined;
+    pullQuotes();
+    const id = setInterval(() => { if (!document.hidden) pullQuotes(); }, 7000);
+    return () => clearInterval(id);
+  }, [reqIds]);   // eslint-disable-line react-hooks/exhaustive-deps
   const wids = asWorker ? "" : Array.from(new Set(mine.map((x) => x.worker_id).filter(Boolean))).join(",");
   useEffect(() => {
     if (!wids || !api.ratingSummary) return;
@@ -116,7 +137,23 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
   );
   if (!list.length) return <div>{noteBox}<div style={{ color: T.inkSoft, padding: "14px 2px" }}>{t("mbk_empty")}</div></div>;
   const label = { requested: t(asWorker ? "mbk_needs_you" : "mbk_waiting"), accepted: t("mbk_accepted"), declined: t("mbk_declined"), completed: t("mbk_completed"), cancelled: t("mbk_cancelled") };
-  const answer = async (x, ok) => { setBusy(x.id); try { await api.bookingAnswer(x.id, ok); } catch (_) {} setBusy(null); onChanged && onChanged(); };
+  const answer = async (x, ok) => {
+    setBusy(x.id); setCmsg(null);
+    try { const r = await api.bookingAnswer(x.id, ok); const y = Array.isArray(r) ? r[0] : r; if (y && y.ok === false && y.reason === "price_first") setCmsg({ id: x.id, msg: t("q_need") }); } catch (_) {}
+    setBusy(null); onChanged && onChanged();
+  };
+  const sendPrice = async (x) => {
+    const v = Number(qin[x.id]);
+    if (!(v > 0)) return;
+    setBusy(x.id); setQerr(null);
+    try { const r = await api.bookingSetPrice(x.id, v); const y = Array.isArray(r) ? r[0] : r; if (y && y.ok === false) setQerr({ id: x.id, msg: t("e_save") }); else setQin((m) => ({ ...m, [x.id]: "" })); } catch (_) { setQerr({ id: x.id, msg: t("e_save") }); }
+    setBusy(null); pullQuotes(); onChanged && onChanged();
+  };
+  const priceAnswer = async (x, ok) => {
+    setBusy(x.id);
+    try { await api.bookingPriceAnswer(x.id, ok); } catch (_) {}
+    setBusy(null); pullQuotes(); onChanged && onChanged();
+  };
   const saveResched = async () => {
     if (!resched || !resched.value) return;
     setBusy(resched.id); setRmsg("");
@@ -230,6 +267,40 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
                 )}
               </div>
             )}
+            {x.status === "requested" && !qFail && (() => {
+              const q = qt[x.id] || {};
+              const has = Number(q.price_paise) > 0;
+              const amt = has ? `\u20B9${Math.round(q.price_paise / 100)}` : "";
+              const box = { margin: "6px 14px 10px", padding: "12px 14px", borderRadius: 14, background: q.price_ok ? "#ECFDF3" : "#FFF7E6", border: `1px solid ${q.price_ok ? "#A7E3BE" : "#F3D48A"}` };
+              const head = { fontSize: 14, fontWeight: 800, color: q.price_ok ? "#0F6B33" : "#7A4A00", lineHeight: 1.45 };
+              if (asWorker) {
+                return (
+                  <div style={box}>
+                    <div style={head}>{q.price_ok ? `\u2713 ${t("q_agreed")} \u00B7 ${amt}` : has ? `${t("q_sent")} ${amt} \u00B7 ${t("q_waiting")}` : t("q_need")}</div>
+                    {!q.price_ok && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <input inputMode="numeric" maxLength={6} value={qin[x.id] || ""} placeholder={t("q_price_ph")} aria-label={t("q_price_ph")}
+                               onChange={(e) => { setQerr(null); setQin((m) => ({ ...m, [x.id]: e.target.value.replace(/\D/g, "") })); }}
+                               style={{ flex: 1, minHeight: 44, fontSize: 16, padding: "0 12px", borderRadius: 12, border: "1px solid #E5C9B0", fontFamily: "inherit" }} />
+                        <button disabled={busy === x.id || !(Number(qin[x.id]) > 0)} onClick={() => sendPrice(x)} style={pill("#0A5BB8", "#fff", { flex: "0 0 auto", padding: "0 16px" })}>{has ? t("q_change") : t("q_send")}</button>
+                      </div>
+                    )}
+                    {qerr && qerr.id === x.id && <div role="alert" style={{ color: "#B91C1C", fontSize: 13, fontWeight: 700, marginTop: 6 }}>{qerr.msg}</div>}
+                  </div>
+                );
+              }
+              if (!has) return <div style={{ ...box, background: "#F3F6FA", border: "1px solid #D6E3F5" }}><div style={{ ...head, color: "#4B6A94" }}>{t("q_wait_price")}</div></div>;
+              if (q.price_ok) return <div style={box}><div style={head}>{`\u2713 ${t("q_you_agreed")} \u00B7 ${amt}`}</div></div>;
+              return (
+                <div style={box}>
+                  <div style={head}>{String(t("q_ask")).replace("{p}", Math.round(q.price_paise / 100))}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button disabled={busy === x.id} onClick={() => priceAnswer(x, true)} style={pill("#15803D", "#fff", { flex: "1 1 120px" })}>{t("q_yes")}</button>
+                    <button disabled={busy === x.id} onClick={() => priceAnswer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 80px", border: "1.5px solid #D1D5DB" })}>{t("q_no")}</button>
+                  </div>
+                </div>
+              );
+            })()}
             {live && resched && resched.id === x.id && (
               <ReschedPanel api={api} x={x} resched={resched} setResched={setResched} busy={busy} rmsg={rmsg} setRmsg={setRmsg} onSave={saveResched} t={t} />
             )}
@@ -237,7 +308,7 @@ export function MyBookings({ api, items, view, onChat, onChanged, asWorker = fal
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "4px 14px 14px" }}>
                 {asWorker && x.status === "accepted" && <button disabled={busy === x.id} onClick={() => complete(x)} style={pill("#15803D", "#fff", { flex: "1 1 150px" })}>{plan ? t("rp_done") : t("mbk_mark_done")}</button>}
                 {cmsg && cmsg.id === x.id && <div role="alert" style={{ flex: "1 1 100%", color: "#B91C1C", fontSize: 13.5, fontWeight: 700 }}>{cmsg.msg}</div>}
-                {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
+                {asWorker && x.status === "requested" && <button disabled={busy === x.id || (!qFail && !(qt[x.id] && qt[x.id].price_ok))} onClick={() => answer(x, true)} style={pill("#0A5BB8", "#fff", { flex: "1 1 120px" })}>{t("bk_accept")}</button>}
                 {asWorker && x.status === "requested" && <button disabled={busy === x.id} onClick={() => answer(x, false)} style={pill("#fff", "#B91C1C", { flex: "1 1 100px", border: "1.5px solid #D1D5DB" })}>{t("bk_decline")}</button>}
                 {!(resched && resched.id === x.id) && <button onClick={() => { setRmsg(""); const d = x.start_at ? new Date(x.start_at) : new Date(); const loc = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); setResched({ id: x.id, value: loc }); }} style={pill("#fff", "#0A5BB8", { flex: "1 1 120px", border: "1.5px solid #B8C9E0" })}>{t("mbk_resched")}</button>}
                 {x.other_phone && <a href={`tel:${x.other_phone}`} style={pill("#15803D", "#fff", { flex: "1 1 100px" })}><Icon name="phone" size={17} /> {t("mbk_call")}</a>}

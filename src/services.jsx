@@ -544,6 +544,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     orderFeeMarkPaid: (id) => rpc("services_order_fee_mark_paid", { p_order: id }, true),
     payFlags: (purpose, ids) => rpc("services_pay_flags", { p_purpose: purpose, p_ids: ids }, true),
     payMarkReceived: (purpose, id) => rpc("services_pay_mark_received", { p_purpose: purpose, p_id: id }, true),
+    bookingPriceAnswer: (id, ok) => rpc("services_booking_price_answer", { p_id: id, p_ok: !!ok }, true),
+    bookingQuotes: (ids) => rpc("services_booking_quotes", { p_ids: ids }, true),
     bookingSetPrice: (id, rupees) => rpc("services_booking_set_price", { p_id: id, p_rupees: rupees }, true),
     paymentsReceived: () => rpc("services_my_payments_received", {}, true),
     adminRefund: (o) => rpc("services_admin_refund", { p_account: o.account, p_rupees: o.rupees, p_dest: o.dest, p_reason: o.reason, p_payment: o.payment || null, p_ticket: o.ticket || null, p_upi: o.upi || null }, true),

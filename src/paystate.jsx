@@ -121,7 +121,7 @@ export function PurposePay({ api, purpose, refId, suggest = 0 }) {
       <div style={box("wait")}>
         <div style={{ fontWeight: 800, fontSize: 14.5 }}>{amount ? `${t("ps_price")}: ${rs(amount)}` : t("ps_no_price")}</div>
         <div style={{ fontSize: 13, marginTop: 2 }}>{amount ? t("ps_not_paid") : t("ps_set_hint")}</div>
-        {purpose === "booking" && (
+        {purpose === "booking" && !amount && (
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <input inputMode="numeric" maxLength={6} value={price} placeholder={suggest ? `\u20B9${suggest}` : t("ps_price")} onChange={(e) => { setErr(""); setPrice(e.target.value.replace(/\D/g, "")); }}
                    style={{ flex: 1, minHeight: 44, fontSize: 16, padding: "0 12px", borderRadius: 12, border: "1px solid #E5C9B0", fontFamily: "inherit" }} />
