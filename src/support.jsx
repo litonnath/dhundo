@@ -6,20 +6,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { T, Btn, Icon, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 import { CONTACT } from "./brand.jsx";
+import { askHelper, faqAnswer, faqQuestion, POPULAR } from "./helpfaq.js";
 
 const many = (r) => (Array.isArray(r) ? r : r ? [r] : []);
 const one = (r) => (Array.isArray(r) ? r[0] : r);
 const TOPICS = ["order", "payment", "rider", "booking", "ride", "account", "other"];
-const WORDS = {
-  order: /order|food|late|missing|wrong item|restaurant|shop|cancel|অর্ডার|खাবার|ऑर्डर|खाना/i,
-  payment: /pay|refund|money|upi|cash|charge|bill|gst|পেমেন্ট|টাকা|पेमेंट|पैसे|रिफंड/i,
-  rider: /rider|delivery partner|driver late|otp|code/i,
-  booking: /book|worker|cook|plumber|electric|reschedule|hire/i,
-  ride: /ride|taxi|cab|auto|bike|fare|trip/i,
-  account: /account|login|log in|otp|phone|password|profile|delete/i,
-};
-const guess = (text) => { const k = Object.keys(WORDS).find((x) => WORDS[x].test(text)); return k || null; };
-
 export function SupportButton({ api, signedIn, onSignIn, bottom = 92 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -60,7 +51,8 @@ function Bubble({ mine, children, time }) {
 }
 
 export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const [convo, setConvo] = useState([]);   // the helper conversation: { who: "me" | "bot", text, related? }
   const [view, setView] = useState("menu"); // menu | bot | chat
   const [topic, setTopic] = useState(null);
   const [text, setText] = useState("");
@@ -83,7 +75,7 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
     const id = setInterval(() => loadThread(ticket), 5000);
     return () => clearInterval(id);
   }, [view, ticket]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (endRef.current) endRef.current.scrollIntoView({ block: "end" }); }, [msgs.length, view]);
+  useEffect(() => { if (endRef.current) endRef.current.scrollIntoView({ block: "end" }); }, [msgs.length, convo.length, view]);
 
   const openTicket = async (tp, body) => {
     if (!signedIn) { onSignIn && onSignIn(); return; }
@@ -105,12 +97,32 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
     } catch (_) { setErr(t("sp_err")); }
     setBusy(false);
   };
-  const ask = () => {
-    const body = text.trim();
-    if (body.length < 2) return;
-    const g = guess(body);
-    if (g) { setTopic(g); setView("bot"); } else openTicket(t("sp_t_other"), body);
+  // The helper answers from its built-in knowledge base (free, nothing is sent anywhere).
+  const reply = (q, from) => {
+    const r = askHelper(q, lang, []);
+    return r ? { who: "bot", text: r.answer, related: r.related } : { who: "bot", text: t("sp_nomatch"), none: true };
   };
+  const askBot = (raw) => {
+    const body = String(raw || "").trim();
+    if (body.length < 2) return;
+    setText(""); setErr("");
+    setConvo((c) => [...c, { who: "me", text: body }, reply(body)]);
+    setView("bot");
+  };
+  const pickQuestion = (id) => {
+    const f = faqAnswer(id, lang);
+    if (!f) return;
+    const r = askHelper(f.q, lang, []);
+    setConvo((c) => [...c, { who: "me", text: f.q }, { who: "bot", text: f.answer, related: (r && r.id === id ? r.related : []) }]);
+    setView("bot");
+  };
+  const startTopic = (k) => {
+    setTopic(k);
+    if (k === "other") { setView("compose"); return; }
+    setConvo([{ who: "me", text: topicName(k) }, { who: "bot", text: t("sp_a_" + k) }]);
+    setView("bot");
+  };
+  const ask = () => askBot(text);
   const time = (iso) => { try { return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (_) { return ""; } };
   const row = { display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 52, padding: "0 14px", borderRadius: 14, border: `1px solid ${T.line}`, background: T.white, fontFamily: "inherit", fontSize: 15, fontWeight: 700, color: T.ink, cursor: "pointer", textAlign: "left" };
   const wa = String(CONTACT.whatsapp || "").replace(/\D/g, "");
@@ -120,7 +132,7 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
          style={{ position: "fixed", inset: 0, zIndex: 560, background: "rgba(15,20,25,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: T.white, borderRadius: "18px 18px 0 0", width: "100%", maxWidth: 520, height: "86vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${T.line}` }}>
-          {view !== "menu" && <button onClick={() => { setView("menu"); setTicket(null); setTopic(null); loadMine(); }} aria-label="Back" style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><Icon name="back" size={20} /></button>}
+          {view !== "menu" && <button onClick={() => { setView("menu"); setTicket(null); setTopic(null); setConvo([]); loadMine(); }} aria-label="Back" style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><Icon name="back" size={20} /></button>}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#0B3A78" }}>{t("sup_title")}</div>
             <div style={{ fontSize: 12.5, color: T.inkSoft }}>{view === "chat" ? t("sp_team_hint") : t("sp_sub")}</div>
@@ -147,7 +159,11 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
                 </div>
               )}
               <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-                {TOPICS.map((k) => <button key={k} onClick={() => { setTopic(k); setView(k === "other" ? "bot" : "bot"); }} style={row}>{topicName(k)}<span style={{ flex: 1 }} /><Icon name="chev" size={16} style={{ transform: "rotate(-90deg)", color: T.inkFaint }} /></button>)}
+                {TOPICS.map((k) => <button key={k} onClick={() => startTopic(k)} style={row}>{topicName(k)}<span style={{ flex: 1 }} /><Icon name="chev" size={16} style={{ transform: "rotate(-90deg)", color: T.inkFaint }} /></button>)}
+              </div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: T.inkSoft, textTransform: "uppercase", letterSpacing: 0.5, margin: "16px 0 6px" }}>{t("sp_popular")}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {POPULAR.map((id) => <button key={id} onClick={() => pickQuestion(id)} style={{ minHeight: 40, padding: "0 14px", borderRadius: 20, border: `1.5px solid ${T.line}`, background: T.white, color: "#0A5BB8", fontFamily: "inherit", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>{faqQuestion(id, lang)}</button>)}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
                 {wa && <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" style={{ ...row, width: "auto", flex: "1 1 140px", justifyContent: "center", textDecoration: "none", color: "#15803D", borderColor: "#BEE3CB" }}>WhatsApp</a>}
@@ -156,15 +172,25 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
             </>
           )}
 
-          {view === "bot" && topic && (
+          {view === "bot" && (
             <>
-              <Bubble mine>{topicName(topic)}</Bubble>
-              {topic !== "other" && <Bubble>{t("sp_a_" + topic)}</Bubble>}
-              <Bubble>{t(topic === "other" ? "sp_ask_other" : "sp_helpful")}</Bubble>
+              {convo.map((m, i) => (
+                <div key={i}>
+                  <Bubble mine={m.who === "me"}>{m.text}</Bubble>
+                  {m.related && m.related.length > 0 && i === convo.length - 1 && (
+                    <div style={{ margin: "4px 0 6px" }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: T.inkSoft, margin: "0 0 4px" }}>{t("sp_related")}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {m.related.map((x) => <button key={x.id} onClick={() => pickQuestion(x.id)} style={{ minHeight: 36, padding: "0 12px", borderRadius: 18, border: `1.5px solid ${T.line}`, background: T.white, color: "#0A5BB8", fontFamily: "inherit", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{x.q}</button>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0" }}>
-                {topic !== "other" && <Btn kind="ghost" onClick={() => { setView("menu"); setTopic(null); }}>{t("sp_yes")}</Btn>}
                 <Btn onClick={() => { setView("compose"); }}>{t("sp_talk")}</Btn>
               </div>
+              <div ref={endRef} />
             </>
           )}
 
@@ -185,14 +211,14 @@ export function SupportSheet({ api, signedIn, onSignIn, onClose }) {
           )}
         </div>
 
-        {(view === "menu" || view === "compose" || view === "chat") && (
+        {(view === "menu" || view === "bot" || view === "compose" || view === "chat") && (
           <div style={{ padding: "10px 12px calc(10px + env(safe-area-inset-bottom))", borderTop: `1px solid ${T.line}` }}>
-            {!signedIn && view !== "menu" ? <Btn full onClick={onSignIn}>{t("nav_signin")}</Btn> : (
+            {!signedIn && view !== "menu" && view !== "bot" ? <Btn full onClick={onSignIn}>{t("nav_signin")}</Btn> : (
               <div style={{ display: "flex", gap: 8 }}>
-                <input style={{ ...input, flex: 1, marginBottom: 0, minHeight: 48 }} value={text} maxLength={view === "menu" ? 300 : 1000}
-                       placeholder={view === "menu" ? t("sp_type_ph") : t("sp_msg_ph")} onChange={(e) => setText(e.target.value)}
-                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); view === "menu" ? ask() : view === "compose" ? openTicket(topic ? topicName(topic) : t("sp_t_other"), text) : send(); } }} />
-                <Btn disabled={busy || !text.trim()} onClick={() => (view === "menu" ? ask() : view === "compose" ? openTicket(topic ? topicName(topic) : t("sp_t_other"), text) : send())}>{busy ? "…" : t("sp_send")}</Btn>
+                <input style={{ ...input, flex: 1, marginBottom: 0, minHeight: 48 }} value={text} maxLength={view === "menu" || view === "bot" ? 300 : 1000}
+                       placeholder={view === "menu" ? t("sp_type_ph") : view === "bot" ? t("sp_bot_ph") : t("sp_msg_ph")} onChange={(e) => setText(e.target.value)}
+                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); view === "menu" || view === "bot" ? ask() : view === "compose" ? openTicket(topic ? topicName(topic) : t("sp_t_other"), text) : send(); } }} />
+                <Btn disabled={busy || !text.trim()} onClick={() => (view === "menu" || view === "bot" ? ask() : view === "compose" ? openTicket(topic ? topicName(topic) : t("sp_t_other"), text) : send())}>{busy ? "…" : t("sp_send")}</Btn>
               </div>
             )}
             {err && view !== "compose" && <div role="alert" style={{ color: "#B91C1C", fontSize: 13, fontWeight: 700, marginTop: 6 }}>{err}</div>}
