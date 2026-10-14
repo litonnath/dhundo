@@ -61,6 +61,7 @@ Payments and wallet:
 43. `244_hire_trip_code_1.sql`, `_2.sql` (a driver hired by the hour or day gets the same start code as a scheduled ride, so "Mark done" no longer fails with "start the trip with the customer's code first")
 44. `245_prepaid_lock_1.sql`, `_2.sql`, `_3.sql` (once a customer has paid online, the driver, rider or shop cannot cancel, give back or reject)
 45. `246_booking_quote_1.sql`, `_2.sql` (a booking is accepted only after the provider names a price and the customer says yes). Redeploy `push-send` for the new alerts.
+46. `247_pin_reset.sql` (reset a forgotten PIN with an SMS code). Then `supabase functions deploy pin-reset --no-verify-jwt` (it needs the same `FIREBASE_API_KEY` secret as phone-firebase and the Firebase setup in PHONE_CHECK.md).
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

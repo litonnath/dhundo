@@ -46,3 +46,11 @@ One WhatsApp message per person, once (plus resends), about Rs 0.115 each.
 6. Supabase: `supabase secrets set --project-ref <ref> FIREBASE_API_KEY=<the same apiKey>` and
    `supabase functions deploy phone-firebase --project-ref <ref>`.
 7. Publish the app. When FIREBASE_CONFIG is present the sheet sends an SMS and asks for the code; without it the app uses the WhatsApp-message way.
+
+## Reset a forgotten PIN (sign-in screen, "Forgot PIN? Reset it with a code")
+Needs the Firebase setup above (FIREBASE_CONFIG in src/config.js, Phone sign-in on, the domain allowed, India allowed in the SMS region policy).
+1. Run sql/247_pin_reset.sql.
+2. `supabase functions deploy pin-reset --project-ref <ref> --no-verify-jwt` (not signed in when it is called). It uses the secret FIREBASE_API_KEY.
+3. The person enters their phone number, types the SMS code, chooses a new 6-digit PIN twice, and signs in with it.
+The server checks the code with Google, allows 5 resets per number and 20 per address an hour, and accepts only a code confirmed in the last 10 minutes.
+A test number from the Firebase console (fixed code) works for trying it without sending an SMS.

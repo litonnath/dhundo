@@ -36,6 +36,7 @@ import { DhundoLogo } from "./brand.jsx";
 import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
 import { NoticePage, NoticeSheet } from "./privacy.jsx";
 import { TermsPage } from "./terms.jsx";
+import { PinResetSheet } from "./pinreset.jsx";
 import { ConsentProvider } from "./consent-ui.jsx";
 import { useConsent } from "./consent-core.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
@@ -163,6 +164,7 @@ function AuthPanel({ onDone, onClose }) {
   const [adult, setAdult] = useState(false);
   const [more, setMore] = useState(false);
   const [notice, setNotice] = useState(false);
+  const [reset, setReset] = useState(false);
   // Set when this person has an authenticator app set up (admins): the PIN
   // was right, and the 6-digit code is the second step.
   const [mfa, setMfa] = useState(null);
@@ -433,10 +435,18 @@ function AuthPanel({ onDone, onClose }) {
             forgets has to reach a human, and being told that up front beats
             discovering it while locked out. */}
         {!signup && (
-          <p style={{ fontSize: 12.5, color: MUTED, margin: "8px 2px 0", lineHeight: 1.6 }}>
-            {t("au_forgot")}
-          </p>
+          <>
+            <button type="button" onClick={() => setReset(true)} style={{
+              background: "none", border: "none", padding: "8px 2px 0", color: DEEP, fontWeight: 800,
+              fontSize: 14, cursor: "pointer", fontFamily: "inherit", minHeight: 40, textAlign: "left",
+            }}>{t("pr_link")}</button>
+            <p style={{ fontSize: 12.5, color: MUTED, margin: "2px 2px 0", lineHeight: 1.6 }}>
+              {t("au_forgot")}
+            </p>
+          </>
         )}
+        {reset && <PinResetSheet cfg={CFG} phone={phone} onClose={() => setReset(false)}
+                                 onDone={(p) => { setReset(false); setPassword(""); if (p) setPhone(p); setErr(null); }} />}
 
         <button onClick={onClose} disabled={busy} style={{
           width: "100%", marginTop: 12, padding: "11px", borderRadius: 10,
