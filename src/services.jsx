@@ -348,6 +348,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_lng: typeof o.lng === "number" ? o.lng : null, p_limit: 50,
       })),
     walletBalance: () => rpc("services_wallet_balance", {}, true),
+    claimMonthly: () => rpc("services_claim_monthly_bonus", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),
     setHome: (lat, lng, exact) =>
@@ -3254,7 +3255,9 @@ export default function ServicesPage({
   useEffect(() => {
     if (!signedIn) { setWalletPaise(null); return; }
     let alive = true;
-    api.walletBalance()
+    // This month's bonus is credited on the first visit of the month (249);
+    // a second call does nothing. Failing here must not hide the balance.
+    Promise.resolve(api.claimMonthly()).catch(() => {}).then(() => api.walletBalance())
       .then((r) => {
         if (!alive) return;
         setWalletPaise(Array.isArray(r) ? Number(r[0] || 0) : Number(r || 0));

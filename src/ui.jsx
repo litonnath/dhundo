@@ -464,6 +464,22 @@ export function InstallButton({ onOpen }) {
 // elderly customer. For them the way in is a person, so the sign-up help
 // number is shown before sign-up, with the message already written in their
 // language. Hidden when CONTACT.whatsapp is empty.
+// The reward promise, shown on the sign-in / sign-up screen. The amounts match
+// sql/249: Rs 10 on sign-up, then Rs 10 a month; Rs 50 a month for a live listing.
+export function RewardsBanner({ style }) {
+  const { t } = useI18n();
+  return (
+    <div style={{
+      background: "#FFF4E8", border: "1px solid rgba(255,138,31,0.45)", borderRadius: 12,
+      padding: "11px 13px", marginBottom: 14, fontSize: 13.5, lineHeight: 1.6, color: "#3A2A14", ...style,
+    }}>
+      <div style={{ fontWeight: 800, marginBottom: 3 }}>{"\uD83C\uDF81 " + t("rw_title")}</div>
+      <div>{t("rw_user")}</div>
+      <div>{t("rw_owner")}</div>
+    </div>
+  );
+}
+
 export function SignupHelp({ style, compact = false }) {
   const { t } = useI18n();
   if (!CONTACT.whatsapp) return null;
@@ -803,6 +819,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
 
   const label = (row) =>
     row.kind === "signup_bonus" ? t("wal_kind_bonus")
+      : row.kind === "monthly_bonus" ? t("wal_kind_monthly")
       : row.kind === "listing_bonus" ? t("wal_kind_listing")
       : row.kind === "promo" ? t("wal_kind_promo")
       : row.kind === "refund" ? t("wal_kind_refund")

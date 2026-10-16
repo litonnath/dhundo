@@ -33,7 +33,7 @@ import ServicesPage from "./services.jsx";
 import { I18nProvider, useI18n } from "./i18n.jsx";
 import { registerServiceWorker } from "./device.jsx";
 import { DhundoLogo } from "./brand.jsx";
-import { CloseButton, useDismissable, SignupHelp } from "./ui.jsx";
+import { CloseButton, useDismissable, SignupHelp, RewardsBanner } from "./ui.jsx";
 import { NoticePage, NoticeSheet } from "./privacy.jsx";
 import { TermsPage } from "./terms.jsx";
 import { PinResetSheet } from "./pinreset.jsx";
@@ -310,6 +310,7 @@ function AuthPanel({ onDone, onClose }) {
 
         {/* Before the form, not after it: somebody stuck on the form is
             not going to scroll past it to find help. */}
+        <RewardsBanner />
         <SignupHelp />
 
         {err && (
