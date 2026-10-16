@@ -83,7 +83,7 @@ self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = {}; }
   e.waitUntil(self.registration.showNotification(d.title || "Dhundo", {
-    body: d.body || "", icon: "/icon-192.png", badge: "/icon-192.png",
+    body: d.body || "", icon: "/icon-v2-192.png", badge: "/icon-v2-192.png",
     tag: d.tag || "dhundo", data: { url: d.url || "/" },
     requireInteraction: !!d.requireInteraction, renotify: !!d.renotify && !!d.tag,
     vibrate: d.vibrate || undefined,
