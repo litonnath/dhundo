@@ -2228,7 +2228,7 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
             <DhundoLogo size={34} showWord={false} />
             <span style={{
               fontSize: 22, fontWeight: 900, letterSpacing: 2, color: T.brandDark,
-            }}>DHUNDO</span>
+            }}>DHUNDONOW</span>
           </div>
           {/* The brand line, in the language the app is showing. */}
           <p style={{
@@ -2412,7 +2412,7 @@ export function AccountPage({
           credit the OpenStreetMap and GeoNames licences require. */}
       {showCredits && (
         <div style={{ marginTop: 26, fontSize: 12, lineHeight: 1.6, color: T.inkFaint, textAlign: "center" }}>
-          <div style={{ fontWeight: 900, letterSpacing: 2, color: T.brandDark, fontSize: 14 }}>DHUNDO</div>
+          <div style={{ fontWeight: 900, letterSpacing: 2, color: T.brandDark, fontSize: 14 }}>DHUNDONOW</div>
           <div style={{ fontStyle: "italic", color: T.inkSoft, margin: "2px 0 8px" }}>“{t("slogan")}”</div>
           <div>{t("owned_by")}</div>
           <div style={{ marginTop: 6 }}>
