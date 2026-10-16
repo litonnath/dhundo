@@ -310,7 +310,7 @@ function AuthPanel({ onDone, onClose }) {
 
         {/* Before the form, not after it: somebody stuck on the form is
             not going to scroll past it to find help. */}
-        <RewardsBanner />
+        <RewardsBanner url={CFG.url} anonKey={CFG.anonKey} />
         <SignupHelp />
 
         {err && (

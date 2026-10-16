@@ -15,7 +15,7 @@ const lbl = { fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 3 }
 const cell = { ...input, minHeight: 40, marginBottom: 0, padding: "6px 8px", width: "100%", boxSizing: "border-box" };
 const td = { padding: "8px 8px", borderTop: `1px solid ${T.line}`, verticalAlign: "top" };
 
-const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["payments", "Payments"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
+const TABS = [["overview", "Overview"], ["partners", "Partners"], ["quality", "Quality"], ["reports", "Reports"], ["support", "Support"], ["orders", "Orders"], ["rides", "Rides"], ["people", "People"], ["money", "Money"], ["payments", "Payments"], ["rewards", "Rewards"], ["fares", "Fares & tax"], ["ads", "Ads & items"], ["security", "Security"]];
 
 export function AdminConsole({ api, panels }) {
   const [tab, setTab] = useState("overview");
@@ -37,6 +37,7 @@ export function AdminConsole({ api, panels }) {
       {tab === "people" && <People api={api} />}
       {tab === "money" && panels.money}
       {tab === "payments" && <Payments api={api} />}
+      {tab === "rewards" && <Rewards api={api} />}
       {tab === "fares" && <FareCalculator api={api} />}
       {tab === "ads" && panels.ads}
       {tab === "security" && panels.security}
@@ -203,6 +204,44 @@ function RefundBox({ api, accountId, ticketId = null, payment = null, name = "",
 }
 
 // Every online payment (PayU): who, what for, how much, and whether PayU confirmed it.
+// Halt or change the sign-up / monthly credits and the message about them.
+function Rewards({ api }) {
+  const [f, setF] = useState(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    Promise.resolve(api.rewardsPublic()).then((r) => setF(r && typeof r === "object" ? { ...r, signup: r.signup_paise / 100, user: r.user_paise / 100, owner: r.owner_paise / 100 } : null)).catch(() => setMsg("Could not load. Run 249_monthly_3.sql first."));
+  }, [api]);
+  if (!f) return <div style={{ color: T.inkSoft }}>{msg || "Loading\u2026"}</div>;
+  const set = (k, v) => setF({ ...f, [k]: v });
+  const save = () => {
+    setMsg("");
+    api.adminRewardsSet({ banner: f.banner_on, signupOn: f.signup_on, monthlyOn: f.monthly_on, signup: Math.round(Number(f.signup) * 100), user: Math.round(Number(f.user) * 100), owner: Math.round(Number(f.owner) * 100) })
+      .then(() => setMsg("Saved.")).catch(() => setMsg("Could not save."));
+  };
+  const sw = (k, text) => (
+    <label style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, fontWeight: 700, fontSize: 14.5 }}>
+      <input type="checkbox" checked={!!f[k]} onChange={(e) => set(k, e.target.checked)} style={{ width: 22, height: 22 }} />{text}
+    </label>
+  );
+  const num = (k, text) => (
+    <div style={{ marginBottom: 10 }}><div style={lbl}>{text}</div><input type="number" min="0" style={cell} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
+  );
+  return (
+    <div style={{ ...card, maxWidth: 460 }}>
+      <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 4px" }}>Rewards</h2>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 12 }}>Switch off to halt. Credits already given stay in wallets. The message follows these settings.</div>
+      {sw("banner_on", "Show the rewards message on sign-in / sign-up")}
+      {sw("signup_on", "Pay the sign-up bonus to new users")}
+      {sw("monthly_on", "Pay the monthly credit")}
+      {num("signup", "Sign-up bonus (Rs)")}
+      {num("user", "Monthly credit for a user (Rs)")}
+      {num("owner", "Monthly credit for a business owner with a live listing (Rs)")}
+      <Btn onClick={save}>Save</Btn>
+      {msg && <div role="status" style={{ marginTop: 8, fontWeight: 700 }}>{msg}</div>}
+    </div>
+  );
+}
+
 function Payments({ api }) {
   const [rows, err, load] = useList(() => api.adminPayments(), [api]);
   const [refunds, , reloadRefunds] = useList(() => api.adminRefundsList("to_pay"), [api]);

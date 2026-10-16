@@ -348,6 +348,8 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
         p_lng: typeof o.lng === "number" ? o.lng : null, p_limit: 50,
       })),
     walletBalance: () => rpc("services_wallet_balance", {}, true),
+    rewardsPublic: () => rpc("services_rewards_public", {}),
+    adminRewardsSet: (o) => rpc("services_admin_rewards_set", { p_banner: o.banner, p_signup_on: o.signupOn, p_monthly_on: o.monthlyOn, p_signup: o.signup, p_user: o.user, p_owner: o.owner }, true),
     claimMonthly: () => rpc("services_claim_monthly_bonus", {}, true),
     myReferrals: () => rpc("services_my_referrals", {}, true),
     applyReferral: (code) => rpc("services_apply_referral", { p_code: code }, true),

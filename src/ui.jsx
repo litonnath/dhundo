@@ -464,18 +464,31 @@ export function InstallButton({ onOpen }) {
 // elderly customer. For them the way in is a person, so the sign-up help
 // number is shown before sign-up, with the message already written in their
 // language. Hidden when CONTACT.whatsapp is empty.
-// The reward promise, shown on the sign-in / sign-up screen. The amounts match
-// sql/249: Rs 10 on sign-up, then Rs 10 a month; Rs 50 a month for a live listing.
-export function RewardsBanner({ style }) {
+// The reward promise on the sign-in / sign-up screen. Amounts and the on/off
+// switch come from the admin (sql/249_monthly_3), so the message can be halted
+// and never promises what the app has stopped paying. Hidden until it knows.
+export function RewardsBanner({ url, anonKey, style }) {
   const { t } = useI18n();
+  const [c, setC] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`${url}/rest/v1/rpc/services_rewards_public`, {
+      method: "POST", body: "{}",
+      headers: { "Content-Type": "application/json", apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) setC(j); }).catch(() => {});
+    return () => { alive = false; };
+  }, [url, anonKey]);
+  if (!c || !c.banner_on || (!c.signup_on && !c.monthly_on)) return null;
+  const rp = (k, o) => t(k).replace("{s}", c.signup_paise / 100).replace("{u}", c.user_paise / 100).replace("{o}", c.owner_paise / 100);
+  const userKey = c.signup_on && c.monthly_on ? "rw_user" : c.monthly_on ? "rw_user_m" : "rw_user_s";
   return (
     <div style={{
       background: "#FFF4E8", border: "1px solid rgba(255,138,31,0.45)", borderRadius: 12,
       padding: "11px 13px", marginBottom: 14, fontSize: 13.5, lineHeight: 1.6, color: "#3A2A14", ...style,
     }}>
       <div style={{ fontWeight: 800, marginBottom: 3 }}>{"\uD83C\uDF81 " + t("rw_title")}</div>
-      <div>{t("rw_user")}</div>
-      <div>{t("rw_owner")}</div>
+      <div>{rp(userKey)}</div>
+      {c.monthly_on && <div>{rp("rw_owner")}</div>}
     </div>
   );
 }
