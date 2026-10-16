@@ -21,7 +21,7 @@
 //   onSignIn, onSignOut    navigation callbacks
 // ===========================================================================
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { T, Icon, Btn, Chip, VoiceButton, Notice, input, Header, Hero, CategoryGrid, ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea, groupStyle, groupLabel, WalletSheet, plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot, BottomNav, AccountPage, ProfilePage, SignupHelp, LanguageGate, matchTrade, matchTrades } from "./ui.jsx";
+import { T, Icon, Btn, Chip, VoiceButton, Notice, input, Header, Hero, CategoryGrid, ListingCard, EmptyState, TrustBar, InstallSheet, OutOfArea, groupStyle, groupLabel, WalletSheet, plateLooksRight, ReqTag, CloseButton, useDismissable, ConfirmDelete, SiteFooter, LiveDot, BottomNav, AccountPage, ProfilePage, SignupHelp, RewardsPopup, LanguageGate, matchTrade, matchTrades } from "./ui.jsx";
 import { placeCoords, pinForPlace, placeIsCoherent, roadDistances, lineDistances } from "./regions.js";
 import { hasIndic, variants } from "./translit.js";
 import { captureFromUrl, redeemPending } from "./referral.js";
@@ -3280,6 +3280,10 @@ export default function ServicesPage({
       // Room for the bottom bar, so it never covers the last card.
       paddingBottom: "calc(72px + env(safe-area-inset-bottom))",
     }}>
+      {tab === "browse" && !isAdmin && (
+        <RewardsPopup api={api} signedIn={signedIn} hasBusiness={hasListing}
+                      onSignIn={() => setTab("account")} onAdd={() => setTab("add")} />
+      )}
       {langGate && <LanguageGate onDone={closeLangGate} />}
       <Header
         tab={tab}

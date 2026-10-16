@@ -493,6 +493,62 @@ export function RewardsBanner({ url, anonKey, style }) {
   );
 }
 
+// Ad-style popup on the home page: what the rewards are and how to get them.
+// Shown once a day per device, closed with the cross; follows the admin switch.
+export function RewardsPopup({ api, signedIn, hasBusiness, onSignIn, onAdd }) {
+  const { t } = useI18n();
+  const [c, setC] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let seen = false;
+    const today = new Date().toISOString().slice(0, 10);
+    try { seen = localStorage.getItem("dn_rw_seen") === today; } catch (_) {}
+    if (seen) return undefined;
+    Promise.resolve(api.rewardsPublic()).then((j) => {
+      if (!alive || !j || !j.banner_on || (!j.signup_on && !j.monthly_on)) return;
+      setC(j);
+      setTimeout(() => { if (alive) setOpen(true); }, 900);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [api]);
+  const close = () => {
+    setOpen(false);
+    try { localStorage.setItem("dn_rw_seen", new Date().toISOString().slice(0, 10)); } catch (_) {}
+  };
+  useDismissable(open, close);
+  if (!open || !c) return null;
+  const rp = (k) => t(k).replace("{s}", c.signup_paise / 100).replace("{u}", c.user_paise / 100).replace("{o}", c.owner_paise / 100);
+  const steps = [];
+  if (!signedIn && c.signup_on) steps.push(rp("rw_step1"));
+  if (c.monthly_on) { steps.push(rp("rw_step2")); steps.push(rp("rw_step3")); }
+  if (!steps.length) return null;
+  const go = () => { close(); if (!signedIn) { if (onSignIn) onSignIn(); } else if (!hasBusiness && onAdd) onAdd(); };
+  const cta = !signedIn ? t("rw_btn_signup") : !hasBusiness ? t("rw_btn_add") : t("rw_btn_ok");
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 380, background: "rgba(15,20,25,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+      <div style={{ position: "relative", background: "#fff", borderRadius: 20, width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,30,45,0.35)" }}>
+        <button onClick={close} aria-label={t("rw_btn_ok")} style={{ position: "absolute", top: 8, right: 8, width: 40, height: 40, borderRadius: 20, border: "none", background: "rgba(255,255,255,0.9)", fontSize: 22, lineHeight: 1, cursor: "pointer", color: T.ink }}>{"\u00D7"}</button>
+        <div style={{ background: "linear-gradient(135deg,#054291,#0A5BB8 60%,#F87617)", color: "#fff", padding: "26px 20px 18px" }}>
+          <div style={{ fontSize: 30 }}>{"\uD83C\uDF81"}</div>
+          <div style={{ fontSize: 21, fontWeight: 800, marginTop: 4 }}>{t("rw_title")}</div>
+          <div style={{ fontSize: 14, opacity: 0.95, marginTop: 3 }}>{t("rw_pop_h")}</div>
+        </div>
+        <div style={{ padding: "14px 18px 18px" }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, fontSize: 14.5, lineHeight: 1.55, color: T.ink }}>
+              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 13, background: T.accentSoft, color: T.accent, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+              <span>{s}</span>
+            </div>
+          ))}
+          <Btn full onClick={go}>{cta}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SignupHelp({ style, compact = false }) {
   const { t } = useI18n();
   if (!CONTACT.whatsapp) return null;
