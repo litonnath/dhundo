@@ -3,7 +3,7 @@
 // items, security. Partners, money, ads and security are existing panels
 // passed in; the rest are read-only lists loaded here.
 import React, { useState, useEffect, useCallback } from "react";
-import { T, Btn, input } from "./ui.jsx";
+import { T, Btn, input, ConfirmDelete } from "./ui.jsx";
 import { FareCalculator } from "./fares.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : []);
@@ -141,7 +141,31 @@ function Rides({ api }) {
 function People({ api }) {
   const [q, setQ] = useState("");
   const [applied, setApplied] = useState("");
-  const [rows, err] = useList(() => api.adminPeople(applied || null), [api, applied]);
+  const [rows, err, load] = useList(() => api.adminPeople(applied || null), [api, applied]);
+  const [open, setOpen] = useState(null);      // person whose listings are shown
+  const [lists, setLists] = useState(null);
+  const [ask, setAsk] = useState(null);        // { kind: "account" | "listing", id, label }
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const showListings = (p) => {
+    if (open && open.id === p.id) { setOpen(null); return; }
+    setOpen(p); setLists(null);
+    Promise.resolve(api.adminPersonListings(p.id)).then((r) => setLists(many(r))).catch(() => setLists([]));
+  };
+  const confirm = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = ask.kind === "account" ? await api.adminDeleteAccount(ask.id, null, false) : await api.adminDeleteListing(ask.id);
+      const one = Array.isArray(r) ? r[0] : r;
+      if (one && one.ok) {
+        api.flushDeletions && api.flushDeletions().catch(() => {});
+        setMsg("Removed.");
+        if (ask.kind === "account") { setOpen(null); load(); } else if (open) { Promise.resolve(api.adminPersonListings(open.id)).then((x) => setLists(many(x))); load(); }
+      } else setMsg("Could not remove" + (one && one.reason ? " (" + one.reason + ")" : "."));
+    } catch (_) { setMsg("Could not remove."); }
+    setBusy(false); setAsk(null);
+  };
+  const link = { background: "none", border: "none", cursor: "pointer", fontWeight: 800, fontFamily: "inherit", fontSize: 13.5, padding: "6px 4px" };
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -150,8 +174,32 @@ function People({ api }) {
         <Btn onClick={() => setApplied(q.trim())}>Search</Btn>
       </div>
       {err && <div role="alert" style={{ color: "#B91C1C", fontWeight: 700, marginBottom: 8 }}>{err}</div>}
-      <Table head={["Name", "Phone", "Joined", "Listings", "Orders", "Rides"]} empty="Nobody found."
-             rows={rows && rows.map((p) => [p.full_name, p.phone, p.joined ? when(p.joined) : "—", p.listings, p.orders, p.rides])} />
+      {msg && <div role="status" style={{ fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
+      <Table head={["Name", "Phone", "Joined", "Listings", "Orders", "Rides", ""]} empty="Nobody found."
+             rows={rows && rows.map((p) => [p.full_name, p.phone, p.joined ? when(p.joined) : "—", p.listings, p.orders, p.rides,
+               <span key="a" style={{ whiteSpace: "nowrap" }}>
+                 {Number(p.listings) > 0 && <button style={{ ...link, color: T.ink }} onClick={() => showListings(p)}>{open && open.id === p.id ? "Hide listings" : "Listings"}</button>}
+                 <button style={{ ...link, color: "#B91C1C" }} onClick={() => setAsk({ kind: "account", id: p.id, label: p.full_name || p.phone })}>Remove account</button>
+               </span>])} />
+      {open && (
+        <div style={{ ...card, marginTop: 12 }}>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Listings of {open.full_name || open.phone}</div>
+          {!lists ? <div style={{ color: T.inkSoft }}>Loading…</div> : lists.length === 0 ? <div style={{ color: T.inkSoft }}>None.</div> : lists.map((l) => (
+            <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 0", borderTop: `1px solid ${T.line}` }}>
+              <span><b>{l.name || "Listing"}</b> <span style={{ color: T.inkSoft }}>({l.status})</span></span>
+              <button style={{ ...link, color: "#B91C1C" }} onClick={() => setAsk({ kind: "listing", id: l.id, label: l.name || "this listing" })}>Remove listing</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {ask && (
+        <ConfirmDelete
+          title={ask.kind === "account" ? "Remove this account?" : "Remove this listing?"}
+          body={ask.kind === "account"
+            ? `${ask.label}: the account, its listings and photos are deleted for good. They can sign up again with the same number. This cannot be undone.`
+            : `${ask.label}: the listing and its photos are deleted for good. The person's account stays. This cannot be undone.`}
+          busy={busy} onCancel={() => setAsk(null)} onConfirm={confirm} />
+      )}
     </div>
   );
 }

@@ -65,6 +65,7 @@ Payments and wallet:
 47. `248_brand_rename.sql` (the new name DhundoNow inside the database's wallet notes and support texts). Run it last.
 48. New address `dhundonow.shortlistone.com`: add the DNS A record, run `sudo bash scripts/add-domain.sh` on the server, then deploy. Then update the secrets and the Firebase, Meta and PayU settings (see the checklist in the chat or PHONE_CHECK.md).
 49. `249_monthly_1.sql`, `249_monthly_2.sql`, then `249_monthly_3.sql` (admin switches: Admin → Rewards) (Rs 10 sign-up bonus, and a monthly credit of Rs 10 for users and Rs 50 for owners of a live listing, given when they open the app).
+50. `251_admin_person_listings.sql` (Admin → People: remove an account, or remove one of a person's listings).
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

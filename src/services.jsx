@@ -271,6 +271,7 @@ function makeApi({ supabaseUrl, anonKey, getAccessToken }) {
     updateMyListing: (p) => rpc("services_update_my_listing", p, true),
     discardIdDoc: () => rpc("services_discard_id_doc", {}, true),
     deleteMyListing: () => rpc("services_delete_my_listing", {}, true),
+    adminPersonListings: (id) => rpc("services_admin_person_listings", { p_account: id }, true),
     adminDeleteListing: (id) =>
       rpc("services_admin_delete_listing", { p_worker_id: id }, true),
     // ------------------------------------------------- storage sweeping
