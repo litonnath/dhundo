@@ -33,7 +33,7 @@ const ICON = (size, safe) => {   // safe < 1 keeps everything inside the middle 
       <div class="word" style="font-size:${76*k}px;color:#fff">Dhundo<span style="color:${ORANGE}">Now</span></div>
     </div></div>`;
 };
-const ICONS = [["public/icon-512.png", 512, 1], ["public/icon-192.png", 192, 1], ["public/apple-touch-icon.png", 180, 1], ["public/icon-maskable-512.png", 512, 0.78]];
+const ICONS = [];  // app icons now come from the supplied artwork (public/icon-v3-*.png)
 const b = await chromium.launch({ executablePath: process.env.CHROME || undefined });
 for (const [file, w, h, body] of LOGOS) {
   const p = await b.newPage({ viewport: { width: w, height: h } });
