@@ -87,6 +87,28 @@ person taps through it. For a listing without that warning, upload the
 
 ---
 
+## Renaming the existing Android app to DhundoNow (and the new address)
+
+The APK you already have (`public/dhundo.apk`, package `com.shortlistone.dhundo`) has the OLD name and the OLD address
+(`services.shortlistone.com`) baked inside it. It keeps working as long as the server still answers to the old name, but
+it will keep showing "Dhundo". To change it you build a new package:
+
+1. Go to **pwabuilder.com**, enter `https://dhundonow.shortlistone.com`, choose **Package for stores, Android**.
+2. Set **App name** and **Launcher name** to `DhundoNow`.
+3. **Package ID**: this is the one decision to make carefully.
+   - **Not on the Play Store yet:** you may pick a new ID that matches the brand, `com.shortlistone.dhundonow`.
+     Then put that ID (and the new fingerprint) in `public/.well-known/assetlinks.json`.
+   - **Already on the Play Store:** keep `com.shortlistone.dhundo`. The ID can never change on a listing. The name people
+     see is the app name you set here and the title you enter in the Play Console.
+4. **Signing key**: choose *Use existing* and upload your old `signing.keystore` if the app is already published
+   (otherwise Play will refuse the update). Choose *Create new* only for a brand-new listing. Keep the keystore safe.
+5. Download, copy the fingerprint into `public/.well-known/assetlinks.json`, deploy, then check
+   `https://dhundonow.shortlistone.com/.well-known/assetlinks.json` returns the file (not the app's HTML page).
+6. Replace `public/dhundo.apk` with the new APK if you offer it for download, and upload the `.aab` to the Play Console
+   as an update (or a new app).
+
+---
+
 ## Which should you do first?
 
 Install-from-browser, today. It costs nothing, it is already built, and it
