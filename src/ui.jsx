@@ -1079,7 +1079,7 @@ export function InstallSheet({ onClose }) {
             There is no APK for iOS, so InstallButton hides itself there
             rather than opening a sheet with nothing in it. */}
         <a
-          href="/dhundo.apk"
+          href="/DhundoNow.apk"
           download="DhundoNow.apk"
           onClick={() => setTimeout(onClose, 800)}
           style={{
