@@ -785,7 +785,7 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
         setReload((n) => n + 1);
       } else {
         const k = x && x.reason;
-        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "no_bank" ? t("wal_wd_bank_bad") : k === "bank_hold" ? t("wal_wd_bank_hold") : k === "insufficient" ? t("wal_wd_big") : k === "below_minimum" ? t("wal_wd_min").replace("{min}", rupees(WD_MIN)).replace("{need}", "") : k === "already_open" ? t("wal_wd_pending").replace("{a}", "").replace("{u}", "") : t("e_gone") }));
+        setWd((y) => ({ ...y, busy: false, err: k === "phone_not_verified" ? t("pv_banner") : k === "upi_hold" ? t("wal_wd_hold") : k === "bad_upi" ? t("wal_wd_bad_upi") : k === "no_bank" ? t("wal_wd_bank_bad") : k === "bank_hold" ? t("wal_wd_bank_hold") : k === "insufficient" ? t("wal_wd_big") : k === "below_minimum" ? t("wal_wd_below").replace(/\{min\}/g, rupees(WD_MIN)) : k === "already_open" ? t("wal_wd_open") : t("e_gone") }));
       }
     } catch (e) {
       setWd((y) => ({ ...y, busy: false, err: (e && e.message) || t("e_gone") }));
@@ -957,8 +957,10 @@ export function WalletSheet({ api, phone, onClose, PhoneVerify = null, extra = n
                 onChange={(e) => setWd((x) => ({ ...x, amt: e.target.value.replace(/\D/g, ""), err: "" }))}
                 placeholder={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))} aria-label={t("wal_wd_amt_ph").replace("{a}", rupees(state.paise))}
               />
+              {String(wd.amt).trim() !== "" && Number(wd.amt) * 100 < WD_MIN && <Notice tone="info">{t("wal_wd_below").replace(/\{min\}/g, rupees(WD_MIN))}</Notice>}
+              {String(wd.amt).trim() !== "" && Number(wd.amt) * 100 > state.paise && <Notice tone="info">{t("wal_wd_big")}</Notice>}
               {wd.err && <Notice tone="bad">{wd.err}</Notice>}
-              <Btn full disabled={wd.busy || (wd.dest === "upi" ? wd.upi.trim().length < 5 : (!bank.saved || bank.edit) && (bank.holder.trim().length < 2 || bank.acct.length < 6 || bank.ifsc.length !== 11))} onClick={sendWithdraw}>
+              <Btn full disabled={wd.busy || (String(wd.amt).trim() !== "" && (Number(wd.amt) * 100 < WD_MIN || Number(wd.amt) * 100 > state.paise)) || (wd.dest === "upi" ? wd.upi.trim().length < 5 : (!bank.saved || bank.edit) && (bank.holder.trim().length < 2 || bank.acct.length < 6 || bank.ifsc.length !== 11))} onClick={sendWithdraw}>
                 {wd.busy ? "…" : t("wal_wd_req").replace("{a}", wd.amt ? rupees(Number(wd.amt) * 100) : rupees(state.paise))}
               </Btn>
               <button onClick={() => setWithdraw(false)} style={{
