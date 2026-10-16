@@ -9,7 +9,7 @@ a file or put it on the Play Store.
 ## 1. Install from the browser (works now, nothing to build)
 
 The site is already a Progressive Web App: manifest, icons, service worker,
-HTTPS. On Android Chrome a person opens `services.shortlistone.com`, taps the
+HTTPS. On Android Chrome a person opens `dhundonow.shortlistone.com`, taps the
 **Install app** button in the header (or Chrome's ⋮ → *Add to Home screen*),
 and gets a DhundoNow icon that opens full-screen with no address bar. It
 updates itself every time they open it, because the service worker is
@@ -35,7 +35,7 @@ is how Twitter Lite, Starbucks and a lot of Indian apps ship.
 Easiest route, no tools to install:
 
 1. Go to **pwabuilder.com**
-2. Enter `https://services.shortlistone.com`
+2. Enter `https://dhundonow.shortlistone.com`
 3. It scores the site and offers **Package for stores** → **Android**
 4. Settings worth checking before you generate:
    - **Package ID**: `com.shortlistone.dhundo` — this must match
@@ -71,7 +71,7 @@ Open the `assetlinks.json` that PWABuilder generated, copy the
 Check it is live before installing the APK:
 
 ```
-curl -s https://services.shortlistone.com/.well-known/assetlinks.json
+curl -s https://dhundonow.shortlistone.com/.well-known/assetlinks.json
 ```
 
 If that returns the file, the app opens clean. If it returns the app's HTML,

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# setup.sh -- build and publish the services app at services.shortlistone.com
+# setup.sh -- build and publish the services app at dhundonow.shortlistone.com
 #
 #     cd ~/services-app && sudo bash setup.sh
 #
@@ -10,7 +10,7 @@
 #      two apps can never drift apart on which project they talk to
 #   2. npm install && npm run build
 #   3. publishes to /var/www/services
-#   4. adds an nginx server block for services.shortlistone.com
+#   4. adds an nginx server block for dhundonow.shortlistone.com
 #
 # WHY IT READS THE KEY RATHER THAN ASKING FOR IT
 # The anon key is public by design -- it already ships inside the ShortlistOne
@@ -19,9 +19,9 @@
 # App.jsx, which is what defeated a naive grep earlier.
 #
 # BEFORE YOU RUN THIS
-# services.shortlistone.com must already point at this server, or nginx will
+# dhundonow.shortlistone.com must already point at this server, or nginx will
 # serve it and nobody will reach it. Check with:
-#     dig +short services.shortlistone.com
+#     dig +short dhundonow.shortlistone.com
 # It should print this server's IP. If it prints nothing, add an A record at
 # your DNS provider first and wait a few minutes.
 #
@@ -38,7 +38,7 @@ set -uo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HR_SRC="${HR_SRC:-/root/shortlisted/hr/hr/src/App.jsx}"
 WEB_ROOT=/var/www/services
-DOMAIN=services.shortlistone.com
+DOMAIN=dhundonow.shortlistone.com
 CONF=/etc/nginx/sites-available/services
 
 red()  { printf '\033[31m%s\033[0m\n' "$*"; }
@@ -112,7 +112,7 @@ else
   fi
 
   cat > "$CONF" <<NGINXCONF
-# services.shortlistone.com -- the local services directory.
+# dhundonow.shortlistone.com -- the local services directory.
 # A separate root from /var/www/hr; the hiring platform is untouched.
 server {
     listen 80;

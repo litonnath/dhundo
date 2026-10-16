@@ -63,6 +63,7 @@ Payments and wallet:
 45. `246_booking_quote_1.sql`, `_2.sql` (a booking is accepted only after the provider names a price and the customer says yes). Redeploy `push-send` for the new alerts.
 46. `247_pin_reset.sql` (reset a forgotten PIN with an SMS code). Then `supabase functions deploy pin-reset --no-verify-jwt` (it needs the same `FIREBASE_API_KEY` secret as phone-firebase and the Firebase setup in PHONE_CHECK.md).
 47. `248_brand_rename.sql` (the new name DhundoNow inside the database's wallet notes and support texts). Run it last.
+48. New address `dhundonow.shortlistone.com`: add the DNS A record, run `sudo bash scripts/add-domain.sh` on the server, then deploy. Then update the secrets and the Firebase, Meta and PayU settings (see the checklist in the chat or PHONE_CHECK.md).
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

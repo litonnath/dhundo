@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /tiles/
 
-Sitemap: https://services.shortlistone.com/sitemap.xml
+Sitemap: https://dhundonow.shortlistone.com/sitemap.xml

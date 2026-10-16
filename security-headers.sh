@@ -14,7 +14,7 @@
 # and puts everything back if nginx rejects it.
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-services.shortlistone.com}"
+DOMAIN="${DOMAIN:-dhundonow.shortlistone.com}"
 SITE="${SITE:-/etc/nginx/sites-available/services}"
 SNIPPET=/etc/nginx/snippets/dhundo-security.conf
 STAMP=$(date +%F-%H%M%S)

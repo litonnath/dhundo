@@ -24,7 +24,7 @@
 # touch the other sites on this server.
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-services.shortlistone.com}"
+DOMAIN="${DOMAIN:-dhundonow.shortlistone.com}"
 SITE="${SITE:-/etc/nginx/sites-available/services}"
 HTTP_CONF=/etc/nginx/conf.d/dhundo-geo.conf
 SNIPPET=/etc/nginx/snippets/dhundo-geo.conf

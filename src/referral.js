@@ -2,7 +2,7 @@
 // referral.js -- remembering who invited somebody, across a sign-up.
 //
 // THE PROBLEM THIS SOLVES
-// A referral link arrives as https://services.shortlistone.com/?ref=Y7RWHJ.
+// A referral link arrives as https://dhundonow.shortlistone.com/?ref=Y7RWHJ.
 // The person who opens it is not signed in yet, so there is no account to
 // attach the code to. They then read the page, maybe close it, come back
 // tomorrow, and sign up. By that point the URL is long gone.

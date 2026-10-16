@@ -5,7 +5,7 @@ import fs from "node:fs"; import path from "node:path";
 
 const W = 1080, H = 1350;
 const logo = "data:image/png;base64," + fs.readFileSync("public/logo-mark.png").toString("base64");
-const URL_TXT = "services.shortlistone.com";
+const URL_TXT = "dhundonow.shortlistone.com";
 
 const B = {
   find: {

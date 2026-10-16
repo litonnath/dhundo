@@ -37,7 +37,7 @@ One WhatsApp message per person, once (plus resends), about Rs 0.115 each.
 
 ## Firebase Phone Auth (SMS from Google, no DLT) -- the code arrives and the person types it
 1. console.firebase.google.com: Add project (DhundoNow). Build, Authentication, Get started, Sign-in method: enable **Phone**.
-2. Authentication, Settings, Authorized domains: add `services.shortlistone.com`.
+2. Authentication, Settings, Authorized domains: add `dhundonow.shortlistone.com`.
 3. Project settings (gear), General, Your apps: add a **Web** app. Copy its config (apiKey, authDomain, projectId, appId).
 4. India SMS may need billing: Project settings, Usage and billing, upgrade to the pay-as-you-go (Blaze) plan; set a budget alert.
    (Test with a "Phone numbers for testing" entry under Authentication, Sign-in method, Phone: no SMS is sent or charged.)
