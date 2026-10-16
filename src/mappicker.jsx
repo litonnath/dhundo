@@ -22,7 +22,7 @@
 // ON THE TILES
 // openstreetmap.org's tile servers are run on donated hardware and their
 // usage policy is meant for light use. This qualifies today -- a map opened
-// a handful of times a day while somebody sets their address once. If Dhundo
+// a handful of times a day while somebody sets their address once. If DhundoNow
 // grows to where that is no longer true, TILE_URL below is one line and free
 // keyed providers (MapTiler, Carto) have tiers far beyond anything this will
 // reach. Attribution is a condition of use, not a courtesy, and is rendered

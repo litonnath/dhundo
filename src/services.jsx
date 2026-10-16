@@ -58,7 +58,7 @@ import { useConsent, CONSENT_EVENT } from "./consent-core.js";
 // ---------------------------------------------------------------- data layer
 // How far "near" is for people available right now, and how far to look
 // when nobody is that near.
-// Dhundo is for eating, not for lodging: these are never offered or listed.
+// DhundoNow is for eating, not for lodging: these are never offered or listed.
 const STAY_TRADES = ["hotel-lodge", "homestay-guesthouse"];
 const NEAR_KM = 30;
 const FAR_KM = 100;

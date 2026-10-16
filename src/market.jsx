@@ -1,6 +1,6 @@
 // ===========================================================================
 // market.jsx -- Buy & Sell: people selling things they no longer need to
-// people nearby. A local OLX inside Dhundo.
+// people nearby. A local OLX inside DhundoNow.
 //
 // Everything is decided by the database (84): who may post, the five-ad
 // limit, banned items, three reports hiding an ad, the number shown only to
@@ -415,7 +415,7 @@ export function ItemDetail({ api, id, distanceKm = null, user, onClose, onSignIn
 
   const share = async () => {
     const url = `${window.location.origin}/?item=${id}`;
-    const text = it ? `${it.title} – ${priceLabel(it.price)} on Dhundo` : "Dhundo";
+    const text = it ? `${it.title} – ${priceLabel(it.price)} on DhundoNow` : "DhundoNow";
     try {
       if (navigator.share) await navigator.share({ title: text, text, url });
       else { await navigator.clipboard.writeText(url); setNote(t("mk_copied")); }

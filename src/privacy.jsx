@@ -66,7 +66,7 @@ export function NoticePage() {
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "22px 18px 40px", background: T.white,
                   minHeight: "100vh", boxSizing: "border-box",
                   fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}>
-      <a href="/" style={{ color: T.brandDark, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>← Dhundo</a>
+      <a href="/" style={{ color: T.brandDark, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>← DhundoNow</a>
       <div style={{ height: 10 }} />
       <NoticeBody />
     </div>

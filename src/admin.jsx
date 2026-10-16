@@ -188,7 +188,7 @@ function RefundBox({ api, accountId, ticketId = null, payment = null, name = "",
         <div style={{ flex: "1 1 200px" }}>
           <div style={lbl}>Refund to</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {[["wallet", "Dhundo wallet (instant)"], ["upi", "Their UPI id"]].map(([k, l]) => (
+            {[["wallet", "DhundoNow wallet (instant)"], ["upi", "Their UPI id"]].map(([k, l]) => (
               <button key={k} onClick={() => setDest(k)} aria-pressed={dest === k} style={{ flex: 1, minHeight: 40, borderRadius: 10, fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, cursor: "pointer", border: `1.5px solid ${dest === k ? T.brandDark : T.line}`, background: dest === k ? T.brandDark : "#fff", color: dest === k ? "#fff" : T.ink }}>{l}</button>
             ))}
           </div>
@@ -238,7 +238,7 @@ function Payments({ api }) {
                r.status === "paid" && !r.refunded_at ? <Btn key="rf" kind="ghost" onClick={() => setRefunding(r)}>Refund</Btn> : null,
              ])} />
       <h3 style={{ fontSize: 16, fontWeight: 800, margin: "18px 0 6px" }}>Refund requests to approve</h3>
-      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>A cancelled or unfinished paid order, ride, booking or item waits here. Nothing is refunded until you approve it. Approving sends the money to the person's wallet and takes back any partner earning. Rejecting keeps the money with Dhundo.</div>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 8 }}>A cancelled or unfinished paid order, ride, booking or item waits here. Nothing is refunded until you approve it. Approving sends the money to the person's wallet and takes back any partner earning. Rejecting keeps the money with DhundoNow.</div>
       <Table head={["When", "Person", "For", "Amount", "Why", ""]} empty="No refund requests."
              rows={reqs && reqs.map((r) => [
                when(r.created_at), <span key="p"><b>{r.name || "\u2014"}</b>{r.phone ? <><br />{r.phone}</> : null}</span>, label[r.purpose] || r.purpose,

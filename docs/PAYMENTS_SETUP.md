@@ -53,4 +53,4 @@ Withdrawals are requested in the app and paid by you from the admin console. Pay
 
 ## Who gets what on an order
 
-The customer pays: items + GST on the items + Dhundo's small fee + GST on that fee. The delivery partner fee is paid directly to the rider. The shop or restaurant is credited the item total only. Item GST and the fee's GST are held by Dhundo (as the platform) and counted in the Admin GST report, so they are not credited to the shop's wallet.
+The customer pays: items + GST on the items + DhundoNow's small fee + GST on that fee. The delivery partner fee is paid directly to the rider. The shop or restaurant is credited the item total only. Item GST and the fee's GST are held by DhundoNow (as the platform) and counted in the Admin GST report, so they are not credited to the shop's wallet.

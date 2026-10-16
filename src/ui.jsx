@@ -1078,7 +1078,7 @@ export function InstallSheet({ onClose }) {
             rather than opening a sheet with nothing in it. */}
         <a
           href="/dhundo.apk"
-          download="Dhundo.apk"
+          download="DhundoNow.apk"
           onClick={() => setTimeout(onClose, 800)}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -1456,7 +1456,7 @@ export function Header({ setTab, isAdmin, tab, place, onOpenLocation, mode = nul
           onClick={() => setTab("browse")}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0,
                    minHeight: 44, flexShrink: 0 }}
-          aria-label="Dhundo"
+          aria-label="DhundoNow"
         >
           <DhundoLogo size={31} />
         </button>
@@ -1556,7 +1556,7 @@ export function BottomNav({ tab, setTab, online = false, signedIn = false, hasLi
     );
   };
   return (
-    <nav aria-label="Dhundo" style={{
+    <nav aria-label="DhundoNow" style={{
       position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60,
       background: T.white, borderTop: `1px solid ${T.line}`,
       boxShadow: "0 -4px 18px rgba(15,20,25,0.06)",
@@ -2190,7 +2190,7 @@ export function TrustBar() {
 
 // -------------------------------------------------------------------- footer
 //
-// Three short columns on a wide screen, stacked on a phone: who Dhundo is,
+// Three short columns on a wide screen, stacked on a phone: who DhundoNow is,
 // where to go, and how to reach a person. The contact column appears only
 // when CONTACT in brand.jsx has something in it.
 //
@@ -2274,7 +2274,7 @@ export function SiteFooter({ setTab, hasListing = false, onInstall }) {
         display: "flex", flexWrap: "wrap", gap: "4px 14px", justifyContent: "space-between",
       }}>
         <span>
-          © {year} Dhundo ·{" "}
+          © {year} DhundoNow ·{" "}
           {/* "owned by ShortlistOne", with the name linked, in any language:
               the sentence is translated and ShortlistOne kept as written. */}
           {t("owned_by").split("ShortlistOne").map((part, i, all) => (

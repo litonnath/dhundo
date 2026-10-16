@@ -1,4 +1,4 @@
-# Dhundo: everything to do, in order
+# DhundoNow: everything to do, in order
 
 Project ref: `nowhtdsuestyduzqtcks`. Run the SQL in Supabase > SQL editor (paste a file, press Run, wait for the "done" row).
 Skip a file you already ran; running one twice is safe. Files that start with a number lower than 197 should already be done.
@@ -39,7 +39,7 @@ Payments and wallet:
 21. `222_withdraw_1.sql`, `222_withdraw_2.sql`  (needs `103`, `155_part3` and `156` done earlier)
 22. `223_pay_guard_1.sql`, `223_pay_guard_2.sql`
 23. `224_online_first_1.sql` to `224_online_first_5.sql` (pay first, then the restaurant sees the order; cash on delivery costs Rs 30 extra)
-24. `225_fee_in_pay_1.sql` to `225_fee_in_pay_8.sql` (delivery partner fee inside the payment, refund of the difference, cash settlement between rider, shop and Dhundo)
+24. `225_fee_in_pay_1.sql` to `225_fee_in_pay_8.sql` (delivery partner fee inside the payment, refund of the difference, cash settlement between rider, shop and DhundoNow)
 25. `226_receipt.sql` (payment receipt on the order)
 26. `227_hold_until_done_1.sql` to `_3.sql` (order money is held until delivery; cancelling refunds the customer and nobody is credited)
 27. `228_hold_release_1.sql` to `_3.sql` (rides and bookings are paid out when finished; a paid second hand item cannot be cancelled; "payment received" alerts). Redeploy `push-send`: `supabase functions deploy push-send --project-ref nowhtdsuestyduzqtcks`
@@ -62,6 +62,7 @@ Payments and wallet:
 44. `245_prepaid_lock_1.sql`, `_2.sql`, `_3.sql` (once a customer has paid online, the driver, rider or shop cannot cancel, give back or reject)
 45. `246_booking_quote_1.sql`, `_2.sql` (a booking is accepted only after the provider names a price and the customer says yes). Redeploy `push-send` for the new alerts.
 46. `247_pin_reset.sql` (reset a forgotten PIN with an SMS code). Then `supabase functions deploy pin-reset --no-verify-jwt` (it needs the same `FIREBASE_API_KEY` secret as phone-firebase and the Firebase setup in PHONE_CHECK.md).
+47. `248_brand_rename.sql` (the new name DhundoNow inside the database's wallet notes and support texts). Run it last.
 If a file says a function or table does not exist, run the file number just before it first, then retry.
 If the shop price-list save fails, also run the `143` and `144` files.
 

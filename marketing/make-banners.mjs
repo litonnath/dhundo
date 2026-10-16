@@ -1,4 +1,4 @@
-// Renders the Dhundo marketing banners (English, Bengali, Hindi) to PNG.
+// Renders the DhundoNow marketing banners (English, Bengali, Hindi) to PNG.
 // Run from the project folder:  node marketing/make-banners.mjs
 import { chromium } from "playwright";
 import fs from "node:fs"; import path from "node:path";
@@ -10,28 +10,28 @@ const URL_TXT = "services.shortlistone.com";
 const B = {
   find: {
     icons: ["🔨", "🚗", "🍛", "🔧"], theme: "blue",
-    en: { h: "Need a mistri, driver or cook? <em>Find them near you.</em>", s: "Trusted local workers. See rates. Call or book in minutes.", cta: "Open Dhundo" },
-    bn: { h: "মিস্ত্রি, ড্রাইভার বা রান্নার লোক দরকার? <em>কাছেই খুঁজে নিন।</em>", s: "ভরসাযোগ্য স্থানীয় কর্মী। রেট দেখুন। কয়েক মিনিটে কল বা বুক করুন।", cta: "Dhundo খুলুন" },
-    hi: { h: "मिस्त्री, ड्राइवर या कुक चाहिए? <em>अपने पास ही खोजें।</em>", s: "भरोसेमंद स्थानीय कारीगर। रेट देखें। कुछ ही मिनट में कॉल या बुक करें।", cta: "Dhundo खोलें" },
+    en: { h: "Need a mistri, driver or cook? <em>Find them near you.</em>", s: "Trusted local workers. See rates. Call or book in minutes.", cta: "Open DhundoNow" },
+    bn: { h: "মিস্ত্রি, ড্রাইভার বা রান্নার লোক দরকার? <em>কাছেই খুঁজে নিন।</em>", s: "ভরসাযোগ্য স্থানীয় কর্মী। রেট দেখুন। কয়েক মিনিটে কল বা বুক করুন।", cta: "DhundoNow খুলুন" },
+    hi: { h: "मिस्त्री, ड्राइवर या कुक चाहिए? <em>अपने पास ही खोजें।</em>", s: "भरोसेमंद स्थानीय कारीगर। रेट देखें। कुछ ही मिनट में कॉल या बुक करें।", cta: "DhundoNow खोलें" },
   },
   more: {
     icons: ["🛵", "🍕", "🚕", "📦"], theme: "orange",
-    en: { h: "Food, rides and more — <em>in one app.</em>", s: "Order from nearby shops. Book a bike, auto or cab. Buy and sell second-hand. Your money stays safe until the work is done.", cta: "Open Dhundo" },
-    bn: { h: "খাবার, রাইড আর আরও অনেক কিছু — <em>একটাই অ্যাপে।</em>", s: "কাছের দোকান থেকে অর্ডার করুন। বাইক, অটো বা ক্যাব বুক করুন। পুরনো জিনিস কিনুন-বেচুন। কাজ শেষ না হওয়া পর্যন্ত আপনার টাকা নিরাপদ।", cta: "Dhundo খুলুন" },
-    hi: { h: "खाना, राइड और भी बहुत कुछ — <em>एक ही ऐप में।</em>", s: "पास की दुकानों से ऑर्डर करें। बाइक, ऑटो या कैब बुक करें। पुराना सामान खरीदें-बेचें। काम पूरा होने तक आपका पैसा सुरक्षित।", cta: "Dhundo खोलें" },
+    en: { h: "Food, rides and more — <em>in one app.</em>", s: "Order from nearby shops. Book a bike, auto or cab. Buy and sell second-hand. Your money stays safe until the work is done.", cta: "Open DhundoNow" },
+    bn: { h: "খাবার, রাইড আর আরও অনেক কিছু — <em>একটাই অ্যাপে।</em>", s: "কাছের দোকান থেকে অর্ডার করুন। বাইক, অটো বা ক্যাব বুক করুন। পুরনো জিনিস কিনুন-বেচুন। কাজ শেষ না হওয়া পর্যন্ত আপনার টাকা নিরাপদ।", cta: "DhundoNow খুলুন" },
+    hi: { h: "खाना, राइड और भी बहुत कुछ — <em>एक ही ऐप में।</em>", s: "पास की दुकानों से ऑर्डर करें। बाइक, ऑटो या कैब बुक करें। पुराना सामान खरीदें-बेचें। काम पूरा होने तक आपका पैसा सुरक्षित।", cta: "DhundoNow खोलें" },
   },
   earn: {
     icons: ["🛠️", "🏪", "🛺", "💰"], theme: "dark",
-    en: { h: "Got a skill, a shop or a vehicle? <em>Earn with Dhundo.</em>", s: "List yourself, get requests nearby, and withdraw your earnings to UPI or your bank.", cta: "Start earning" },
-    bn: { h: "দক্ষতা, দোকান বা গাড়ি আছে? <em>Dhundo-তে আয় করুন।</em>", s: "নিজেকে লিস্ট করুন, কাছের অনুরোধ পান, আর আয় তুলুন UPI বা ব্যাংকে।", cta: "আয় শুরু করুন" },
-    hi: { h: "हुनर, दुकान या गाड़ी है? <em>Dhundo पर कमाएँ।</em>", s: "खुद को लिस्ट करें, पास के अनुरोध पाएँ और कमाई UPI या बैंक में निकालें।", cta: "कमाई शुरू करें" },
+    en: { h: "Got a skill, a shop or a vehicle? <em>Earn with DhundoNow.</em>", s: "List yourself, get requests nearby, and withdraw your earnings to UPI or your bank.", cta: "Start earning" },
+    bn: { h: "দক্ষতা, দোকান বা গাড়ি আছে? <em>DhundoNow-তে আয় করুন।</em>", s: "নিজেকে লিস্ট করুন, কাছের অনুরোধ পান, আর আয় তুলুন UPI বা ব্যাংকে।", cta: "আয় শুরু করুন" },
+    hi: { h: "हुनर, दुकान या गाड़ी है? <em>DhundoNow पर कमाएँ।</em>", s: "खुद को लिस्ट करें, पास के अनुरोध पाएँ और कमाई UPI या बैंक में निकालें।", cta: "कमाई शुरू करें" },
   },
 };
 B.pooja = {
   icons: ["🪔", "🚕", "🍛", "🎉"], theme: "festival",
-  en: { h: "Shubho Pujo! <em>Everything for your Puja, near you.</em>", s: "Book a ride to the pandal, order festive food, find decorators and caterers.", cta: "Open Dhundo" },
-  bn: { h: "শুভ পুজো! <em>পুজোর সব কিছু, কাছেই।</em>", s: "প্যান্ডেলে যেতে রাইড বুক করুন, পুজোর খাবার অর্ডার করুন, ডেকোরেটর ও ক্যাটারার খুঁজুন।", cta: "Dhundo খুলুন" },
-  hi: { h: "शुभो पूजो! <em>पूजा की हर चीज़, आपके पास।</em>", s: "पंडाल जाने के लिए राइड बुक करें, त्योहार का खाना ऑर्डर करें, डेकोरेटर और केटरर खोजें।", cta: "Dhundo खोलें" },
+  en: { h: "Shubho Pujo! <em>Everything for your Puja, near you.</em>", s: "Book a ride to the pandal, order festive food, find decorators and caterers.", cta: "Open DhundoNow" },
+  bn: { h: "শুভ পুজো! <em>পুজোর সব কিছু, কাছেই।</em>", s: "প্যান্ডেলে যেতে রাইড বুক করুন, পুজোর খাবার অর্ডার করুন, ডেকোরেটর ও ক্যাটারার খুঁজুন।", cta: "DhundoNow খুলুন" },
+  hi: { h: "शुभो पूजो! <em>पूजा की हर चीज़, आपके पास।</em>", s: "पंडाल जाने के लिए राइड बुक करें, त्योहार का खाना ऑर्डर करें, डेकोरेटर और केटरर खोजें।", cta: "DhundoNow खोलें" },
 };
 const THEMES = {
   festival: { bg: "linear-gradient(160deg,#B3122B 0%,#6B0A1A 100%)", accent: "#FFC247", ink: "#fff", soft: "rgba(255,255,255,.92)", btn: "#FFC247", btnInk: "#6B0A1A", frame: true },
@@ -66,7 +66,7 @@ p{font-size:${lang==="en"?38:40}px;line-height:1.55;font-weight:600;color:${t.so
 .url{position:absolute;left:96px;bottom:96px;font-family:'Poppins',sans-serif;font-size:36px;font-weight:600;color:${t.soft}}
 </style></head><body>
 ${t.frame ? '<div class="frame"></div><div class="frame2"></div>' : ""}<div class="blob b1"></div><div class="blob b2"></div>
-<div class="top"><div class="logo"><img src="${logo}"></div><div class="brand">Dhundo</div></div>
+<div class="top"><div class="logo"><img src="${logo}"></div><div class="brand">DhundoNow</div></div>
 <div class="icons">${d.icons.map((i) => `<div class="ic">${i}</div>`).join("")}</div>
 <div class="txt"><h1>${c.h}</h1><p>${c.s}</p></div>
 <div class="cta">${c.cta} →</div><div class="url">${URL_TXT}</div>

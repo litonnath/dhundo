@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# deploy.sh -- pack, upload and publish Dhundo, from Git Bash on Windows.
+# deploy.sh -- pack, upload and publish DhundoNow, from Git Bash on Windows.
 #
 #     cd "/d/project/services app/services-app/services-app"
 #     ./deploy.sh
@@ -39,8 +39,8 @@ tar -czf dhundo-deploy.tar.gz \
   --exclude=node_modules --exclude=dist --exclude=shots --exclude=_to_delete \
   --exclude=.git --exclude='dhundo-deploy.*' \
   --exclude='*.keystore' --exclude='*key-info*' --exclude='*.aab' \
-  --exclude='Dhundo - Google Play package' \
-  --exclude='Dhundo - Google Play package.zip' \
+  --exclude='DhundoNow - Google Play package' \
+  --exclude='DhundoNow - Google Play package.zip' \
   *
 
 # Belt and braces: if anything signing-related slipped through, stop here

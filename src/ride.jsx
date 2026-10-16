@@ -190,7 +190,7 @@ export function RideScreen({ api, signedIn, place, onSignIn, onBrowse, trades = 
     // own ranges when there are any (the server keeps them inside the band).
     const rrow = rateCard.find((c) => c.key === rateKeyFor(slug));
     if (rrow) {
-      // Set by Dhundo: every driver of a vehicle charges the same per-km rate.
+      // Set by DhundoNow: every driver of a vehicle charges the same per-km rate.
       const perKm = rrow.per_km_rupees;
       const fare = Math.max(rrow.min_rupees, Math.round(rrow.base_rupees + perKm * trip.km));
       const lo = fare, hi = fare;

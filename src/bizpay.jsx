@@ -4,7 +4,7 @@
 //                       owner's GST and licence numbers.
 //   * EarningsPanel  -- what was earned today, in 7 days and in 30 days, from
 //                       the completed orders, jobs and rides in the app.
-// Customers pay the business directly; Dhundo takes no commission.
+// Customers pay the business directly; DhundoNow takes no commission.
 // ---------------------------------------------------------------------------
 import React, { useEffect, useState } from "react";
 import { T, Btn, Icon, Notice, input } from "./ui.jsx";
@@ -137,7 +137,7 @@ export function EarningsPanel({ api, kind, bizName = "" }) {
                 {r.who && <div>{r.who}</div>}
                 {r.sub && !r.pick && <div>{r.sub}</div>}
                 {r.note && <div>{r.note}</div>}
-                <button onClick={() => openInvoice({ biz: bizName || "Dhundo", gst, row: r, t })} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: `1.5px solid ${T.line}`, background: "#fff", color: T.brandDark, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("iv_invoice")}</button>
+                <button onClick={() => openInvoice({ biz: bizName || "DhundoNow", gst, row: r, t })} style={{ marginTop: 8, minHeight: 40, padding: "0 16px", borderRadius: 20, border: `1.5px solid ${T.line}`, background: "#fff", color: T.brandDark, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("iv_invoice")}</button>
               </div>
             </details>
           ))}
@@ -671,7 +671,7 @@ export function RateBox({ api, orderId, onDone, title = null, submit = null, pro
 }
 
 // ---------------------------------------------------------------------------
-// SOS for riders and drivers: call 112, or send the position to Dhundo help.
+// SOS for riders and drivers: call 112, or send the position to DhundoNow help.
 // ---------------------------------------------------------------------------
 export function SosButton() {
   const { t } = useI18n();

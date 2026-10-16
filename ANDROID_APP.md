@@ -1,6 +1,6 @@
-# Making Dhundo a real Android app
+# Making DhundoNow a real Android app
 
-There are two ways people can get Dhundo on their phone. They are not
+There are two ways people can get DhundoNow on their phone. They are not
 alternatives — do the first today, the second when you are ready to hand out
 a file or put it on the Play Store.
 
@@ -11,7 +11,7 @@ a file or put it on the Play Store.
 The site is already a Progressive Web App: manifest, icons, service worker,
 HTTPS. On Android Chrome a person opens `services.shortlistone.com`, taps the
 **Install app** button in the header (or Chrome's ⋮ → *Add to Home screen*),
-and gets a Dhundo icon that opens full-screen with no address bar. It
+and gets a DhundoNow icon that opens full-screen with no address bar. It
 updates itself every time they open it, because the service worker is
 network-first.
 
@@ -41,7 +41,7 @@ Easiest route, no tools to install:
    - **Package ID**: `com.shortlistone.dhundo` — this must match
      `public/.well-known/assetlinks.json`, and **can never be changed**
      once the app is on the Play Store
-   - **App name**: Dhundo
+   - **App name**: DhundoNow
    - **Signing key**: choose *Create new* the first time
 5. Download the zip. It contains:
    - `app-release-signed.apk` — the file people install

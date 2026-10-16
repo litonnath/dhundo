@@ -1,18 +1,18 @@
 // ===========================================================================
-// worker.jsx -- Work mode: the "captain app" half of Dhundo.
+// worker.jsx -- Work mode: the "captain app" half of DhundoNow.
 //
-// Dhundo has two kinds of people and they want opposite things. Somebody
+// DhundoNow has two kinds of people and they want opposite things. Somebody
 // looking for help wants a list; a mistri or an auto driver wants one big
 // switch that says "I can take work now". Work mode is that switch and what
 // it needs around it, kept apart from the search so neither screen has to
 // explain the other.
 //
 // HOW "AVAILABLE NOW" STAYS TRUE
-// While the switch is on and Dhundo is open, the phone's position goes to
+// While the switch is on and DhundoNow is open, the phone's position goes to
 // services_set_availability about once a minute, and immediately whenever
 // the worker has moved 150 m or brings the app back to the front. The
 // database drops anybody not heard from in 30 minutes, and the switch ends
-// by itself after the hours chosen. Dhundo is a web app in an Android shell,
+// by itself after the hours chosen. DhundoNow is a web app in an Android shell,
 // so it cannot report from a locked phone -- the screen says so plainly
 // rather than letting a worker believe customers can still see them.
 //

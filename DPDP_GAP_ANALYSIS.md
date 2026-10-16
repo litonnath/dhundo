@@ -1,11 +1,11 @@
-# Dhundo against the DPDP Act 2023 and the DPDP Rules 2025
+# DhundoNow against the DPDP Act 2023 and the DPDP Rules 2025
 
 Not legal advice. A lawyer who does Indian data-protection work should read it before you rely on it.
 The Rules were notified on 13 November 2025. Most duties (notice, safeguards, breach, erasure, children, rights)
 apply 18 months later, about **May 2027**. Consent-manager rules apply after 12 months. The Act applies to
 everyone who handles the personal data of people in India, whatever the size of the business.
 
-## What Dhundo already does well
+## What DhundoNow already does well
 - Consent asked for each purpose, at the moment the data is saved (location, live position, account, listing, market, profile), in 12 languages.
 - Consent can be withdrawn from the same screen, and the database refuses the action without a consent record (triggers).
 - Account deletion exists, with a queue that removes stored files.
@@ -14,7 +14,7 @@ everyone who handles the personal data of people in India, whatever the size of 
 
 ## Gaps, most serious first
 
-| # | Duty (Act / Rules) | What Dhundo does today | What to do |
+| # | Duty (Act / Rules) | What DhundoNow does today | What to do |
 |---|---|---|---|
 | 1 | **Notice** (s5, Rule 3): plain-language notice before or with each consent, listing the data, the purpose, how to withdraw, how to complain to the Board | Short consent texts per purpose. No full privacy notice or privacy policy page anywhere in the app or website | Write one notice page, link it from sign-up, the consent sheets, Account and the website footer, in all 12 languages |
 | 2 | **Grievance redressal** (s8(10), Rule 14): publish contact details of a person who answers rights requests | None published | Name an owner (you), an email and a response time. Show it in the app and notice |

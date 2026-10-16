@@ -68,7 +68,7 @@ export function RidePassengerPay({ api, rideId }) {
   return (
     <div style={{ margin: "8px 0" }}>
       <div style={{ ...box("wait"), fontWeight: 800 }}>{t("ps_pay_now")}{f.fare_paise ? ` · ${rs(f.fare_paise)}` : ""}</div>
-      {f.upi_id && <UpiQr upi={f.upi_id} name={f.driver_name} amount={Number(f.fare_paise) / 100} note="Dhundo ride" />}
+      {f.upi_id && <UpiQr upi={f.upi_id} name={f.driver_name} amount={Number(f.fare_paise) / 100} note="DhundoNow ride" />}
       <div style={{ margin: "8px 0" }}><PayOnline api={api} purpose="ride" refId={rideId} full onPaid={again} /></div>
     </div>
   );
@@ -95,7 +95,7 @@ export function FeeCustomerPay({ api, orderId }) {
       {f.upi_id && (
         <>
           <Btn kind="ghost" onClick={() => setOpen((v) => !v)}>{open ? t("qr_hide") : t("ps_fee_qr")}</Btn>
-          {open && <div style={{ marginTop: 8 }}><UpiQr upi={f.upi_id} name={f.rider_name} amount={Number(f.fee_paise) / 100} note="Dhundo delivery" /></div>}
+          {open && <div style={{ marginTop: 8 }}><UpiQr upi={f.upi_id} name={f.rider_name} amount={Number(f.fee_paise) / 100} note="DhundoNow delivery" /></div>}
         </>
       )}
     </div>
@@ -147,7 +147,7 @@ export function PurposePay({ api, purpose, refId, suggest = 0 }) {
       {f.upi_id && (
         <div style={{ marginTop: 8 }}>
           <Btn kind="ghost" onClick={() => setQr((v) => !v)}>{qr ? t("qr_hide") : t("ps_mode_qr")}</Btn>
-          {qr && <div style={{ marginTop: 8 }}><UpiQr upi={f.upi_id} name={f.other_name} amount={amount / 100} note={`Dhundo ${purpose}`} /></div>}
+          {qr && <div style={{ marginTop: 8 }}><UpiQr upi={f.upi_id} name={f.other_name} amount={amount / 100} note={`DhundoNow ${purpose}`} /></div>}
         </div>
       )}
       <div style={{ fontSize: 12.5, color: "#4B6A94", marginTop: 6 }}>{t("ps_mode_cash")}</div>

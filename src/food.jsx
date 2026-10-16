@@ -872,7 +872,7 @@ export function MyOrdersList({ api, view = null, title = null, showEmpty = false
               <div style={{ margin: "8px 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <PayBadge method={o.pay_method} paid={o.paid} claimed={o.upi_claimed} t={t} />
                 {!o.paid && !["delivered", "cancelled", "rejected"].includes(o.status) && <PayOnline api={api} purpose="order" refId={o.id} onPaid={load} />}
-                {!o.paid && !["delivered", "cancelled", "rejected"].includes(o.status) && o.worker_id && eatIds[o.worker_id] === false && <OrderUpiQr api={api} workerId={o.worker_id} shopName={o.other_name} amount={orderBill(o).total / 100} note="Dhundo order" />}
+                {!o.paid && !["delivered", "cancelled", "rejected"].includes(o.status) && o.worker_id && eatIds[o.worker_id] === false && <OrderUpiQr api={api} workerId={o.worker_id} shopName={o.other_name} amount={orderBill(o).total / 100} note="DhundoNow order" />}
                 {o.pay_method === "upi" && !o.paid && !o.upi_claimed && o.status !== "delivered" && (
                   <Btn kind="ghost" onClick={async () => { try { await api.orderPay(o.id, "upi_sent"); } catch (_) {} load(); }}>{t("pay_i_paid")}</Btn>
                 )}

@@ -124,7 +124,7 @@ export function PayBadge({ method, paid, claimed, t, style }) {
   );
 }
 
-// Who gets what from one order: the shop, the rider, Dhundo and the GST for
+// Who gets what from one order: the shop, the rider, DhundoNow and the GST for
 // the government. The rider's share is the delivery job fee; whatever is left
 // of the delivery charge stays with the shop (and the shop covers any shortfall).
 export function splitOf(o) {
@@ -159,7 +159,7 @@ export function SplitBox({ o, t, who = "all", eat = true }) {
 }
 
 // What the restaurant or shop gets from an order: the items at the prices it
-// set, and the GST on them. Nothing about the rider's fee or Dhundo's fee.
+// set, and the GST on them. Nothing about the rider's fee or DhundoNow's fee.
 export function OwnerPart({ o, t }) {
   const items = Number(o.total_paise) || 0;
   return (

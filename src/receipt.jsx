@@ -1,6 +1,6 @@
 // RECEIPT and PAY-BY-QR. The receipt shows what the customer paid and when. The QR
 // opens the app on the customer's phone at their order, where they pay online; the
-// money goes to Dhundo's account and is shared out after delivery, never straight
+// money goes to DhundoNow's account and is shared out after delivery, never straight
 // to the rider or the shop.
 import React, { useEffect, useState } from "react";
 import { T, CloseButton, useDismissable } from "./ui.jsx";

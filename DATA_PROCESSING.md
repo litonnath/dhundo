@@ -1,6 +1,6 @@
-# Companies that handle Dhundo data for us
+# Companies that handle DhundoNow data for us
 
-The DPDP Act keeps Dhundo responsible for personal data even when another company handles it, so each of
+The DPDP Act keeps DhundoNow responsible for personal data even when another company handles it, so each of
 these needs a written agreement (their standard data-processing terms are fine) and a note of where the data sits.
 Tick each when done.
 

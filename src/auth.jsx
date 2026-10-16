@@ -323,7 +323,7 @@ export async function mfaEnroll(cfg, token) {
   await mfaDropUnverified(cfg, token);
   const res = await fetch(`${cfg.url}/auth/v1/factors`, {
     method: "POST", headers: mfaHeaders(cfg, token),
-    body: JSON.stringify({ factor_type: "totp", friendly_name: `Dhundo ${Date.now()}`, issuer: "Dhundo" }),
+    body: JSON.stringify({ factor_type: "totp", friendly_name: `DhundoNow ${Date.now()}`, issuer: "DhundoNow" }),
   });
   if (!res.ok) throw new Error(await mfaWhy(res));
   const j = await res.json().catch(() => null);

@@ -1,12 +1,12 @@
 // PAY BY UPI QR. Scan the code with any UPI app (on another phone or screen),
 // or tap to open a UPI app on this phone. The money goes straight to the UPI id
-// shown; nothing passes through Dhundo, so the person taps "I have paid" after.
+// shown; nothing passes through DhundoNow, so the person taps "I have paid" after.
 import React, { useEffect, useState } from "react";
 import { T, Btn } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 
 export const upiLink = ({ upi, name, amount, note }) =>
-  `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent((name || "Dhundo").slice(0, 40))}` +
+  `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent((name || "DhundoNow").slice(0, 40))}` +
   `${amount ? `&am=${Number(amount).toFixed(2)}` : ""}&cu=INR${note ? `&tn=${encodeURIComponent(String(note).slice(0, 40))}` : ""}`;
 
 export function UpiQr({ upi, name, amount, note }) {

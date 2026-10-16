@@ -1,5 +1,5 @@
 // ===========================================================================
-// main.jsx -- Dhundo.
+// main.jsx -- DhundoNow.
 //
 // A separate build, a separate origin, a separate brand and now separate
 // accounts. It shares ONE thing with ShortlistOne: the Postgres database. No
@@ -51,7 +51,7 @@ const CFG = { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY };
 const INK = "#0F1419";
 // Taken from the logo, like the rest of the app. These were left at the old
 // teal when the palette moved, so the sign-in button was the one control on
-// the site still wearing the pre-Dhundo colours -- visible only when the
+// the site still wearing the pre-DhundoNow colours -- visible only when the
 // panel was open over a blue page.
 const MATCH = "#0A5BB8";
 const DEEP = "#054291";

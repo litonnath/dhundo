@@ -1,15 +1,15 @@
 // FARES: the rate card, the admin's fare and payout calculator, and the
 // delivery-fee suggestion a shop sees when it sends a rider. A trip costs
 // max(minimum, base + per-km x km) and goes whole to the rider or driver. The
-// customer pays that plus Dhundo's flat delivery fee and GST on that fee, so
-// Dhundo takes no commission from the partner.
+// customer pays that plus DhundoNow's flat delivery fee and GST on that fee, so
+// DhundoNow takes no commission from the partner.
 import React, { useState, useEffect, useMemo } from "react";
 import { T, Btn, input } from "./ui.jsx";
 import { useI18n } from "./i18n.jsx";
 
 const many = (r) => (Array.isArray(r) ? r : []);
 const num = (v) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
-const GST_PERCENT = 18; // the only GST rate: 18%, on Dhundo's fee
+const GST_PERCENT = 18; // the only GST rate: 18%, on DhundoNow's fee
 const r2 = (n) => Math.round(n * 100) / 100;
 const rs = (n) => `\u20b9${r2(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -19,7 +19,7 @@ export function calcFare(card, km) {
   const rider = Math.round(Math.max(num(card.min_rupees), num(card.base_rupees) + num(card.per_km_rupees) * k));
   const platform = Math.round(num(card.platform_rupees));
   const gst = r2(platform * GST_PERCENT / 100);
-  // rider: what the partner earns, whole. The customer also pays Dhundo's
+  // rider: what the partner earns, whole. The customer also pays DhundoNow's
   // delivery fee and the GST on it.
   return { rider, platform, gst, customer: r2(rider + platform + gst), fare: rider, payout: rider };
 }
@@ -43,13 +43,13 @@ export function orderBill(o) {
   const delivery = n(o.delivery_fee_paise), dGst = n(o.delivery_gst_paise);
   const misc = n(o.misc_fee_paise), mGst = n(o.misc_gst_paise);
   // The delivery partner fee is paid straight to the rider, so it is not in total.
-  const cod = n(o.cod_fee_paise); // cash-on-delivery fee (Dhundo's), 0 when paid online
+  const cod = n(o.cod_fee_paise); // cash-on-delivery fee (DhundoNow's), 0 when paid online
   // Orders placed after the fee became part of the payment carry it in the total.
   const feeIn = o.ledger && o.mode === "delivery" ? (n(o.fee_due_paise) || delivery) : 0;
   return { items, gst, delivery, dGst, misc, mGst, cod, feeIn, total: items + gst + dGst + misc + mGst + cod + feeIn };
 }
 
-// Dhundo's registered details, for the bill. Empty until the admin saves them.
+// DhundoNow's registered details, for the bill. Empty until the admin saves them.
 export function useBusinessInfo(api) {
   const [b, setB] = useState(null);
   useEffect(() => {
@@ -63,7 +63,7 @@ export function useBusinessInfo(api) {
 // Which rate card row a driver's vehicle is priced from.
 export const rateKeyFor = (slug) => (/deliver/i.test(slug) ? "delivery_food" : /bike|moto|scooter/i.test(slug) ? "ride_bike" : /auto|rick|toto/i.test(slug) ? "ride_auto" : /taxi|cab|\bcar\b/i.test(slug) ? "ride_taxi" : null);
 
-// Drivers and riders no longer type a price. Dhundo sets every fare from the
+// Drivers and riders no longer type a price. DhundoNow sets every fare from the
 // rate card (Admin > Fares & tax), so this just shows them what applies.
 export function KmRateFields({ api, slug, style }) {
   const { t } = useI18n();
@@ -216,7 +216,7 @@ export function FareCalculator({ api }) {
   return (
     <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 16, margin: "0 0 20px" }}>
       <h2 style={{ fontSize: 19, fontWeight: 800, margin: "0 0 4px" }}>Fare and payout calculator</h2>
-      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 12 }}>The rider or driver earns the larger of the minimum and (base + per km x distance), in full: no commission is taken from them. The customer pays that plus Dhundo's delivery fee and 18% GST on that fee. Dhundo keeps the delivery fee; the GST is collected for the government. Shops use these rates to suggest a delivery fee, and the rider only ever sees what he earns.</div>
+      <div style={{ fontSize: 13.5, color: T.inkSoft, marginBottom: 12 }}>The rider or driver earns the larger of the minimum and (base + per km x distance), in full: no commission is taken from them. The customer pays that plus DhundoNow's delivery fee and 18% GST on that fee. DhundoNow keeps the delivery fee; the GST is collected for the government. Shops use these rates to suggest a delivery fee, and the rider only ever sees what he earns.</div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={{ width: 200 }}>
           <div style={lbl}>Average distance per trip (km)</div>
@@ -348,7 +348,7 @@ function GstReport({ api }) {
 
 const SAMPLE = { legal_name: "Sample Business Pvt Ltd", gstin: "22AAAAA0000A1Z5", address: "Sample address, Agartala, Tripura" };
 
-// Admin: Dhundo's registered name, GSTIN and address. Customers see them on
+// Admin: DhundoNow's registered name, GSTIN and address. Customers see them on
 // their bill once a GSTIN is saved. The preview uses an obvious sample.
 function BusinessEditor({ api }) {
   const [f, setF] = useState({ name: "", gstin: "", address: "" });
@@ -387,7 +387,7 @@ function BusinessEditor({ api }) {
       </div>
       <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "#F7F8FA", fontSize: 13.5 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: T.inkSoft, marginBottom: 4 }}>{shown ? "How customers will see it" : "PREVIEW WITH A SAMPLE (not real, not shown to customers)"}</div>
-        <div style={{ fontWeight: 800 }}>{p.legal_name || "Dhundo"}</div>
+        <div style={{ fontWeight: 800 }}>{p.legal_name || "DhundoNow"}</div>
         <div>GSTIN: {p.gstin}</div>
         {p.address && <div style={{ color: T.inkSoft }}>{p.address}</div>}
       </div>

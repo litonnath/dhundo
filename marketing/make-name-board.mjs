@@ -1,4 +1,4 @@
-// Renders a comparison board of candidate app names in the Dhundo logo style.
+// Renders a comparison board of candidate app names in the DhundoNow logo style.
 // Run:  CHROME=/opt/pw-browsers/chromium node marketing/make-name-board.mjs
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -41,7 +41,7 @@ h1{font-size:40px;font-weight:800;color:#032C61;margin-bottom:6px}
 .tag{margin-top:6px;font-size:24px;color:#4B6A94;font-weight:600}
 .pill{display:none}
 </style></head><body>
-<h1>Name board</h1><div class="sub">Each name in the Dhundo logo style, with its Hindi and Bengali spelling and a tagline. Search the IP India trademark site, Google Play and domains before choosing.</div>
+<h1>Name board</h1><div class="sub">Each name in the DhundoNow logo style, with its Hindi and Bengali spelling and a tagline. Search the IP India trademark site, Google Play and domains before choosing.</div>
 <div class="grid">${NAMES.map(card).join("")}</div></body></html>`;
 const b = await chromium.launch({ executablePath: process.env.CHROME || undefined });
 const p = await b.newPage({ viewport: { width: 1600, height: 1000 } });

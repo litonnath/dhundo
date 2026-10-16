@@ -39,7 +39,7 @@ const T: Record<string, Row> = {
   pay_received: { en: "Payment received", bn: "পেমেন্ট এসেছে", hi: "भुगतान मिल गया" },
   ride_accepted: { en: "A driver accepted your ride", bn: "একজন চালক আপনার রাইড নিয়েছেন", hi: "एक ड्राइवर ने आपकी राइड स्वीकार की", as: "এজন চালকে আপোনাৰ ৰাইড লৈছে", gu: "એક ડ્રાઇવરે તમારી રાઇડ સ્વીકારી", kn: "ಒಬ್ಬ ಚಾಲಕ ನಿಮ್ಮ ರೈಡ್ ಒಪ್ಪಿದ್ದಾರೆ", ml: "ഒരു ഡ്രൈവർ നിങ്ങളുടെ റൈഡ് സ്വീകരിച്ചു", mr: "एका चालकाने तुमची राइड स्वीकारली", or: "ଜଣେ ଚାଳକ ଆପଣଙ୍କ ରାଇଡ୍ ଗ୍ରହଣ କଲେ", pa: "ਇੱਕ ਡਰਾਈਵਰ ਨੇ ਤੁਹਾਡੀ ਰਾਈਡ ਮਨਜ਼ੂਰ ਕੀਤੀ", ta: "ஒரு ஓட்டுநர் உங்கள் சவாரியை ஏற்றார்", te: "ఒక డ్రైవర్ మీ రైడ్ అంగీకరించారు" },
 };
-const OPEN: Row = { en: "Tap to open Dhundo", bn: "Dhundo খুলতে ট্যাপ করুন", hi: "Dhundo खोलने के लिए टैप करें", as: "Dhundo খুলিবলৈ টেপ কৰক", gu: "Dhundo ખોલવા ટૅપ કરો", kn: "Dhundo ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ", ml: "Dhundo തുറക്കാൻ ടാപ്പ് ചെയ്യുക", mr: "Dhundo उघडण्यासाठी टॅप करा", or: "Dhundo ଖୋଲିବାକୁ ଟାପ୍ କରନ୍ତୁ", pa: "Dhundo ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ", ta: "Dhundo ஐத் திறக்கத் தட்டவும்", te: "Dhundo తెరవడానికి ట్యాప్ చేయండి" };
+const OPEN: Row = { en: "Tap to open DhundoNow", bn: "DhundoNow খুলতে ট্যাপ করুন", hi: "DhundoNow खोलने के लिए टैप करें", as: "DhundoNow খুলিবলৈ টেপ কৰক", gu: "DhundoNow ખોલવા ટૅપ કરો", kn: "DhundoNow ತೆರೆಯಲು ಟ್ಯಾಪ್ ಮಾಡಿ", ml: "DhundoNow തുറക്കാൻ ടാപ്പ് ചെയ്യുക", mr: "DhundoNow उघडण्यासाठी टॅप करा", or: "DhundoNow ଖୋଲିବାକୁ ଟାପ୍ କରନ୍ତୁ", pa: "DhundoNow ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ", ta: "DhundoNow ஐத் திறக்கத் தட்டவும்", te: "DhundoNow తెరవడానికి ట్యాప్ చేయండి" };
 
 Deno.serve(async (req) => {
   if (req.headers.get("x-push-secret") !== secret) return new Response("no", { status: 401 });
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
   let sent = 0;
   for (const s of subs || []) {
     const lang = s.lang in OPEN ? s.lang : "en";
-    const title = (T[rec.kind] || {})[lang] || (T[rec.kind] || {}).en || "Dhundo";
+    const title = (T[rec.kind] || {})[lang] || (T[rec.kind] || {}).en || "DhundoNow";
     // A ride alert carries "ride id|km to the pickup": the distance goes in the
     // words, and the ride id makes each request its own notification, so
     // several waiting at once stack instead of replacing one another.
