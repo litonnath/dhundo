@@ -38,7 +38,7 @@ Easiest route, no tools to install:
 2. Enter `https://dhundonow.shortlistone.com`
 3. It scores the site and offers **Package for stores** → **Android**
 4. Settings worth checking before you generate:
-   - **Package ID**: `com.shortlistone.dhundo` — this must match
+   - **Package ID**: `com.shortlistone.dhundonow` — this must match
      `public/.well-known/assetlinks.json`, and **can never be changed**
      once the app is on the Play Store
    - **App name**: DhundoNow
